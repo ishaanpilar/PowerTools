@@ -22,8 +22,16 @@ struct TemperatureSensorsSection: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            DisclosureGroup(l10n.s.monitorSensorsShow, isExpanded: $expanded) {
+            // The page's own disclosure idiom, as in "In the panel" beside it:
+            // the whole row toggles and the chevron sits trailing. The list
+            // exists only while expanded, which is what scopes its polling.
+            DisclosureHeaderRow(isExpanded: $expanded) {
+                Text(l10n.s.monitorSensorsShow)
+                Spacer()
+            }
+            if expanded {
                 SensorList(unit: TemperatureUnit(rawValue: temperatureUnit) ?? .celsius)
+                    .disclosureIndent()
             }
         }
     }

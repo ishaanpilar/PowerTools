@@ -82,6 +82,12 @@ extension Strings {
 
         systemSection: "Система",
         temperatures: "Температуры",
+        thermalPressureLabel: "Нагрев",
+        thermalNominal: "Норма",
+        thermalModerate: "Умеренный",
+        thermalHeavy: "Высокий",
+        thermalCritical: "Критический",
+        cpuSpeedLimitLabel: "Предел ЦП",
         cpuLabel: "CPU",
         gpuLabel: "GPU",
         batteryLabel: "Батарея",

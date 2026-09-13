@@ -82,6 +82,12 @@ extension Strings {
 
         systemSection: "Sistem",
         temperatures: "Sıcaklıklar",
+        thermalPressureLabel: "Termal",
+        thermalNominal: "Normal",
+        thermalModerate: "Orta",
+        thermalHeavy: "Yüksek",
+        thermalCritical: "Kritik",
+        cpuSpeedLimitLabel: "CPU sınırı",
         cpuLabel: "CPU",
         gpuLabel: "GPU",
         batteryLabel: "Pil",

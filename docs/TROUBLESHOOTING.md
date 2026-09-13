@@ -93,4 +93,4 @@ If you have a build from source, the self test prints a quick health summary tha
 ./build/PowerTools --selftest
 ```
 
-Open a report from the [new issue](https://github.com/POWERTOOLS-OWNER/powertools/issues/new/choose) page, and see [support](../SUPPORT.md) for every way to get help.
+Open a report from the [new issue](https://github.com/ishaanpilar/PowerTools/issues/new/choose) page, and see [support](../SUPPORT.md) for every way to get help.

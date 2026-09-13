@@ -260,13 +260,63 @@ struct SystemSection: View {
                                         value: monitor.snapshot.gpuTemperature)
                     }
                 }
+                thermalRow
                 if monitor.snapshot.cpuTemperature == nil,
-                   monitor.snapshot.gpuTemperature == nil {
+                   monitor.snapshot.gpuTemperature == nil,
+                   monitor.snapshot.thermalPressure == nil {
                     Text(l10n.s.monitorUnavailable)
                         .font(.system(size: 10))
                         .foregroundStyle(.tertiary)
                 }
             }
+        }
+    }
+
+    /// The kernel's own answer to "is this Mac being held back?", which a
+    /// temperature in degrees cannot give on its own: a warm Mac at full speed
+    /// and a cooler one that is throttling can read the same in °C.
+    @ViewBuilder
+    private var thermalRow: some View {
+        if let pressure = monitor.snapshot.thermalPressure {
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(thermalColor(pressure))
+                    .frame(width: 6, height: 6)
+                Text(l10n.s.thermalPressureLabel)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                Text(thermalName(pressure))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(pressure.isThrottling ? thermalColor(pressure) : .primary)
+                // Intel only: the one real throttle number macOS will give us
+                // without root. Hidden at 100%, which is the unthrottled case.
+                if let limit = monitor.snapshot.throttle?.speedLimit, limit < 100 {
+                    Spacer(minLength: 4)
+                    Text("\(l10n.s.cpuSpeedLimitLabel) \(limit)%")
+                        .font(.system(size: 10, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(PanelMetricColor.orange(for: colorScheme))
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private func thermalName(_ pressure: ThermalPressure) -> String {
+        switch pressure {
+        case .nominal: return l10n.s.thermalNominal
+        case .moderate: return l10n.s.thermalModerate
+        case .heavy: return l10n.s.thermalHeavy
+        case .critical: return l10n.s.thermalCritical
+        }
+    }
+
+    private func thermalColor(_ pressure: ThermalPressure) -> Color {
+        switch pressure {
+        case .nominal: return PanelMetricColor.green(for: colorScheme)
+        case .moderate: return PanelMetricColor.yellow(for: colorScheme)
+        case .heavy: return PanelMetricColor.orange(for: colorScheme)
+        case .critical: return PanelMetricColor.red(for: colorScheme)
         }
     }
 

@@ -3765,12 +3765,14 @@ struct MetricsTests {
         expect(AppInfo.repositoryURL.absoluteString
                    == "https://github.com/\(AppInfo.repositorySlug)",
                "the updater feed and the repository link cannot drift apart")
-        // Delete this one once real endpoints land; until then it is what stops
-        // a placeholder reaching a public build unnoticed.
-        expect(outwardEndpoints.allSatisfy {
-                   $0.contains(".invalid") || $0.contains("POWERTOOLS-OWNER")
-               },
-               "outward-facing endpoints are still unshipped placeholders")
+        expect(AppInfo.repositorySlug == "ishaanpilar/PowerTools",
+               "the updater polls this project's own releases")
+        // The endpoints that have no destination yet stay unresolvable on
+        // purpose, so a dead link cannot ship quietly. Drop an entry from here
+        // as each one becomes real.
+        expect([AppInfo.coffeeURL, AppInfo.discordURL, AppInfo.socialURL]
+                   .allSatisfy { $0.absoluteString.contains(".invalid") },
+               "endpoints without a real destination are still unresolvable")
         // AppInfo.version falls back to "dev" in this bare harness, so read
         // the plist the shipped app will actually carry. The pin is a
         // per-release decision: this check fails on every version bump so the
@@ -10288,8 +10290,8 @@ struct MetricsTests {
                "beta is not newer than the released final version")
 
         // Release candidate selection
-        let dummyDMG = URL(string: "https://github.com/POWERTOOLS-OWNER/powertools/releases/download/v3.3.4/PowerTools.dmg")!
-        let dummyBetaDMG = URL(string: "https://github.com/POWERTOOLS-OWNER/powertools/releases/download/v3.3.4-beta.1/PowerTools.dmg")!
+        let dummyDMG = URL(string: "https://github.com/ishaanpilar/PowerTools/releases/download/v3.3.4/PowerTools.dmg")!
+        let dummyBetaDMG = URL(string: "https://github.com/ishaanpilar/PowerTools/releases/download/v3.3.4-beta.1/PowerTools.dmg")!
 
         let candidateList = [
             UpdateServiceSupport.ReleaseCandidate(tagName: "v3.3.4-beta.1", isPrerelease: true, isDraft: false, dmgURL: dummyBetaDMG, dmgExpectedBytes: 1000, body: "Beta notes"),
@@ -14553,6 +14555,47 @@ struct MetricsTests {
                "monitor peripheral battery sampling is heavily throttled in menu-bar-only mode")
         expect(MonitorSamplingPolicy.sampleStride(for: .fanSpeed, intervalSeconds: 2, foreground: false) == 3,
                "fan speed refreshes without waking the monitor every base tick")
+        expect(MonitorSamplingPolicy.sampleStride(for: .thermalPressure, intervalSeconds: 2, foreground: true) == 1,
+               "thermal pressure stays live while the panel is open")
+        expect(MonitorSamplingPolicy.sampleStride(for: .thermalPressure, intervalSeconds: 2, foreground: false) == 3,
+               "thermal pressure only feeds an alert while hidden, so it slows down")
+        expect(MonitorSamplingPolicy.sampleStride(for: .cpuThrottle, intervalSeconds: 2, foreground: true) == 3,
+               "the throttle readout costs a pmset subprocess, so it stays slow even in front")
+        expect(MonitorSamplingPolicy.sampleStride(for: .cpuThrottle, intervalSeconds: 2, foreground: false) == 15,
+               "the throttle readout is heavily throttled in menu-bar-only mode")
+
+        // Thermal pressure: ordered, and only the top two levels mean the Mac
+        // is actually shedding performance.
+        expect(ThermalPressure.nominal < .moderate && ThermalPressure.moderate < .heavy
+                   && ThermalPressure.heavy < .critical,
+               "thermal pressure levels are ordered by severity")
+        expect(!ThermalPressure.nominal.isThrottling && !ThermalPressure.moderate.isThrottling
+                   && ThermalPressure.heavy.isThrottling && ThermalPressure.critical.isThrottling,
+               "only heavy and critical thermal pressure count as throttling")
+
+        // `pmset -g therm` as an Intel Mac prints it while throttled.
+        let intelThrottled = ThrottleReader.parse("""
+            Note: No thermal warning level has been recorded
+            CPU_Scheduler_Limit \t= 100
+            CPU_Available_CPUs \t= 8
+            CPU_Speed_Limit \t= 62
+            """)
+        expect(intelThrottled == ThrottleInfo(speedLimit: 62, schedulerLimit: 100, availableCPUs: 8),
+               "the throttle parser reads padded pmset fields")
+        expect(intelThrottled?.isThrottled == true,
+               "a speed limit under 100 percent counts as throttled")
+        expect(ThrottleReader.parse("CPU_Speed_Limit = 100")?.isThrottled == false,
+               "a 100 percent speed limit is the unthrottled case")
+        // What Apple Silicon actually prints: notes only, no fields. Recorded
+        // verbatim from an M-series Mac; it must read as unknown, never as zero.
+        expect(ThrottleReader.parse("""
+            Note: No thermal warning level has been recorded
+            Note: No performance warning level has been recorded
+            Note: No CPU power status has been recorded
+            """) == nil,
+               "pmset output without throttle fields reads as unavailable, not as zero")
+        expect(ThrottleReader.parse("") == nil,
+               "empty pmset output reads as unavailable")
         expect(MonitorSamplingPolicy.sampleStride(for: .disk, intervalSeconds: 2, foreground: true) == 1,
                "monitor disk sampling stays live while the panel is open")
         expect(MonitorSamplingPolicy.shouldSample(.disk, tick: 4, intervalSeconds: 2, foreground: false) == false,

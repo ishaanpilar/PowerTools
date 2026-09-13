@@ -415,6 +415,8 @@ if (( TEST )); then
         Sources/PowerTools/Services/Metrics/PeripheralBatterySupport.swift
         Sources/PowerTools/Services/Metrics/DiskSupport.swift
         Sources/PowerTools/Services/Metrics/MonitorSamplingPolicy.swift
+        Sources/PowerTools/Services/Metrics/ThermalPressureReader.swift
+        Sources/PowerTools/Services/Metrics/ThrottleReader.swift
         Sources/PowerTools/Services/Metrics/MaxCapacityProbe.swift
         Sources/PowerTools/Services/Metrics/TemperatureSensorSelector.swift
         Sources/PowerTools/Services/Metrics/SustainedAlertGate.swift

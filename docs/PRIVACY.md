@@ -59,4 +59,4 @@ This page describes how the current version of PowerTools behaves. If the app's 
 
 ## Questions
 
-If anything here is unclear, open a question in [GitHub issues](https://github.com/POWERTOOLS-OWNER/powertools/issues), or have a look at [support](../SUPPORT.md).
+If anything here is unclear, open a question in [GitHub issues](https://github.com/ishaanpilar/PowerTools/issues), or have a look at [support](../SUPPORT.md).

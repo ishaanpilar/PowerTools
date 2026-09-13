@@ -82,6 +82,12 @@ extension Strings {
 
         systemSection: "Sistema",
         temperatures: "Temperaturas",
+        thermalPressureLabel: "Térmico",
+        thermalNominal: "Normal",
+        thermalModerate: "Moderado",
+        thermalHeavy: "Alto",
+        thermalCritical: "Crítico",
+        cpuSpeedLimitLabel: "Límite de CPU",
         cpuLabel: "CPU",
         gpuLabel: "GPU",
         batteryLabel: "Batería",

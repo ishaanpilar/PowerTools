@@ -82,6 +82,12 @@ extension Strings {
 
         systemSection: "系統",
         temperatures: "溫度",
+        thermalPressureLabel: "熱度",
+        thermalNominal: "正常",
+        thermalModerate: "中等",
+        thermalHeavy: "偏高",
+        thermalCritical: "嚴重",
+        cpuSpeedLimitLabel: "CPU 限制",
         cpuLabel: "CPU",
         gpuLabel: "GPU",
         batteryLabel: "電池",

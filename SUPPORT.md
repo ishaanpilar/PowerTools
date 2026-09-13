@@ -6,11 +6,11 @@ Before you reach out, the [documentation](#documentation) below answers most of 
 
 ## Report a bug
 
-Open the bug report form from the [new issue](https://github.com/POWERTOOLS-OWNER/powertools/issues/new/choose) page. Please bring your PowerTools version from Settings under About, your macOS version, and clear steps to reproduce. The notes on [reporting a useful bug](docs/TROUBLESHOOTING.md#reporting-a-useful-bug) spell out what helps.
+Open the bug report form from the [new issue](https://github.com/ishaanpilar/PowerTools/issues/new/choose) page. Please bring your PowerTools version from Settings under About, your macOS version, and clear steps to reproduce. The notes on [reporting a useful bug](docs/TROUBLESHOOTING.md#reporting-a-useful-bug) spell out what helps.
 
 ## Request a feature
 
-Open the feature request form from the same [new issue](https://github.com/POWERTOOLS-OWNER/powertools/issues/new/choose) page. Describe the problem you want solved rather than only a specific solution, since that makes the need much clearer. You can also browse and back existing ideas in the [open issues](https://github.com/POWERTOOLS-OWNER/powertools/issues).
+Open the feature request form from the same [new issue](https://github.com/ishaanpilar/PowerTools/issues/new/choose) page. Describe the problem you want solved rather than only a specific solution, since that makes the need much clearer. You can also browse and back existing ideas in the [open issues](https://github.com/ishaanpilar/PowerTools/issues).
 
 ## Report a security issue
 

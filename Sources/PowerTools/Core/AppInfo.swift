@@ -11,19 +11,17 @@ enum AppInfo {
 
     // MARK: - Outward-facing endpoints
     //
-    // TODO(powertools-branding): every value below is a placeholder and must be
-    // replaced before the first public build. They are deliberately unresolvable
-    // (`.invalid` is reserved by RFC 2606, and POWERTOOLS-OWNER is not a real
-    // GitHub account) so that a half-branded build fails closed instead of
-    // quietly pointing users at the upstream project it was forked from.
-    // Upstream's TRADEMARKS.md requires a fork to use its own update feed,
-    // so `repositorySlug` in particular must never be left as-is.
+    // The repository is real; the rest have no destination yet and are
+    // deliberately unresolvable (`.invalid` is reserved by RFC 2606) so a dead
+    // link cannot ship quietly. `--test` enforces both halves of that.
 
     /// The GitHub `owner/repo` the updater polls for releases. Single source of
     /// truth: `repositoryURL` and the release-asset URLs are both built from it.
-    static let repositorySlug = "POWERTOOLS-OWNER/powertools"
+    static let repositorySlug = "ishaanpilar/PowerTools"
     static let repositoryURL = URL(string: "https://github.com/\(repositorySlug)")!
-    static let websiteURL = URL(string: "https://powertools.invalid")!
+    /// No separate site yet, so the repository is the project's web presence.
+    static let websiteURL = repositoryURL
+    // TODO(powertools-branding): replace when these actually exist.
     static let coffeeURL = URL(string: "https://powertools.invalid/support")!
     static let discordURL = URL(string: "https://powertools.invalid/chat")!
     static let socialURL = URL(string: "https://powertools.invalid/social")!

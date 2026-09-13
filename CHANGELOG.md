@@ -63,10 +63,34 @@ Forked from Vorssaint 3.3.5 and rebranded. No user-facing feature changes yet.
 - `--selftest` samples the brand colour out of the shipped app icon and compares
   it with `Theme.brandLime`, so the app's palette and its icon cannot diverge.
 
+### Added: thermal telemetry from MacTelemetry
+
+- Thermal pressure in the System panel, read from the kernel's
+  `com.apple.system.thermalpressurelevel` notification: five levels where
+  `ProcessInfo.thermalState` exposes four, with no root, helper or subprocess.
+  Shown beside the temperatures, because a Mac at full speed and one that is
+  throttling can read the same in degrees.
+- On Intel Macs, the CPU speed limit from `pmset -g therm`, the only real
+  throttle figure macOS gives without root. Apple Silicon has no equivalent, so
+  the reader never spawns anything there.
+- Both are sampled through the existing monitor plan and strides, gated by the
+  CPU monitor feature, and localized in all 13 languages.
+- Ported from [MacTelemetry](https://github.com/ishaanpilar/MacTelemetry)
+  (MIT © 2025 Ishaan Pilar). Only what PowerTools lacked came across: its CPU,
+  memory, fan, storage and battery readers were left behind, since PowerTools
+  already ships them, and its memory reader would have regressed the
+  HOST_VM_INFO64 revision handling in `VMStatisticsCompat`. The `notify_*`
+  bindings now use `import notify` instead of `@_silgen_name`, and `pmset` runs
+  through the bounded `Shell.run`.
+
+### Changed: real repository
+
+- `AppInfo.repositorySlug` is now `ishaanpilar/PowerTools`; the update feed,
+  README badges, issue templates, release workflow and docs follow it.
+
 ### Known gaps
 
-- Placeholder endpoints (`*.invalid`, `POWERTOOLS-OWNER`) must be replaced with
-  real ones.
+- The support, chat and social endpoints are still `*.invalid` placeholders.
 - Screenshot sharing, recording sharing and in-app feedback point at a backend
   upstream operates; PowerTools has no equivalent yet.
 - In-app highlight images and the update showcase clip still show upstream's UI.

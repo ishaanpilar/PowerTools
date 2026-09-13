@@ -13,32 +13,25 @@
 </p>
 
 <p align="center">
-  <a href="https://powertools.invalid">Website</a> ·
+  <a href="https://github.com/ishaanpilar/PowerTools">Repository</a> ·
   <a href="#install">Install</a> ·
   <a href="#everything-it-does">Features</a> ·
   <a href="#private-by-default">Privacy</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="mailto:hello@powertools.invalid">Contact</a> ·
-  <a href="https://buymeacoffee.com/POWERTOOLS-OWNER">Buy Me a Coffee</a>
+  <a href="https://github.com/ishaanpilar/PowerTools/issues">Issues</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/POWERTOOLS-OWNER/powertools/releases"><img src="https://img.shields.io/github/v/release/POWERTOOLS-OWNER/powertools?label=release&color=4c8dff" alt="Latest release"></a>
-  <a href="https://github.com/POWERTOOLS-OWNER/powertools/releases"><img src="https://img.shields.io/github/downloads/POWERTOOLS-OWNER/powertools/total?color=4c8dff" alt="Downloads"></a>
-  <a href="https://github.com/POWERTOOLS-OWNER/powertools/actions/workflows/ci.yml"><img src="https://github.com/POWERTOOLS-OWNER/powertools/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI status"></a>
+  <a href="https://github.com/ishaanpilar/PowerTools/releases"><img src="https://img.shields.io/github/v/release/ishaanpilar/PowerTools?label=release&color=4c8dff" alt="Latest release"></a>
+  <a href="https://github.com/ishaanpilar/PowerTools/releases"><img src="https://img.shields.io/github/downloads/ishaanpilar/PowerTools/total?color=4c8dff" alt="Downloads"></a>
+  <a href="https://github.com/ishaanpilar/PowerTools/actions/workflows/ci.yml"><img src="https://github.com/ishaanpilar/PowerTools/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI status"></a>
   <a href="#what-you-need"><img src="https://img.shields.io/badge/macOS-14%2B%20Apple%20Silicon-black" alt="macOS 14 and newer, Apple Silicon"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License GPL 3.0 or later"></a>
 </p>
 
 <p align="center">
-  <a href="https://powertools.invalid/chat">
-    <img src="docs/assets/readme/discord-symbol.svg" width="72" alt="Discord">
-  </a>
-</p>
-
-<p align="center">
-  For anything private, email
-  <a href="mailto:hello@powertools.invalid"><strong>hello@powertools.invalid</strong></a>.
+  For anything private, open a
+  <a href="https://github.com/ishaanpilar/PowerTools/security/advisories/new">security advisory</a>.
 </p>
 
 <p align="center">
@@ -158,7 +151,7 @@ With [Homebrew](https://brew.sh):
 brew install --cask powertools
 ```
 
-Or grab the disk image from the [releases page](https://github.com/POWERTOOLS-OWNER/powertools/releases) and drag PowerTools into Applications.
+Or grab the disk image from the [releases page](https://github.com/ishaanpilar/PowerTools/releases) and drag PowerTools into Applications.
 
 Builds are signed with an Apple Developer ID and notarized, so macOS opens them without a fuss and your permissions survive updates.
 
@@ -206,7 +199,7 @@ The shelf and almost every quick toggle need no permission at all. Finder cut an
 ### Build it yourself
 
 ```sh
-git clone https://github.com/POWERTOOLS-OWNER/powertools.git
+git clone https://github.com/ishaanpilar/PowerTools.git
 cd powertools
 ./build.sh            # compile, generate the icon, assemble the signed bundle
 ./build.sh --install  # the same, then install into Applications and launch
@@ -231,7 +224,7 @@ The [troubleshooting guide](docs/TROUBLESHOOTING.md) walks through the common ca
 
 PowerTools went from first commit to the front of GitHub trending in three days, top of the Swift charts, and issues and pull requests have shaped every release since. Bug reports, feature ideas and translations are all welcome, starting from the [contributing guide](CONTRIBUTING.md).
 
-PowerTools is free and will stay that way. If it earned its place in your menu bar, a star helps other people find it, and a [coffee](https://buymeacoffee.com/POWERTOOLS-OWNER) keeps the maintainer awake, with or without the Keep awake feature.
+PowerTools is free and will stay that way. If it earned its place in your menu bar, a star helps other people find it, and a star helps the project along.
 
 ## Acknowledgements
 
@@ -244,5 +237,5 @@ PowerTools is free and will stay that way. If it earned its place in your menu b
 PowerTools is a fork of [Vorssaint](https://github.com/vorssaint/vorssaint-utils) (copyright 2026 Vorssaint), used under the same license. It is not an official Vorssaint build and is not endorsed by or affiliated with that project. Upstream's release history is preserved verbatim in [docs/UPSTREAM-CHANGELOG.md](docs/UPSTREAM-CHANGELOG.md).
 
 <p align="center">
-  <sub>Made by <a href="https://x.com/POWERTOOLS-OWNER">@powertools</a></sub>
+  <sub>Made by <a href="https://github.com/ishaanpilar">@ishaanpilar</a></sub>
 </p>

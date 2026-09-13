@@ -194,6 +194,12 @@ struct Strings {
     // MARK: Panel — system monitor
     let systemSection: String
     let temperatures: String
+    let thermalPressureLabel: String
+    let thermalNominal: String
+    let thermalModerate: String
+    let thermalHeavy: String
+    let thermalCritical: String
+    let cpuSpeedLimitLabel: String
     let cpuLabel: String
     let gpuLabel: String
     let batteryLabel: String
@@ -1248,6 +1254,12 @@ extension Strings {
 
         systemSection: "Sistema",
         temperatures: "Temperaturas",
+        thermalPressureLabel: "Térmico",
+        thermalNominal: "Nominal",
+        thermalModerate: "Moderado",
+        thermalHeavy: "Alto",
+        thermalCritical: "Crítico",
+        cpuSpeedLimitLabel: "Limite da CPU",
         cpuLabel: "CPU",
         gpuLabel: "GPU",
         batteryLabel: "Bateria",
@@ -2260,6 +2272,12 @@ extension Strings {
 
         systemSection: "System",
         temperatures: "Temperatures",
+        thermalPressureLabel: "Thermal",
+        thermalNominal: "Nominal",
+        thermalModerate: "Moderate",
+        thermalHeavy: "Heavy",
+        thermalCritical: "Critical",
+        cpuSpeedLimitLabel: "CPU limit",
         cpuLabel: "CPU",
         gpuLabel: "GPU",
         batteryLabel: "Battery",

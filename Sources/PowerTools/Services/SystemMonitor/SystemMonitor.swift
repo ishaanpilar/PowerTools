@@ -52,6 +52,12 @@ struct SystemSnapshot {
     var memoryPressure: MemoryPressure = .unknown
     var fanSpeeds: [Double] = []
 
+    // Thermal
+    /// The kernel's 5-level thermal pressure; nil when it cannot be read.
+    var thermalPressure: ThermalPressure?
+    /// Intel-only CPU speed/scheduler limits; nil on Apple Silicon.
+    var throttle: ThrottleInfo?
+
     // Network
     var netDownBytesPerSec: Double?
     var netUpBytesPerSec: Double?
@@ -95,12 +101,14 @@ struct SystemMonitorPanelNeeds: Equatable {
     var gpuTemperature = false
     var batteryTemperature = false
     var fanSpeed = false
+    var thermal = false
 
     static let none = SystemMonitorPanelNeeds()
 
     var any: Bool {
         system || network || disk || power || cpu || gpu || memory || battery ||
-            peripheralBattery || cpuTemperature || gpuTemperature || batteryTemperature || fanSpeed
+            peripheralBattery || cpuTemperature || gpuTemperature || batteryTemperature ||
+            fanSpeed || thermal
     }
 }
 
@@ -144,6 +152,12 @@ final class SystemMonitor: ObservableObject {
 
     // Samplers
     private let networkSampler = NetworkSampler()
+    /// Touched only from `queue`, like the other samplers.
+    private let thermalPressureReader = ThermalPressureReader()
+    /// Carried between ticks so a stride-skipped tick republishes the last
+    /// real reading rather than blanking the row, like the other metrics.
+    private var lastThermalPressure: ThermalPressure?
+    private var lastThrottle: ThrottleInfo?
     private let diskSampler = DiskSampler()
     private let peripheralBatterySampler = PeripheralBatterySampler()
     private var powerSampler: PowerSampler?
@@ -411,6 +425,8 @@ final class SystemMonitor: ObservableObject {
         var needGPUTemperature = false
         var needBatteryTemperature = false
         var needFanSpeed = false
+        var needThermalPressure = false
+        var needThrottle = false
 
         var needSMC: Bool { needPower || needTemperature || needFanSpeed }
 
@@ -420,7 +436,8 @@ final class SystemMonitor: ObservableObject {
 
         var any: Bool {
             needCPU || needMemory || needNetwork || needDisk || needPower ||
-                needPeripheralBattery || needGPUUsage || needTemperature || needFanSpeed
+                needPeripheralBattery || needGPUUsage || needTemperature || needFanSpeed ||
+                needThermalPressure || needThrottle
         }
     }
 
@@ -477,6 +494,14 @@ final class SystemMonitor: ObservableObject {
             defaults.bool(forKey: DefaultsKey.menuBarCPUTemperature) || alertCPUTemperature
         plan.needGPUTemperature = panelTemps || menuPanelNeeds.gpuTemperature ||
             defaults.bool(forKey: DefaultsKey.menuBarGPUTemperature)
+        // Thermal pressure rides along with the temperature row: it is the
+        // kernel's own answer to "is this Mac actually being held back", which
+        // a temperature in degrees cannot tell you on its own. Reading it is a
+        // shared-memory load, so it is gated on being shown, not on cost.
+        plan.needThermalPressure = panelTemps || menuPanelNeeds.thermal
+            || menuPanelNeeds.cpuTemperature || alertCPUTemperature
+        // Intel only, and it costs a subprocess, so never speculatively.
+        plan.needThrottle = ThrottleReader.isSupported && (panelTemps || menuPanelNeeds.thermal)
         plan.needBatteryTemperature = hasInternalBattery && (
             (panelNeedsPower && defaults.bool(forKey: DefaultsKey.monitorPwrTemperature))
                 || menuPanelNeeds.batteryTemperature
@@ -495,6 +520,8 @@ final class SystemMonitor: ObservableObject {
         if !available(.monitorCPU) {
             plan.needCPU = false
             plan.needCPUTemperature = false
+            plan.needThermalPressure = false
+            plan.needThrottle = false
         }
         if !available(.monitorGPU) {
             plan.needGPUUsage = false
@@ -554,6 +581,8 @@ final class SystemMonitor: ObservableObject {
         if plan.needGPUUsage { kinds.append(.gpuUsage) }
         if plan.needTemperature { kinds.append(.temperature) }
         if plan.needFanSpeed { kinds.append(.fanSpeed) }
+        if plan.needThermalPressure { kinds.append(.thermalPressure) }
+        if plan.needThrottle { kinds.append(.cpuThrottle) }
         return kinds
     }
 
@@ -656,6 +685,20 @@ final class SystemMonitor: ObservableObject {
                         self.memoryAppHistory.push(Double(memory.appUsed) / Double(memory.total))
                     }
                 }
+            }
+
+            if plan.needThermalPressure {
+                if take(.thermalPressure) {
+                    self.lastThermalPressure = self.thermalPressureReader.read()
+                }
+                next.thermalPressure = self.lastThermalPressure
+            }
+
+            if plan.needThrottle {
+                if take(.cpuThrottle) {
+                    self.lastThrottle = ThrottleReader.read()
+                }
+                next.throttle = self.lastThrottle
             }
 
             if plan.needNetwork {

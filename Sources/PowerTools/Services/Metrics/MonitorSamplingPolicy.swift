@@ -14,6 +14,8 @@ enum MonitorSamplingKind: String {
     case gpuUsage
     case temperature
     case fanSpeed
+    case thermalPressure
+    case cpuThrottle
 }
 
 enum MonitorSamplingPolicy {
@@ -74,7 +76,11 @@ enum MonitorSamplingPolicy {
             switch kind {
             case .peripheralBattery:
                 return 15
-            case .cpu, .memory, .network, .disk, .power, .gpuUsage, .temperature, .fanSpeed:
+            case .cpuThrottle:
+                // Costs a `pmset` subprocess, so it stays slow even in front.
+                return 5
+            case .cpu, .memory, .network, .disk, .power, .gpuUsage, .temperature,
+                 .fanSpeed, .thermalPressure:
                 return 1
             }
         }
@@ -82,6 +88,11 @@ enum MonitorSamplingPolicy {
         switch kind {
         case .cpu, .memory, .network:
             return 1
+        case .thermalPressure:
+            // A shared-memory read, but it only feeds an alert while hidden.
+            return 5
+        case .cpuThrottle:
+            return 30
         case .gpuUsage:
             return 10
         case .fanSpeed:

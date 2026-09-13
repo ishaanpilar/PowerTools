@@ -195,7 +195,7 @@ struct PanelDashboardView: View {
     }
 
     private func toggleExpanded(_ tile: PanelDashboardTile) {
-        withAnimation(.easeInOut(duration: 0.22)) {
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
             expandedTile = (expandedTile == tile) ? nil : tile
         }
     }
@@ -939,7 +939,11 @@ private struct DashboardMetricTile: View {
                 if isExpanded {
                     MetricDetailView(kind: detailKind, style: .embedded)
                         .padding(.top, 8)
-                        .transition(.opacity)
+                        // Grows out of the header rather than fading in flat:
+                        // scaled down from the top edge, so it visibly
+                        // unfolds from the row that opened it, and the same
+                        // shape in reverse on collapse.
+                        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
                 }
             }
             .padding(10)

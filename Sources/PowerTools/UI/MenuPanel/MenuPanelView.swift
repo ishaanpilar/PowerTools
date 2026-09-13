@@ -415,11 +415,16 @@ private struct MenuPanelHeader: View {
 
     private static let rollInterval: TimeInterval = 3.4
 
+    /// Picked once per header lifetime, not recomputed in `body`: the pool
+    /// is read every time `monitor`/`updates` publish, and re-rolling on
+    /// every one of those would make the word visibly flicker.
+    @State private var greetingWordIndex = Int.random(in: 0..<6)
+
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 10) {
             logoBadge
 
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(greeting)
                         .font(.system(size: 13, weight: .semibold))
@@ -432,13 +437,14 @@ private struct MenuPanelHeader: View {
                 Text(statusText)
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
                     .id(conditionIndex)
                     .transition(.opacity)
             }
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 8)
 
             if AppInfo.isBeta {
                 Text(l10n.s.betaBadgeLabel.uppercased())
@@ -452,7 +458,6 @@ private struct MenuPanelHeader: View {
             }
 
             settingsButton
-            moreMenu
         }
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -476,6 +481,11 @@ private struct MenuPanelHeader: View {
             .accessibilityHidden(true)
     }
 
+    /// The only icon left in the header, so the trailing Spacer carries it
+    /// all the way to the edge. Quit (and everything else — About, Check
+    /// for Updates, Uninstall, the Shelf) already lives one right-click on
+    /// the status item away; a second, narrower copy of that same menu up
+    /// here was redundant, not an extra convenience.
     private var settingsButton: some View {
         Button {
             // The hosted utility's own page, or the general one from the
@@ -494,48 +504,44 @@ private struct MenuPanelHeader: View {
         .help(l10n.s.panelSettings)
     }
 
-    /// Quit, plus Send Feedback on a beta build: the two actions small enough
-    /// that they never needed a whole footer row of their own once Settings
-    /// and the greeting moved up here.
-    private var moreMenu: some View {
-        Menu {
-            if AppInfo.isBeta {
-                Button {
-                    appDelegate()?.openFeedbackWindow()
-                } label: {
-                    Label(FeatureStrings.feedback(l10n.language).openButton,
-                          systemImage: "bubble.left.and.text.bubble.right")
-                }
-            }
-            Button(role: .destructive) {
-                NSApp.terminate(nil)
-            } label: {
-                Label(l10n.s.menuQuit, systemImage: "power")
-            }
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 12, weight: .bold))
-                .frame(width: 26, height: 26)
-                .contentShape(Circle())
-                .panelGlassControl(in: Circle())
-        }
-        .menuStyle(.borderlessButton)
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
-        .fixedSize()
-        .help(l10n.s.menuQuit)
-    }
-
     private var markTint: Color {
         colorScheme == .light ? Color(white: 0.03) : .white
     }
 
-    private var greeting: String {
+    /// The time-of-day word plus five casual, time-agnostic alternatives,
+    /// one of them picked at random per header lifetime so the panel does
+    /// not say the exact same word on every open. Combined with the Mac
+    /// account's own first name — already on the machine, no network
+    /// involved, the same kind of local-only personalization the rest of
+    /// the app already trades in.
+    private var greetingWordPool: [String] {
+        let timeWord: String
         switch Calendar.current.component(.hour, from: Date()) {
-        case 0..<12: return l10n.s.healthGreetingMorning
-        case 12..<17: return l10n.s.healthGreetingAfternoon
-        default: return l10n.s.healthGreetingEvening
+        case 0..<12: timeWord = l10n.s.healthGreetingMorning
+        case 12..<17: timeWord = l10n.s.healthGreetingAfternoon
+        default: timeWord = l10n.s.healthGreetingEvening
         }
+        return [timeWord, l10n.s.healthGreetingHello, l10n.s.healthGreetingHi,
+                l10n.s.healthGreetingHey, l10n.s.healthGreetingHowdy, l10n.s.healthGreetingGreetings]
+    }
+
+    private var greetingWord: String {
+        let pool = greetingWordPool
+        return pool[greetingWordIndex % pool.count]
+    }
+
+    /// The account's first name, read locally via NSFullUserName() — no
+    /// network call, nothing sent anywhere. nil only if the account somehow
+    /// has no display name at all, which real Mac accounts always do.
+    private var firstName: String? {
+        let full = NSFullUserName().trimmingCharacters(in: .whitespaces)
+        guard let first = full.split(separator: " ").first, !first.isEmpty else { return nil }
+        return String(first)
+    }
+
+    private var greeting: String {
+        guard let firstName else { return greetingWord }
+        return String(format: l10n.s.healthGreetingNameFormat, greetingWord, firstName)
     }
 
     private var updateAvailable: Bool {

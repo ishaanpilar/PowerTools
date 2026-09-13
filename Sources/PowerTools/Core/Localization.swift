@@ -863,6 +863,13 @@ struct Strings {
     let healthGreetingMorning: String
     let healthGreetingAfternoon: String
     let healthGreetingEvening: String
+    let healthGreetingHello: String
+    let healthGreetingHi: String
+    let healthGreetingHey: String
+    let healthGreetingHowdy: String
+    let healthGreetingGreetings: String
+    /// %1$@ is the chosen greeting word, %2$@ the Mac account's first name.
+    let healthGreetingNameFormat: String
     let healthEverythingGood: String
     let healthBatteryCriticallyLow: String
     let healthThermalCritical: String
@@ -1911,9 +1918,15 @@ extension Strings {
         diskCriticallyLow: "Armazenamento criticamente baixo",
         diskReclaimableFormat: "Até %@ podem ser liberados",
         diskOpenCleaner: "Abrir o Cleaner",
-        healthGreetingMorning: "Bom dia!",
-        healthGreetingAfternoon: "Boa tarde!",
-        healthGreetingEvening: "Boa noite!",
+        healthGreetingMorning: "Bom dia",
+        healthGreetingAfternoon: "Boa tarde",
+        healthGreetingEvening: "Boa noite",
+        healthGreetingHello: "Olá",
+        healthGreetingHi: "Oi",
+        healthGreetingHey: "E aí",
+        healthGreetingHowdy: "Opa",
+        healthGreetingGreetings: "Saudações",
+        healthGreetingNameFormat: "%1$@, %2$@!",
         healthEverythingGood: "Está tudo bem.",
         healthBatteryCriticallyLow: "Sua bateria está criticamente baixa.",
         healthThermalCritical: "Seu Mac está sendo limitado por temperatura.",
@@ -2949,9 +2962,15 @@ extension Strings {
         diskCriticallyLow: "Critically low storage",
         diskReclaimableFormat: "Up to %@ can be freed",
         diskOpenCleaner: "Open Cleaner",
-        healthGreetingMorning: "Good morning!",
-        healthGreetingAfternoon: "Good afternoon!",
-        healthGreetingEvening: "Good evening!",
+        healthGreetingMorning: "Morning",
+        healthGreetingAfternoon: "Afternoon",
+        healthGreetingEvening: "Evening",
+        healthGreetingHello: "Hello",
+        healthGreetingHi: "Hi",
+        healthGreetingHey: "Hey",
+        healthGreetingHowdy: "Howdy",
+        healthGreetingGreetings: "Greetings",
+        healthGreetingNameFormat: "%1$@, %2$@!",
         healthEverythingGood: "Everything looks good.",
         healthBatteryCriticallyLow: "Your battery is critically low.",
         healthThermalCritical: "Your Mac is being throttled.",

@@ -208,8 +208,6 @@ struct MenuPanelView: View {
                 .frame(width: 308)
             }
             .frame(width: 308, height: navigableScrollHeight)
-
-            footer
         }
         .padding(12)
         .frame(width: 332, height: navigablePanelHeight)
@@ -234,8 +232,6 @@ struct MenuPanelView: View {
                 }
                 .frame(width: 308, height: metricScrollHeight)
             }
-
-            footer
         }
         .padding(12)
         .frame(width: 332, height: metricPanelHeight)
@@ -284,9 +280,11 @@ struct MenuPanelView: View {
         let bannerHeight = updates.state.showsMenuPanelBanner
             ? (max(updateBannerHeight, 48) + 12)
             : 0
-        // Padding, header and footer; a section or metric adds its back row.
+        // Padding and the header (now a two-line greeting, no separate
+        // footer row since Settings/Quit moved up into it); a section or
+        // metric adds its back row.
         let backRow: CGFloat = (selectedMetric != nil || activeSection != nil) ? 38 : 0
-        return 124 + backRow + bannerHeight
+        return 90 + backRow + bannerHeight
     }
 
     private var estimatedNavigableContentHeight: CGFloat {
@@ -400,47 +398,6 @@ struct MenuPanelView: View {
     private var header: some View {
         MenuPanelHeader()
     }
-
-    private var footer: some View {
-        HStack(spacing: 8) {
-            footerButton(l10n.s.panelSettings,
-                         systemImage: "gearshape",
-                         horizontalPadding: 7) {
-                // The hosted utility's own page, or the general one from the
-                // panel's lists: the router is sticky, so it is set every time.
-                SettingsRouter.shared.page = PanelInteractionState.shared.hostedSettingsPage ?? .general
-                appDelegate()?.openSettingsWindow()
-            }
-
-            footerButton(l10n.s.panelQuit,
-                         systemImage: "power",
-                         horizontalPadding: 7) {
-                NSApp.terminate(nil)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 30)
-        .padding(.top, 4)
-    }
-
-    private func footerButton(_ title: String, systemImage: String,
-                              horizontalPadding: CGFloat = 8,
-                              action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 11, weight: .medium))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .minimumScaleFactor(0.78)
-                .labelStyle(.titleAndIcon)
-                .padding(.horizontal, horizontalPadding)
-                .frame(maxWidth: .infinity, minHeight: 28)
-                .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                .panelGlassControl(in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
-    }
 }
 
 /// The top row on every screen: just the mark, on the leading edge, where a
@@ -450,17 +407,38 @@ private struct MenuPanelHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var monitor = SystemMonitor.shared
+    @ObservedObject private var updates = UpdateService.shared
+    /// Which of the current conditions the status line is showing; advances
+    /// on a timer only while there is more than one to cycle through.
+    @State private var conditionIndex = 0
+    @State private var rollTimer: Timer?
+
+    private static let rollInterval: TimeInterval = 3.4
 
     var body: some View {
-        HStack(spacing: 8) {
-            BrandMark(width: 34, tint: markTint)
-                .frame(height: 24)
-                .accessibilityHidden(true)
+        HStack(alignment: .top, spacing: 8) {
+            logoBadge
 
-            if monitor.isRefreshing {
-                RefreshingIndicator()
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(greeting)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                    if monitor.isRefreshing {
+                        RefreshingIndicator()
+                            .transition(.opacity)
+                    }
+                }
+                Text(statusText)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .id(conditionIndex)
                     .transition(.opacity)
             }
+
+            Spacer(minLength: 4)
 
             if AppInfo.isBeta {
                 Text(l10n.s.betaBadgeLabel.uppercased())
@@ -473,30 +451,116 @@ private struct MenuPanelHeader: View {
                     .fixedSize()
             }
 
-            Spacer(minLength: 0)
+            settingsButton
+            moreMenu
+        }
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.2), value: monitor.isRefreshing)
+        .animation(.easeInOut(duration: 0.3), value: conditionIndex)
+        .onAppear { restartRolling() }
+        .onChange(of: conditions.count) { _, _ in restartRolling() }
+        .onDisappear {
+            rollTimer?.invalidate()
+            rollTimer = nil
+        }
+    }
 
+    private var logoBadge: some View {
+        BrandMark(width: 20, tint: markTint)
+            .frame(width: 32, height: 32)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(colorScheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.08))
+            )
+            .accessibilityHidden(true)
+    }
+
+    private var settingsButton: some View {
+        Button {
+            // The hosted utility's own page, or the general one from the
+            // panel's lists: the router is sticky, so it is set every time.
+            SettingsRouter.shared.page = PanelInteractionState.shared.hostedSettingsPage ?? .general
+            appDelegate()?.openSettingsWindow()
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 26, height: 26)
+                .contentShape(Circle())
+                .panelGlassControl(in: Circle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .help(l10n.s.panelSettings)
+    }
+
+    /// Quit, plus Send Feedback on a beta build: the two actions small enough
+    /// that they never needed a whole footer row of their own once Settings
+    /// and the greeting moved up here.
+    private var moreMenu: some View {
+        Menu {
             if AppInfo.isBeta {
                 Button {
                     appDelegate()?.openFeedbackWindow()
                 } label: {
-                    Image(systemName: "bubble.left.and.text.bubble.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .padding(4)
-                        .contentShape(Rectangle())
+                    Label(FeatureStrings.feedback(l10n.language).openButton,
+                          systemImage: "bubble.left.and.text.bubble.right")
                 }
-                .buttonStyle(.plain)
-                .help(FeatureStrings.feedback(l10n.language).openButton)
             }
+            Button(role: .destructive) {
+                NSApp.terminate(nil)
+            } label: {
+                Label(l10n.s.menuQuit, systemImage: "power")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .bold))
+                .frame(width: 26, height: 26)
+                .contentShape(Circle())
+                .panelGlassControl(in: Circle())
         }
-        .frame(height: 28)
-        .padding(.vertical, 4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(.easeInOut(duration: 0.2), value: monitor.isRefreshing)
+        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .fixedSize()
+        .help(l10n.s.menuQuit)
     }
 
     private var markTint: Color {
         colorScheme == .light ? Color(white: 0.03) : .white
+    }
+
+    private var greeting: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 0..<12: return l10n.s.healthGreetingMorning
+        case 12..<17: return l10n.s.healthGreetingAfternoon
+        default: return l10n.s.healthGreetingEvening
+        }
+    }
+
+    private var updateAvailable: Bool {
+        if case .available = updates.state { return true }
+        return false
+    }
+
+    private var conditions: [SystemHealthCondition] {
+        SystemHealthSummary.conditions(for: monitor.snapshot, updateAvailable: updateAvailable)
+    }
+
+    private var statusText: String {
+        guard !conditions.isEmpty else { return l10n.s.healthEverythingGood }
+        return conditions[conditionIndex % conditions.count].message(l10n.s)
+    }
+
+    private func restartRolling() {
+        rollTimer?.invalidate()
+        conditionIndex = 0
+        guard conditions.count > 1 else { return }
+        rollTimer = Timer.scheduledTimer(withTimeInterval: Self.rollInterval, repeats: true) { _ in
+            DispatchQueue.main.async {
+                conditionIndex += 1
+            }
+        }
     }
 }
 

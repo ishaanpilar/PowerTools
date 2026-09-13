@@ -858,6 +858,16 @@ struct Strings {
     /// %@ is the freeable byte amount, already formatted (e.g. "15.4 GB").
     let diskReclaimableFormat: String
     let diskOpenCleaner: String
+    // Panel header: time-of-day greeting and the one-line health summary
+    // beneath it (SystemHealthSummary picks which one, most urgent first).
+    let healthGreetingMorning: String
+    let healthGreetingAfternoon: String
+    let healthGreetingEvening: String
+    let healthEverythingGood: String
+    let healthBatteryCriticallyLow: String
+    let healthThermalCritical: String
+    let healthMemoryCritical: String
+    let healthDiskCriticallyLow: String
     let diskInternal: String
     let diskExternal: String
     let diskSelect: String
@@ -1901,6 +1911,14 @@ extension Strings {
         diskCriticallyLow: "Armazenamento criticamente baixo",
         diskReclaimableFormat: "Até %@ podem ser liberados",
         diskOpenCleaner: "Abrir o Cleaner",
+        healthGreetingMorning: "Bom dia!",
+        healthGreetingAfternoon: "Boa tarde!",
+        healthGreetingEvening: "Boa noite!",
+        healthEverythingGood: "Está tudo bem.",
+        healthBatteryCriticallyLow: "Sua bateria está criticamente baixa.",
+        healthThermalCritical: "Seu Mac está sendo limitado por temperatura.",
+        healthMemoryCritical: "A pressão de memória está alta agora.",
+        healthDiskCriticallyLow: "Está tudo bem, exceto o armazenamento.",
         diskInternal: "Interno",
         diskExternal: "Externo",
         diskSelect: "Selecionar disco",
@@ -2931,6 +2949,14 @@ extension Strings {
         diskCriticallyLow: "Critically low storage",
         diskReclaimableFormat: "Up to %@ can be freed",
         diskOpenCleaner: "Open Cleaner",
+        healthGreetingMorning: "Good morning!",
+        healthGreetingAfternoon: "Good afternoon!",
+        healthGreetingEvening: "Good evening!",
+        healthEverythingGood: "Everything looks good.",
+        healthBatteryCriticallyLow: "Your battery is critically low.",
+        healthThermalCritical: "Your Mac is being throttled.",
+        healthMemoryCritical: "Memory pressure is high right now.",
+        healthDiskCriticallyLow: "Everything looks good, except your storage.",
         diskInternal: "Internal",
         diskExternal: "External",
         diskSelect: "Select disk",

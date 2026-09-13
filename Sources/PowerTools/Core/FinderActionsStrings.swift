@@ -545,7 +545,7 @@ extension FinderActionsStrings {
         noText: "Aucun texte trouvé",
         working: "Traitement…",
         savedFormat: "%@ enregistré",
-        failedFormat: "Impossible de terminer : %@",
+        failedFormat: "Impossible de terminer\u{00A0}: %@",
         busy: "Médias traite déjà un autre fichier",
         mixedFolders: "Choisissez des éléments d’un seul dossier",
         untitled: "sans titre",
@@ -554,7 +554,7 @@ extension FinderActionsStrings {
         copyButton: "Copier",
         moveMessage: "Choisissez où déplacer les éléments sélectionnés.",
         copyMessage: "Choisissez où copier les éléments sélectionnés.",
-        deleteTitle: "Supprimer définitivement ?",
+        deleteTitle: "Supprimer définitivement\u{00A0}?",
         deleteBodyFormat: "%@ sera supprimé tout de suite, sans passer par la corbeille. Cette action est irréversible.",
         deleteButton: "Supprimer",
         cancel: "Annuler",
@@ -567,7 +567,7 @@ extension FinderActionsStrings {
         renameNumbers: "Ajouter des numéros",
         renameStart: "Commencer à",
         renameButton: "Renommer",
-        renameInvalid: "Un nom ne peut pas être vide ni contenir / ou :.",
+        renameInvalid: "Un nom ne peut pas être vide ni contenir / ou\u{00A0}:.",
         renameDuplicate: "Deux éléments auraient le même nom.",
         renameTaken: "Un élément porte déjà ce nom dans le dossier."
     )

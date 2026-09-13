@@ -13,8 +13,14 @@ struct CutPasteSettings: View {
     @AppStorage(DefaultsKey.finderRenameEnabled) private var renameEnabled = false
     @AppStorage(DefaultsKey.finderRenameShortcut) private var renameShortcutRaw =
         GlobalShortcut.finderRenameDefault.storageValue
+    @AppStorage(DefaultsKey.finderActionsEnabled) private var actionsEnabled = false
     @State private var renameError: String?
     @State private var recordingRename = false
+    @State private var extensionEnabled = false
+
+    private var actionsText: FinderActionsStrings {
+        FeatureStrings.finderActions(l10n.language)
+    }
 
     private var renameText: FinderRenameFeatureStrings {
         FeatureStrings.finderRename(l10n.language)
@@ -112,6 +118,44 @@ struct CutPasteSettings: View {
                     Text(renameText.hubTitle)
                 }
                 .settingsSectionAnchor(.finderRename)
+            }
+
+            if AppFeature.finderActions.isAvailable {
+                Section {
+                    Toggle(actionsText.enableLabel, isOn: $actionsEnabled)
+                        .onChange(of: actionsEnabled) { _, enabled in
+                            FinderActionsService.shared.syncWithPreferences()
+                            if enabled { FinderActionsService.shared.enableExtension() }
+                            // pluginkit takes a moment to flip the switch.
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                extensionEnabled = FinderActionsService.isExtensionEnabled
+                            }
+                        }
+                    Text(actionsText.caption)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if actionsEnabled {
+                        HStack(spacing: 8) {
+                            Label(extensionEnabled ? actionsText.extensionOn : actionsText.extensionOff,
+                                  systemImage: extensionEnabled
+                                    ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(extensionEnabled ? .green : .orange)
+                            Spacer()
+                            Button(actionsText.openExtensionSettings) {
+                                FinderActionsService.showExtensionSettings()
+                            }
+                        }
+                    }
+                } header: {
+                    Text(actionsText.hubTitle)
+                }
+                .settingsSectionAnchor(.finderActions)
+                .onAppear { extensionEnabled = FinderActionsService.isExtensionEnabled }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: NSApplication.didBecomeActiveNotification)) { _ in
+                    extensionEnabled = FinderActionsService.isExtensionEnabled
+                }
             }
 
             if needsAccessibility, !permissions.accessibility {

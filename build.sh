@@ -63,6 +63,17 @@ FAN_HELPER_ID="$APP_BUNDLE_ID.fan-control"
 # Sources/NowPlayingAdapter. Staged under Contents/Frameworks, signed on its own.
 NOW_PLAYING_ADAPTER_ID="$APP_BUNDLE_ID.now-playing"
 NOW_PLAYING_ADAPTER="libPowerToolsNowPlaying.dylib"
+# The Finder right-click menu: a sandboxed Finder Sync extension staged under
+# Contents/PlugIns. It reaches the app through the variant's own URL scheme and
+# the one folder its entitlements open (see FinderActionsSupport).
+FINDER_EXTENSION_ID="$APP_BUNDLE_ID.finder-menu"
+FINDER_EXTENSION_NAME="PowerToolsFinderMenu"
+FINDER_EXTENSION_ENTITLEMENTS="build/FinderExtension.entitlements"
+if (( DEV )); then
+    FINDER_URL_SCHEME="powertools-dev-finder"
+else
+    FINDER_URL_SCHEME="powertools-finder"
+fi
 TARGET="arm64-apple-macosx14.0"
 ENTITLEMENTS="Resources/PowerTools.entitlements"
 LEGACY_IDENTITY="PowerTools Signing"
@@ -126,6 +137,29 @@ codesign_with_timestamp_retry() {
     return 1
 }
 
+write_finder_extension_entitlements() {
+    mkdir -p build
+    cp Resources/FinderExtension/FinderExtension.entitlements "$FINDER_EXTENSION_ENTITLEMENTS"
+    /usr/libexec/PlistBuddy -c "Set :com.apple.security.temporary-exception.files.home-relative-path.read-write:0 '/Library/Application Support/$APP_BUNDLE_ID/FinderMenu/'" \
+        "$FINDER_EXTENSION_ENTITLEMENTS"
+}
+
+# Signs the extension with its sandbox entitlements. $2 is the identity ("-"
+# for ad-hoc); a non-empty $3 means Developer ID, which adds the hardened
+# runtime and a timestamp.
+sign_finder_extension() {
+    local extension="$1" identity="$2" devid="$3"
+    [[ -d "$extension" ]] || return 0
+    write_finder_extension_entitlements
+    if [[ -n "$devid" ]]; then
+        codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
+            --entitlements "$FINDER_EXTENSION_ENTITLEMENTS" --sign "$identity" "$extension"
+    else
+        /usr/bin/codesign --force --strip-disallowed-xattrs \
+            --entitlements "$FINDER_EXTENSION_ENTITLEMENTS" --sign "$identity" "$extension"
+    fi
+}
+
 write_swift_output_file_map() {
     local output_file="$1"
     local object_dir="$2"
@@ -154,6 +188,7 @@ finalize_installed_bundle_after_child() {
     local bundle="$1"
     local helper="$bundle/Contents/Library/LaunchServices/$FAN_HELPER_ID"
     local adapter="$bundle/Contents/Frameworks/$NOW_PLAYING_ADAPTER"
+    local finder_extension="$bundle/Contents/PlugIns/$FINDER_EXTENSION_NAME.appex"
     local devid
     devid="$(developer_id_identity)"
 
@@ -164,6 +199,7 @@ finalize_installed_bundle_after_child() {
             --options runtime --timestamp --identifier "$FAN_HELPER_ID" --sign "$devid" "$helper"
         [[ -f "$adapter" ]] && codesign_with_timestamp_retry --force --strip-disallowed-xattrs \
             --options runtime --timestamp --identifier "$NOW_PLAYING_ADAPTER_ID" --sign "$devid" "$adapter"
+        sign_finder_extension "$finder_extension" "$devid" "$devid"
         codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
             --entitlements "$ENTITLEMENTS" --sign "$devid" "$bundle"
     elif legacy_identity_installed; then
@@ -171,16 +207,19 @@ finalize_installed_bundle_after_child() {
             --identifier "$FAN_HELPER_ID" --sign "$LEGACY_IDENTITY" "$helper"
         [[ -f "$adapter" ]] && /usr/bin/codesign --force --strip-disallowed-xattrs \
             --identifier "$NOW_PLAYING_ADAPTER_ID" --sign "$LEGACY_IDENTITY" "$adapter"
+        sign_finder_extension "$finder_extension" "$LEGACY_IDENTITY" ""
         /usr/bin/codesign --force --strip-disallowed-xattrs --sign "$LEGACY_IDENTITY" "$bundle"
     else
         [[ -f "$helper" ]] && /usr/bin/codesign --force --strip-disallowed-xattrs \
             --identifier "$FAN_HELPER_ID" --sign - "$helper"
         [[ -f "$adapter" ]] && /usr/bin/codesign --force --strip-disallowed-xattrs \
             --identifier "$NOW_PLAYING_ADAPTER_ID" --sign - "$adapter"
+        sign_finder_extension "$finder_extension" "-" ""
         /usr/bin/codesign --force --strip-disallowed-xattrs --sign - "$bundle"
     fi
     [[ -f "$helper" ]] && /usr/bin/codesign --verify --strict "$helper"
     [[ -f "$adapter" ]] && /usr/bin/codesign --verify --strict "$adapter"
+    [[ -d "$finder_extension" ]] && /usr/bin/codesign --verify --strict "$finder_extension"
     /usr/bin/codesign --verify --deep --strict "$bundle"
     echo "✓ Signature ready: $bundle"
 }
@@ -273,6 +312,8 @@ if (( TEST )); then
         Sources/PowerTools/Core/CameraPreviewStrings.swift
         Sources/PowerTools/Core/ScratchpadStrings.swift
         Sources/PowerTools/Core/FinderRenameStrings.swift
+        Sources/PowerTools/Core/FinderActionsStrings.swift
+        Sources/PowerTools/Services/FinderActions/FinderActionsSupport.swift
         Sources/PowerTools/Core/CommandBarStrings.swift
         Sources/PowerTools/Core/FeedbackStrings.swift
         Sources/PowerTools/Core/RadialMenuStrings.swift
@@ -487,6 +528,14 @@ swiftc -O -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" -emit-library \
     Sources/NowPlayingAdapter/NowPlayingAdapter.swift \
     -o "build/$NOW_PLAYING_ADAPTER"
 
+echo "▸ Compiling Finder menu extension…"
+swiftc -O -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" "${BUILD_VARIANT_FLAGS[@]}" \
+    -module-name PowerToolsFinderMenu \
+    Sources/PowerTools/Services/FinderActions/FinderActionsSupport.swift \
+    Sources/FinderExtension/FinderMenuExtension.swift \
+    Sources/FinderExtension/main.swift \
+    -o "build/$FINDER_EXTENSION_NAME"
+
 echo "▸ Generating app icon…"
 swift Tools/MakeIcon.swift build/AppIcon.iconset
 xattr -c -r build/AppIcon.iconset build/AppIcon.icns build/MenuBarIcon.png build/MenuBarIcon@2x.png build/BrandMark.png 2>/dev/null || true
@@ -567,6 +616,27 @@ FAN_HELPER_VERSION="$(
 /usr/libexec/PlistBuddy -c "Add :PowerToolsFanControlHelperVersion string '$FAN_HELPER_VERSION'" \
     "$STAGE/Contents/Info.plist"
 printf 'APPL????' > "$STAGE/Contents/PkgInfo"
+/usr/libexec/PlistBuddy \
+    -c "Set :CFBundleURLTypes:0:CFBundleURLName $FINDER_EXTENSION_ID" \
+    -c "Set :CFBundleURLTypes:0:CFBundleURLSchemes:0 $FINDER_URL_SCHEME" \
+    "$STAGE/Contents/Info.plist"
+FINDER_EXTENSION_BUNDLE="$STAGE/Contents/PlugIns/$FINDER_EXTENSION_NAME.appex"
+FINDER_EXTENSION_PLIST="$FINDER_EXTENSION_BUNDLE/Contents/Info.plist"
+mkdir -p "$FINDER_EXTENSION_BUNDLE/Contents/MacOS"
+cp "build/$FINDER_EXTENSION_NAME" "$FINDER_EXTENSION_BUNDLE/Contents/MacOS/$FINDER_EXTENSION_NAME"
+cp Resources/FinderExtension/Info.plist "$FINDER_EXTENSION_PLIST"
+# An extension's version has to match the app that carries it.
+APP_SHORT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$STAGE/Contents/Info.plist")"
+APP_BUILD_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$STAGE/Contents/Info.plist")"
+/usr/libexec/PlistBuddy \
+    -c "Set :CFBundleIdentifier $FINDER_EXTENSION_ID" \
+    -c "Set :CFBundleDisplayName $APP_NAME" \
+    -c "Set :CFBundleShortVersionString $APP_SHORT_VERSION" \
+    -c "Set :CFBundleVersion $APP_BUILD_VERSION" \
+    -c "Set :PowerToolsHostBundleIdentifier $APP_BUNDLE_ID" \
+    -c "Set :PowerToolsFinderURLScheme $FINDER_URL_SCHEME" \
+    "$FINDER_EXTENSION_PLIST"
+printf 'XPC!????' > "$FINDER_EXTENSION_BUNDLE/Contents/PkgInfo"
 cp build/AppIcon.icns "$STAGE/Contents/Resources/AppIcon.icns"
 cp build/MenuBarIcon.png build/MenuBarIcon@2x.png build/BrandMark.png "$STAGE/Contents/Resources/"
 if [[ -f build/Assets.car ]]; then
@@ -631,11 +701,23 @@ codesign_now_playing_adapter() {
     fi
 }
 
+codesign_finder_extension() {
+    local target="$1"
+    if [[ -n "$DEVID" ]]; then
+        sign_finder_extension "$target" "$DEVID" "$DEVID"
+    elif legacy_identity_installed; then
+        sign_finder_extension "$target" "$LEGACY_IDENTITY" ""
+    else
+        sign_finder_extension "$target" "-" ""
+    fi
+}
+
 sign_bundle() {
     local bundle="$1"
     local executable="$bundle/Contents/MacOS/$EXECUTABLE"
     local helper="$bundle/Contents/Library/LaunchServices/$FAN_HELPER_ID"
     local adapter="$bundle/Contents/Frameworks/$NOW_PLAYING_ADAPTER"
+    local finder_extension="$bundle/Contents/PlugIns/$FINDER_EXTENSION_NAME.appex"
 
     if [[ -n "$DEVID" ]]; then
         echo "  signing with Developer ID (hardened runtime): $DEVID"
@@ -646,6 +728,7 @@ sign_bundle() {
     fi
     [[ -f "$helper" ]] && codesign_fan_helper "$helper"
     [[ -f "$adapter" ]] && codesign_now_playing_adapter "$adapter"
+    [[ -d "$finder_extension" ]] && codesign_finder_extension "$finder_extension"
     codesign_app "$bundle"
 
     # If local filesystem metadata invalidates the first signature, sign once
@@ -655,9 +738,11 @@ sign_bundle() {
         xattr -c -r "$bundle" 2>/dev/null || true
         [[ -f "$helper" ]] && codesign_fan_helper "$helper"
         [[ -f "$adapter" ]] && codesign_now_playing_adapter "$adapter"
+        [[ -d "$finder_extension" ]] && codesign_finder_extension "$finder_extension"
         codesign_app "$bundle"
     fi
     [[ -f "$executable" ]] && codesign --verify --strict "$executable"
+    [[ -d "$finder_extension" ]] && codesign --verify --strict "$finder_extension"
     [[ -f "$helper" ]] && codesign --verify --strict "$helper"
     [[ -f "$adapter" ]] && codesign --verify --strict "$adapter"
     codesign --verify --deep --strict "$bundle"

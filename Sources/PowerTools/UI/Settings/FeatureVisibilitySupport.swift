@@ -36,6 +36,7 @@ enum SettingsSectionAnchor: String, CaseIterable, Hashable {
     case dockClick
     case finderCutPaste
     case finderRename
+    case finderActions
     case clipboardHistory
     case pastePlain
     case quickLauncher
@@ -59,7 +60,7 @@ enum SettingsSectionAnchor: String, CaseIterable, Hashable {
              .middleClick, .mouseClickDebounce:
             return .mouse
         case .switcher, .dock, .dockClick: return .switcher
-        case .finderCutPaste, .finderRename: return .cutPaste
+        case .finderCutPaste, .finderRename, .finderActions: return .cutPaste
         case .clipboardHistory, .pastePlain: return .clipboard
         case .quickLauncher, .quickToggles, .micMute, .cameraPreview, .scratchpad, .cleaningMode:
             return .quickTools
@@ -197,6 +198,8 @@ extension AppFeature {
             return FeatureSettingsDestination(.cutPaste, sectionAnchor: .finderCutPaste)
         case .finderRename:
             return FeatureSettingsDestination(.cutPaste, sectionAnchor: .finderRename)
+        case .finderActions:
+            return FeatureSettingsDestination(.cutPaste, sectionAnchor: .finderActions)
         case .shelf: return FeatureSettingsDestination(.shelf)
         case .urlCleaner: return FeatureSettingsDestination(.urlCleaner)
         case .diskImageInstaller: return FeatureSettingsDestination(.features)
@@ -275,7 +278,7 @@ enum FeatureVisibilitySupport {
         case .autoQuit: return [.autoQuit]
         case .quitProtection: return [.quitWindowProtection]
         case .clipboard: return [.clipboardHistory, .pastePlain, .finderCutPaste]
-        case .cutPaste: return [.finderCutPaste, .finderRename]
+        case .cutPaste: return [.finderCutPaste, .finderRename, .finderActions]
         case .shelf: return [.shelf]
         case .media: return [.mediaTools]
         case .quickTools: return [.quickLauncher, .quickToggles, .micMute,

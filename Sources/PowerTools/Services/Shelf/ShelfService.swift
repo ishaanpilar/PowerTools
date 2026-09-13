@@ -1486,6 +1486,23 @@ final class ShelfService: ObservableObject {
         return append(batchItem(children: children))
     }
 
+    /// Shelves files handed over without a drag, such as from the Finder
+    /// right-click menu, and brings the shelf up to show them.
+    @discardableResult
+    func add(fileURLs urls: [URL]) -> Bool {
+        guard AppFeature.shelf.isAvailable,
+              UserDefaults.standard.bool(forKey: DefaultsKey.shelfEnabled),
+              let first = urls.first else { return false }
+        let added = urls.count > 1 ? addFileBatch(urls) : append(fileItem(for: first))
+        guard added else { return false }
+        if dockedFeatureOn {
+            expandDocked()
+        } else if !isVisible {
+            summon()
+        }
+        return true
+    }
+
     private enum ContentThumbnailKind {
         case image
         case video

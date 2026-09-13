@@ -119,6 +119,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         // One binding per feature: only available features are touched, so a
         // feature switched off in the hub never even instantiates here.
         FeatureRuntime.shared.syncAtLaunch()
+        finishedLaunching = true
+        let launchURLs = pendingOpenURLs
+        pendingOpenURLs = []
+        DispatchQueue.main.async { [weak self] in self?.handleOpenURLs(launchURLs) }
         if AppFeature.monitorPower.isAvailable, PowerSampler.hasInternalBattery {
             MaxCapacityProbe.shared.refreshIfStale()
         }
@@ -202,6 +206,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
     /// quit properly. Finding the mark still set means the previous run died
     /// on the way up, and this one leaves the optional windows out of it.
     private var startupOfPreviousRunDidNotFinish = false
+
+    // MARK: - Opened URLs
+
+    /// URLs that arrived before launch finished. macOS can deliver the one
+    /// that launched the app ahead of applicationDidFinishLaunching, before
+    /// any feature is up to act on it.
+    private var pendingOpenURLs: [URL] = []
+    private var finishedLaunching = false
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard finishedLaunching else {
+            pendingOpenURLs += urls
+            return
+        }
+        handleOpenURLs(urls)
+    }
+
+    private func handleOpenURLs(_ urls: [URL]) {
+        guard AppFeature.finderActions.isAvailable else { return }
+        for url in urls {
+            FinderActionsService.shared.handle(url)
+        }
+    }
 
     /// How long a run has to last before its start counts as having worked.
     /// Comfortably past the point where the reported failures happened.

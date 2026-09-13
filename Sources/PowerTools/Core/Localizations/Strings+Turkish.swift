@@ -712,7 +712,6 @@ extension Strings {
         diskPurgeable: "silinebilir",
         diskCriticallyLow: "Depolama alanı kritik derecede az",
         diskReclaimableFormat: "%@ kadar alan boşaltılabilir",
-        diskReclaimableCaption: "PowerTools’un Cleaner’ı güvenle kaldırılabilecek önbellekleri, günlükleri ve kalıntı dosyaları bulabilir.",
         diskOpenCleaner: "Cleaner’ı Aç",
         diskInternal: "Dahili",
         diskExternal: "Harici",

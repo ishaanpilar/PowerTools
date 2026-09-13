@@ -713,7 +713,6 @@ extension Strings {
         diskPurgeable: "可清除",
         diskCriticallyLow: "儲存空間嚴重不足",
         diskReclaimableFormat: "最多可釋放 %@",
-        diskReclaimableCaption: "PowerTools 的清理工具可以找到可安全移除的快取、日誌和殘留檔案。",
         diskOpenCleaner: "開啟清理工具",
         diskInternal: "內置",
         diskExternal: "外置",

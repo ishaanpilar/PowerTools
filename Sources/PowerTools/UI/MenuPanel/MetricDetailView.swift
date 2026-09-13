@@ -436,27 +436,23 @@ struct MetricDetailView: View {
     }
 
     private func diskReclaimCallout(_ purgeable: UInt64) -> some View {
-        HStack(alignment: .top, spacing: 9) {
+        HStack(spacing: 9) {
             Image(systemName: "sparkles")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(PanelMetricColor.yellow(for: colorScheme))
-                .frame(width: 16)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(String(format: l10n.s.diskReclaimableFormat, MetricFormat.diskBytes(purgeable)))
-                    .font(.system(size: 11, weight: .semibold))
-                Text(l10n.s.diskReclaimableCaption)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button(l10n.s.diskOpenCleaner) {
-                    SettingsRouter.shared.page = .cleaner
-                    appDelegate()?.openSettingsWindow()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.mini)
+            Text(String(format: l10n.s.diskReclaimableFormat, MetricFormat.diskBytes(purgeable)))
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Button(l10n.s.diskOpenCleaner) {
+                SettingsRouter.shared.page = .cleaner
+                appDelegate()?.openSettingsWindow()
             }
+            .buttonStyle(.bordered)
+            .controlSize(.mini)
         }
         .padding(9)
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(PanelMetricColor.yellow(for: colorScheme).opacity(0.10))

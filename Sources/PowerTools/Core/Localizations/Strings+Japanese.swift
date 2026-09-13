@@ -712,7 +712,6 @@ extension Strings {
         diskPurgeable: "パージ可能",
         diskCriticallyLow: "空き容量が危機的に少なくなっています",
         diskReclaimableFormat: "最大 %@ を解放できます",
-        diskReclaimableCaption: "PowerToolsのCleanerは、安全に削除できるキャッシュ、ログ、残留ファイルを見つけます。",
         diskOpenCleaner: "Cleanerを開く",
         diskInternal: "内蔵",
         diskExternal: "外部",

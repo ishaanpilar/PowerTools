@@ -857,7 +857,6 @@ struct Strings {
     let diskCriticallyLow: String
     /// %@ is the freeable byte amount, already formatted (e.g. "15.4 GB").
     let diskReclaimableFormat: String
-    let diskReclaimableCaption: String
     let diskOpenCleaner: String
     let diskInternal: String
     let diskExternal: String
@@ -1901,7 +1900,6 @@ extension Strings {
         diskPurgeable: "purgável",
         diskCriticallyLow: "Armazenamento criticamente baixo",
         diskReclaimableFormat: "Até %@ podem ser liberados",
-        diskReclaimableCaption: "O Cleaner do PowerTools pode encontrar caches, logs e arquivos residuais seguros para remover.",
         diskOpenCleaner: "Abrir o Cleaner",
         diskInternal: "Interno",
         diskExternal: "Externo",
@@ -2932,7 +2930,6 @@ extension Strings {
         diskPurgeable: "purgeable",
         diskCriticallyLow: "Critically low storage",
         diskReclaimableFormat: "Up to %@ can be freed",
-        diskReclaimableCaption: "PowerTools’ Cleaner can find caches, logs and leftover files safe to remove.",
         diskOpenCleaner: "Open Cleaner",
         diskInternal: "Internal",
         diskExternal: "External",

@@ -713,7 +713,6 @@ extension Strings {
         diskPurgeable: "삭제 가능",
         diskCriticallyLow: "저장 공간이 매우 부족합니다",
         diskReclaimableFormat: "최대 %@ 확보 가능",
-        diskReclaimableCaption: "PowerTools의 Cleaner가 안전하게 제거할 수 있는 캐시, 로그, 잔여 파일을 찾아줍니다.",
         diskOpenCleaner: "Cleaner 열기",
         diskInternal: "내장",
         diskExternal: "외장",

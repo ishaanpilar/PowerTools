@@ -712,7 +712,6 @@ extension Strings {
         diskPurgeable: "löschbar",
         diskCriticallyLow: "Kritisch wenig Speicherplatz",
         diskReclaimableFormat: "Bis zu %@ können freigegeben werden",
-        diskReclaimableCaption: "Der PowerTools-Cleaner findet Caches, Protokolle und Restdateien, die sich gefahrlos entfernen lassen.",
         diskOpenCleaner: "Cleaner öffnen",
         diskInternal: "Intern",
         diskExternal: "Extern",

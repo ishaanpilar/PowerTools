@@ -713,7 +713,6 @@ extension Strings {
         diskPurgeable: "очищаемый",
         diskCriticallyLow: "Критически мало места",
         diskReclaimableFormat: "Можно освободить до %@",
-        diskReclaimableCaption: "Cleaner в PowerTools найдёт кеши, журналы и остаточные файлы, которые можно безопасно удалить.",
         diskOpenCleaner: "Открыть Cleaner",
         diskInternal: "Внутренний",
         diskExternal: "Внешний",

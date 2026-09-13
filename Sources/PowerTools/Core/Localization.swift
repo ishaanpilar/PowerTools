@@ -854,6 +854,11 @@ struct Strings {
     let diskFree: String
     let diskAvailable: String
     let diskPurgeable: String
+    let diskCriticallyLow: String
+    /// %@ is the freeable byte amount, already formatted (e.g. "15.4 GB").
+    let diskReclaimableFormat: String
+    let diskReclaimableCaption: String
+    let diskOpenCleaner: String
     let diskInternal: String
     let diskExternal: String
     let diskSelect: String
@@ -953,6 +958,9 @@ struct Strings {
     let monitorOrderHint: String
     let monitorDashboardCardsSection: String
     let monitorDashboardCardsHint: String
+    /// Shown briefly on a fresh panel open, while a background-trickled
+    /// reading is on screen and a live one is still on its way in.
+    let monitorRefreshingLabel: String
     let obStepPanelTitle: String
     let obStepPanelBody: String
     let obStepPanelNavigationTitle: String
@@ -1891,6 +1899,10 @@ extension Strings {
         diskFree: "livre",
         diskAvailable: "disponível",
         diskPurgeable: "purgável",
+        diskCriticallyLow: "Armazenamento criticamente baixo",
+        diskReclaimableFormat: "Até %@ podem ser liberados",
+        diskReclaimableCaption: "O Cleaner do PowerTools pode encontrar caches, logs e arquivos residuais seguros para remover.",
+        diskOpenCleaner: "Abrir o Cleaner",
         diskInternal: "Interno",
         diskExternal: "Externo",
         diskSelect: "Selecionar disco",
@@ -1986,6 +1998,7 @@ extension Strings {
         monitorOrderHint: "Arraste para reordenar as seções do painel e use o olho para mostrar ou ocultar cada uma.",
         monitorDashboardCardsSection: "Cartões do painel",
         monitorDashboardCardsHint: "Arraste para reordenar os cartões do painel e use o olho para mostrar ou ocultar cada um.",
+        monitorRefreshingLabel: "Atualizando…",
         obStepPanelTitle: "O que aparece no painel",
         obStepPanelBody: "Abra cada bloco e escolha exatamente o que mostrar quando você clica no ícone.",
         obStepPanelNavigationTitle: "Painel por seções",
@@ -2917,6 +2930,10 @@ extension Strings {
         diskFree: "free",
         diskAvailable: "available",
         diskPurgeable: "purgeable",
+        diskCriticallyLow: "Critically low storage",
+        diskReclaimableFormat: "Up to %@ can be freed",
+        diskReclaimableCaption: "PowerTools’ Cleaner can find caches, logs and leftover files safe to remove.",
+        diskOpenCleaner: "Open Cleaner",
         diskInternal: "Internal",
         diskExternal: "External",
         diskSelect: "Select disk",
@@ -3012,6 +3029,7 @@ extension Strings {
         monitorOrderHint: "Drag to reorder the panel sections and use the eye to show or hide each one.",
         monitorDashboardCardsSection: "Dashboard cards",
         monitorDashboardCardsHint: "Drag to reorder the dashboard cards and use the eye to show or hide each one.",
+        monitorRefreshingLabel: "Refreshing…",
         obStepPanelTitle: "What’s in the panel",
         obStepPanelBody: "Open each block and pick exactly what shows when you click the icon.",
         obStepPanelNavigationTitle: "Section-based panel",

@@ -449,12 +449,18 @@ struct MenuPanelView: View {
 private struct MenuPanelHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var monitor = SystemMonitor.shared
 
     var body: some View {
         HStack(spacing: 8) {
             BrandMark(width: 34, tint: markTint)
                 .frame(height: 24)
                 .accessibilityHidden(true)
+
+            if monitor.isRefreshing {
+                RefreshingIndicator()
+                    .transition(.opacity)
+            }
 
             if AppInfo.isBeta {
                 Text(l10n.s.betaBadgeLabel.uppercased())
@@ -486,10 +492,34 @@ private struct MenuPanelHeader: View {
         .frame(height: 28)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.2), value: monitor.isRefreshing)
     }
 
     private var markTint: Color {
         colorScheme == .light ? Color(white: 0.03) : .white
+    }
+}
+
+/// A small spinning glyph shown only while the panel just woke from an idle
+/// trickle and is catching up to a live reading: what's on screen already
+/// (up to a trickle tick old) is real, this just says a fresher one is
+/// landing any moment.
+private struct RefreshingIndicator: View {
+    @ObservedObject private var l10n = L10n.shared
+    @State private var spinning = false
+
+    var body: some View {
+        Image(systemName: "arrow.triangle.2.circlepath")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .rotationEffect(.degrees(spinning ? 360 : 0))
+            .onAppear {
+                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+                    spinning = true
+                }
+            }
+            .help(l10n.s.monitorRefreshingLabel)
+            .accessibilityLabel(l10n.s.monitorRefreshingLabel)
     }
 }
 

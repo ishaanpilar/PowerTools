@@ -294,7 +294,15 @@ extension MonitorAlertFeatureStrings {
         batteryTemperature: "높은 배터리 온도",
         batteryTemperatureThreshold: "온도",
         batteryTemperatureTitle: "배터리 과열",
-        batteryTemperatureBodyFormat: "배터리 온도가 %d °C에 도달했습니다."
+        batteryTemperatureBodyFormat: "배터리 온도가 %d °C에 도달했습니다.",
+        thermal: "발열로 인한 성능 제한",
+        thermalRecovery: "제한이 풀릴 때도 알림",
+        thermalHeavyTitle: "Mac 성능이 제한되고 있음",
+        thermalHeavyBody: "발열 부하가 높아 macOS가 Mac을 식히려고 속도를 낮추고 있습니다.",
+        thermalCriticalTitle: "발열 부하 심각",
+        thermalCriticalBody: "macOS가 Mac을 식히려고 속도를 크게 낮추고 있습니다.",
+        thermalRecoveredTitle: "성능 제한 해제됨",
+        thermalRecoveredBody: "발열 부하가 정상으로 돌아왔습니다."
     )
 }
 
@@ -2112,6 +2120,14 @@ struct MonitorAlertFeatureStrings {
     let batteryTemperatureThreshold: String
     let batteryTemperatureTitle: String
     let batteryTemperatureBodyFormat: String
+    let thermal: String
+    let thermalRecovery: String
+    let thermalHeavyTitle: String
+    let thermalHeavyBody: String
+    let thermalCriticalTitle: String
+    let thermalCriticalBody: String
+    let thermalRecoveredTitle: String
+    let thermalRecoveredBody: String
 
     static let enUS = MonitorAlertFeatureStrings(
         section: "Alerts",
@@ -2145,7 +2161,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "High battery temperature",
         batteryTemperatureThreshold: "Temperature above",
         batteryTemperatureTitle: "Hot battery",
-        batteryTemperatureBodyFormat: "Battery reached %d °C."
+        batteryTemperatureBodyFormat: "Battery reached %d °C.",
+        thermal: "Thermal throttling",
+        thermalRecovery: "Also when throttling clears",
+        thermalHeavyTitle: "Mac is throttling",
+        thermalHeavyBody: "Thermal pressure is heavy, so macOS is slowing the Mac to cool it.",
+        thermalCriticalTitle: "Critical thermal pressure",
+        thermalCriticalBody: "macOS is slowing the Mac sharply to cool it.",
+        thermalRecoveredTitle: "Throttling cleared",
+        thermalRecoveredBody: "Thermal pressure is back to normal."
     )
 
     static let ptBR = MonitorAlertFeatureStrings(
@@ -2180,7 +2204,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "Temperatura alta da bateria",
         batteryTemperatureThreshold: "Temperatura acima de",
         batteryTemperatureTitle: "Bateria quente",
-        batteryTemperatureBodyFormat: "A bateria chegou a %d °C."
+        batteryTemperatureBodyFormat: "A bateria chegou a %d °C.",
+        thermal: "Limitação térmica",
+        thermalRecovery: "Também quando a limitação terminar",
+        thermalHeavyTitle: "O Mac está sendo limitado",
+        thermalHeavyBody: "A pressão térmica está alta, então o macOS está desacelerando o Mac para resfriá-lo.",
+        thermalCriticalTitle: "Pressão térmica crítica",
+        thermalCriticalBody: "O macOS está desacelerando bastante o Mac para resfriá-lo.",
+        thermalRecoveredTitle: "Limitação encerrada",
+        thermalRecoveredBody: "A pressão térmica voltou ao normal."
     )
 
     static let tr = MonitorAlertFeatureStrings(
@@ -2215,7 +2247,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "Yüksek pil sıcaklığı",
         batteryTemperatureThreshold: "Sıcaklık şu değerin üstünde",
         batteryTemperatureTitle: "Pil sıcak",
-        batteryTemperatureBodyFormat: "Pil %d °C değerine ulaştı."
+        batteryTemperatureBodyFormat: "Pil %d °C değerine ulaştı.",
+        thermal: "Termal kısıtlama",
+        thermalRecovery: "Kısıtlama bittiğinde de",
+        thermalHeavyTitle: "Mac kısıtlanıyor",
+        thermalHeavyBody: "Termal baskı yüksek; macOS, Mac’i soğutmak için yavaşlatıyor.",
+        thermalCriticalTitle: "Kritik termal baskı",
+        thermalCriticalBody: "macOS, Mac’i soğutmak için belirgin şekilde yavaşlatıyor.",
+        thermalRecoveredTitle: "Kısıtlama sona erdi",
+        thermalRecoveredBody: "Termal baskı normale döndü."
     )
 
     static let ru = MonitorAlertFeatureStrings(
@@ -2250,7 +2290,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "Высокая температура батареи",
         batteryTemperatureThreshold: "Температура выше",
         batteryTemperatureTitle: "Батарея перегрета",
-        batteryTemperatureBodyFormat: "Батарея достигла %d °C."
+        batteryTemperatureBodyFormat: "Батарея достигла %d °C.",
+        thermal: "Тепловой троттлинг",
+        thermalRecovery: "И когда троттлинг закончится",
+        thermalHeavyTitle: "Mac замедляется из-за нагрева",
+        thermalHeavyBody: "Высокое тепловое давление: macOS замедляет Mac, чтобы охладить его.",
+        thermalCriticalTitle: "Критическое тепловое давление",
+        thermalCriticalBody: "macOS сильно замедляет Mac, чтобы охладить его.",
+        thermalRecoveredTitle: "Троттлинг прекратился",
+        thermalRecoveredBody: "Тепловое давление вернулось в норму."
     )
 
     static let es = MonitorAlertFeatureStrings(
@@ -2285,7 +2333,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "Temperatura de la batería alta",
         batteryTemperatureThreshold: "Temperatura por encima de",
         batteryTemperatureTitle: "Batería caliente",
-        batteryTemperatureBodyFormat: "La batería llegó a %d °C."
+        batteryTemperatureBodyFormat: "La batería llegó a %d °C.",
+        thermal: "Limitación térmica",
+        thermalRecovery: "También cuando termine la limitación",
+        thermalHeavyTitle: "El Mac se está limitando",
+        thermalHeavyBody: "La presión térmica es alta, así que macOS está ralentizando el Mac para enfriarlo.",
+        thermalCriticalTitle: "Presión térmica crítica",
+        thermalCriticalBody: "macOS está ralentizando mucho el Mac para enfriarlo.",
+        thermalRecoveredTitle: "Limitación terminada",
+        thermalRecoveredBody: "La presión térmica volvió a la normalidad."
     )
 
     static let de = MonitorAlertFeatureStrings(
@@ -2320,7 +2376,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "Hohe Akkutemperatur",
         batteryTemperatureThreshold: "Temperatur über",
         batteryTemperatureTitle: "Heißer Akku",
-        batteryTemperatureBodyFormat: "Der Akku hat %d °C erreicht."
+        batteryTemperatureBodyFormat: "Der Akku hat %d °C erreicht.",
+        thermal: "Thermische Drosselung",
+        thermalRecovery: "Auch wenn die Drosselung endet",
+        thermalHeavyTitle: "Mac wird gedrosselt",
+        thermalHeavyBody: "Die thermische Belastung ist hoch, deshalb bremst macOS den Mac zum Kühlen.",
+        thermalCriticalTitle: "Kritische thermische Belastung",
+        thermalCriticalBody: "macOS bremst den Mac stark, um ihn zu kühlen.",
+        thermalRecoveredTitle: "Drosselung beendet",
+        thermalRecoveredBody: "Die thermische Belastung ist wieder normal."
     )
 
     static let fr = MonitorAlertFeatureStrings(
@@ -2355,7 +2419,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "Température de la batterie élevée",
         batteryTemperatureThreshold: "Température au-dessus de",
         batteryTemperatureTitle: "Batterie chaude",
-        batteryTemperatureBodyFormat: "La batterie a atteint %d °C."
+        batteryTemperatureBodyFormat: "La batterie a atteint %d °C.",
+        thermal: "Bridage thermique",
+        thermalRecovery: "Aussi quand le bridage cesse",
+        thermalHeavyTitle: "Le Mac est bridé",
+        thermalHeavyBody: "La pression thermique est élevée\u{00A0}: macOS ralentit le Mac pour le refroidir.",
+        thermalCriticalTitle: "Pression thermique critique",
+        thermalCriticalBody: "macOS ralentit fortement le Mac pour le refroidir.",
+        thermalRecoveredTitle: "Bridage terminé",
+        thermalRecoveredBody: "La pression thermique est revenue à la normale."
     )
 
     static let it = MonitorAlertFeatureStrings(
@@ -2390,7 +2462,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "Temperatura batteria alta",
         batteryTemperatureThreshold: "Temperatura sopra",
         batteryTemperatureTitle: "Batteria calda",
-        batteryTemperatureBodyFormat: "La batteria ha raggiunto %d °C."
+        batteryTemperatureBodyFormat: "La batteria ha raggiunto %d °C.",
+        thermal: "Limitazione termica",
+        thermalRecovery: "Anche quando la limitazione termina",
+        thermalHeavyTitle: "Il Mac viene limitato",
+        thermalHeavyBody: "La pressione termica è alta, quindi macOS rallenta il Mac per raffreddarlo.",
+        thermalCriticalTitle: "Pressione termica critica",
+        thermalCriticalBody: "macOS rallenta molto il Mac per raffreddarlo.",
+        thermalRecoveredTitle: "Limitazione terminata",
+        thermalRecoveredBody: "La pressione termica è tornata normale."
     )
 
     static let ja = MonitorAlertFeatureStrings(
@@ -2425,7 +2505,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "バッテリー温度が高い",
         batteryTemperatureThreshold: "温度が次を超過",
         batteryTemperatureTitle: "バッテリーが高温",
-        batteryTemperatureBodyFormat: "バッテリーが %d °C に達しました。"
+        batteryTemperatureBodyFormat: "バッテリーが %d °C に達しました。",
+        thermal: "熱によるスロットリング",
+        thermalRecovery: "解消したときも通知",
+        thermalHeavyTitle: "Macが減速しています",
+        thermalHeavyBody: "熱負荷が高いため、macOSが冷却のためにMacを減速しています。",
+        thermalCriticalTitle: "熱負荷が危険な状態です",
+        thermalCriticalBody: "macOSが冷却のためにMacを大幅に減速しています。",
+        thermalRecoveredTitle: "スロットリングが解消しました",
+        thermalRecoveredBody: "熱負荷は通常に戻りました。"
     )
 
     static let zhHans = MonitorAlertFeatureStrings(
@@ -2460,7 +2548,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "电池温度过高",
         batteryTemperatureThreshold: "温度高于",
         batteryTemperatureTitle: "电池过热",
-        batteryTemperatureBodyFormat: "电池已达到 %d °C。"
+        batteryTemperatureBodyFormat: "电池已达到 %d °C。",
+        thermal: "热降频",
+        thermalRecovery: "降频结束时也通知",
+        thermalHeavyTitle: "Mac 正在降频",
+        thermalHeavyBody: "热压力较高，macOS 正在降低 Mac 的速度以散热。",
+        thermalCriticalTitle: "热压力严重",
+        thermalCriticalBody: "macOS 正在大幅降低 Mac 的速度以散热。",
+        thermalRecoveredTitle: "降频已结束",
+        thermalRecoveredBody: "热压力已恢复正常。"
     )
 
     static let zhTW = MonitorAlertFeatureStrings(
@@ -2495,7 +2591,15 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "電池溫度過高",
         batteryTemperatureThreshold: "溫度高於",
         batteryTemperatureTitle: "電池過熱",
-        batteryTemperatureBodyFormat: "電池已達到 %d °C。"
+        batteryTemperatureBodyFormat: "電池已達到 %d °C。",
+        thermal: "熱降頻",
+        thermalRecovery: "降頻結束時也通知",
+        thermalHeavyTitle: "Mac 正在降頻",
+        thermalHeavyBody: "熱壓力偏高，macOS 正在降低 Mac 的速度以散熱。",
+        thermalCriticalTitle: "熱壓力嚴重",
+        thermalCriticalBody: "macOS 正在大幅降低 Mac 的速度以散熱。",
+        thermalRecoveredTitle: "降頻已結束",
+        thermalRecoveredBody: "熱壓力已恢復正常。"
     )
 
     static let zhHK = MonitorAlertFeatureStrings(
@@ -2530,6 +2634,14 @@ struct MonitorAlertFeatureStrings {
         batteryTemperature: "電池溫度過高",
         batteryTemperatureThreshold: "溫度高於",
         batteryTemperatureTitle: "電池過熱",
-        batteryTemperatureBodyFormat: "電池已達到 %d °C。"
+        batteryTemperatureBodyFormat: "電池已達到 %d °C。",
+        thermal: "熱降頻",
+        thermalRecovery: "降頻結束時也通知",
+        thermalHeavyTitle: "Mac 正在降頻",
+        thermalHeavyBody: "熱壓力偏高，macOS 正在降低 Mac 的速度以散熱。",
+        thermalCriticalTitle: "熱壓力嚴重",
+        thermalCriticalBody: "macOS 正在大幅降低 Mac 的速度以散熱。",
+        thermalRecoveredTitle: "降頻已結束",
+        thermalRecoveredBody: "熱壓力已恢復正常。"
     )
 }

@@ -15,6 +15,9 @@ final class MonitorAlertService {
     private var cpuTemperatureGate = SustainedAlertGate()
     private var batteryTemperatureGate = SustainedAlertGate()
     private var lastSent: [MonitorAlertKind: Date] = [:]
+    /// The last thermal pressure level the thermal alert saw, so it can fire
+    /// on a change of level rather than on every snapshot.
+    private var lastThermalPressure: ThermalPressure?
 
     private init() {}
 
@@ -59,6 +62,7 @@ final class MonitorAlertService {
         cpuUsageGate.reset()
         cpuTemperatureGate.reset()
         batteryTemperatureGate.reset()
+        lastThermalPressure = nil
     }
 
     private func evaluate(_ snapshot: SystemSnapshot) {
@@ -67,6 +71,7 @@ final class MonitorAlertService {
             cpuUsageGate.reset()
             cpuTemperatureGate.reset()
             batteryTemperatureGate.reset()
+            lastThermalPressure = nil
             return
         }
         let strings = FeatureStrings.monitorAlerts(L10n.shared.language)
@@ -93,6 +98,12 @@ final class MonitorAlertService {
             evaluateBatteryTemperature(snapshot, defaults: defaults, strings: strings)
         } else {
             batteryTemperatureGate.reset()
+        }
+
+        if alertOn(DefaultsKey.monitorAlertThermal, .monitorCPU) {
+            evaluateThermal(snapshot, defaults: defaults, strings: strings)
+        } else {
+            lastThermalPressure = nil
         }
 
         if alertOn(DefaultsKey.monitorAlertMemory, .monitorMemory),
@@ -186,6 +197,30 @@ final class MonitorAlertService {
                           Int(temperature.rounded())))
     }
 
+    /// Fires on a change of level rather than on a sustained reading: the
+    /// kernel's thermal pressure is already a governed state, not a raw sensor
+    /// that spikes, so the transition is the event worth reporting. The
+    /// per-kind cooldown in `send` keeps a level that flaps from repeating.
+    private func evaluateThermal(_ snapshot: SystemSnapshot,
+                                 defaults: UserDefaults,
+                                 strings: MonitorAlertFeatureStrings) {
+        // An unreadable level says nothing; keep the last known one rather
+        // than treating the gap as a recovery.
+        guard let pressure = snapshot.thermalPressure else { return }
+        let previous = lastThermalPressure ?? .nominal
+        lastThermalPressure = pressure
+        guard pressure != previous else { return }
+
+        if pressure == .critical {
+            send(.thermalCritical, title: strings.thermalCriticalTitle, body: strings.thermalCriticalBody)
+        } else if pressure.isThrottling, !previous.isThrottling {
+            send(.thermalHeavy, title: strings.thermalHeavyTitle, body: strings.thermalHeavyBody)
+        } else if !pressure.isThrottling, previous.isThrottling,
+                  defaults.bool(forKey: DefaultsKey.monitorAlertThermalRecovery) {
+            send(.thermalRecovered, title: strings.thermalRecoveredTitle, body: strings.thermalRecoveredBody)
+        }
+    }
+
     private func send(_ kind: MonitorAlertKind, title: String, body: String) {
         let now = Date()
         let minutes = Defaults.sanitizedMonitorAlertCooldown(
@@ -201,4 +236,5 @@ final class MonitorAlertService {
 
 private enum MonitorAlertKind: Hashable {
     case cpu, cpuTemperature, memory, disk, battery, batteryTemperature
+    case thermalHeavy, thermalCritical, thermalRecovered
 }

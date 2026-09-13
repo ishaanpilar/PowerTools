@@ -395,6 +395,8 @@ enum DefaultsKey {
     static let monitorAlertDiskFreePercent = "monitorAlertDiskFreePercent"
     static let monitorAlertBatteryPercent = "monitorAlertBatteryPercent"
     static let monitorAlertCooldownMinutes = "monitorAlertCooldownMinutes"
+    static let monitorAlertThermal = "monitorAlertThermal"
+    static let monitorAlertThermalRecovery = "monitorAlertThermalRecovery"
     // Menu panel layout — the order the major sections appear in and which are
     // collapsed, both comma-joined section ids (see PanelSectionID). Absent keys
     // mean the canonical order and nothing collapsed, so no defaults registration.
@@ -1196,6 +1198,8 @@ enum Defaults {
         DefaultsKey.monitorAlertMemory: false,
         DefaultsKey.monitorAlertDisk: false,
         DefaultsKey.monitorAlertBattery: false,
+        DefaultsKey.monitorAlertThermal: false,
+        DefaultsKey.monitorAlertThermalRecovery: false,
         DefaultsKey.monitorAlertCPUThreshold: 90,
         DefaultsKey.monitorAlertCPUTemperatureThreshold: 90,
         DefaultsKey.monitorAlertBatteryTemperatureThreshold: 40,

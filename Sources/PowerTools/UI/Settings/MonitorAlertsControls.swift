@@ -15,6 +15,8 @@ struct MonitorAlertsControls: View {
     @AppStorage(DefaultsKey.monitorAlertMemory) private var alertMemory = false
     @AppStorage(DefaultsKey.monitorAlertDisk) private var alertDisk = false
     @AppStorage(DefaultsKey.monitorAlertBattery) private var alertBattery = false
+    @AppStorage(DefaultsKey.monitorAlertThermal) private var alertThermal = false
+    @AppStorage(DefaultsKey.monitorAlertThermalRecovery) private var alertThermalRecovery = false
     @AppStorage(DefaultsKey.monitorAlertCPUThreshold) private var alertCPUThreshold = 90
     @AppStorage(DefaultsKey.monitorAlertCPUTemperatureThreshold) private var alertCPUTemperatureThreshold = 90
     @AppStorage(DefaultsKey.monitorAlertBatteryTemperatureThreshold) private var alertBatteryTemperatureThreshold = 40
@@ -46,6 +48,10 @@ struct MonitorAlertsControls: View {
                             value: $alertCPUTemperatureThreshold,
                             in: 70...105,
                             step: 5)
+                }
+                Toggle(text.thermal, isOn: $alertThermal)
+                if alertThermal {
+                    Toggle(text.thermalRecovery, isOn: $alertThermalRecovery)
                 }
             }
             if AppFeature.monitorMemory.isAvailable {
@@ -109,6 +115,7 @@ struct MonitorAlertsControls: View {
         .onChange(of: alertMemory) { _, _ in MonitorAlertService.shared.syncWithPreferences(); refreshNotificationStatus() }
         .onChange(of: alertDisk) { _, _ in MonitorAlertService.shared.syncWithPreferences(); refreshNotificationStatus() }
         .onChange(of: alertBattery) { _, _ in MonitorAlertService.shared.syncWithPreferences(); refreshNotificationStatus() }
+        .onChange(of: alertThermal) { _, _ in MonitorAlertService.shared.syncWithPreferences(); refreshNotificationStatus() }
         .onChange(of: alertCPUThreshold) { _, _ in sanitizeAlertValues() }
         .onChange(of: alertCPUTemperatureThreshold) { _, _ in sanitizeAlertValues() }
         .onChange(of: alertBatteryTemperatureThreshold) { _, _ in sanitizeAlertValues() }
@@ -118,7 +125,7 @@ struct MonitorAlertsControls: View {
     }
 
     private var anyAlertEnabled: Bool {
-        alertCPU || alertCPUTemperature || alertMemory || alertDisk
+        alertCPU || alertCPUTemperature || alertThermal || alertMemory || alertDisk
             || (PowerSampler.hasInternalBattery && (alertBatteryTemperature || alertBattery))
     }
 

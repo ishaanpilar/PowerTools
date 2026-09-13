@@ -84,6 +84,15 @@ struct SystemSnapshot {
     var batteryHistory: [Double] = []      // 0...1 charge level
 }
 
+/// One SMC temperature sensor, as shown in the Settings sensor list.
+struct TemperatureSensorReading: Identifiable, Equatable {
+    let name: String
+    let value: Double          // °C
+    /// Whether PowerTools' CPU temperature already draws on this sensor.
+    let isCPU: Bool
+    var id: String { name }
+}
+
 /// What parts of the menu panel are actually visible right now. The popover can
 /// be open on Keep Awake, Utilities or Controls; in those states the monitor
 /// should not wake the heavier samplers just because the user clicked the icon.
@@ -149,6 +158,9 @@ final class SystemMonitor: ObservableObject {
     private var tempKeysPrepared = false
     private var fanKeysPrepared = false
     private var cpuTemperaturePlatform: CPUTemperaturePlatform = .generic
+    /// Every `T*` SMC key, enumerated once on first use by the Settings sensor
+    /// list. Enumeration walks the whole key table, so it is never repeated.
+    private var allTemperatureKeys: [SMCClient.Key]?
 
     // Samplers
     private let networkSampler = NetworkSampler()
@@ -474,6 +486,7 @@ final class SystemMonitor: ObservableObject {
         let alertMemory = defaults.bool(forKey: DefaultsKey.monitorAlertMemory)
         let alertDisk = defaults.bool(forKey: DefaultsKey.monitorAlertDisk)
         let alertBattery = hasInternalBattery && defaults.bool(forKey: DefaultsKey.monitorAlertBattery)
+        let alertThermal = defaults.bool(forKey: DefaultsKey.monitorAlertThermal)
 
         plan.needCPU = panelCPU || defaults.bool(forKey: DefaultsKey.menuBarCPU) || alertCPU
         plan.needMemory = panelMemory || defaults.bool(forKey: DefaultsKey.menuBarMemory) || alertMemory
@@ -499,7 +512,7 @@ final class SystemMonitor: ObservableObject {
         // a temperature in degrees cannot tell you on its own. Reading it is a
         // shared-memory load, so it is gated on being shown, not on cost.
         plan.needThermalPressure = panelTemps || menuPanelNeeds.thermal
-            || menuPanelNeeds.cpuTemperature || alertCPUTemperature
+            || menuPanelNeeds.cpuTemperature || alertThermal
         // Intel only, and it costs a subprocess, so never speculatively.
         plan.needThrottle = ThrottleReader.isSupported && (panelTemps || menuPanelNeeds.thermal)
         plan.needBatteryTemperature = hasInternalBattery && (
@@ -1003,6 +1016,35 @@ final class SystemMonitor: ObservableObject {
         readings += temperatureReadings(of: fallbackCPUKeys)
         return TemperatureSensorSelector.displayedCPUTemperature(readings: readings,
                                                                  platform: cpuTemperaturePlatform)
+    }
+
+    /// Live values for every temperature sensor the SMC reports, for the
+    /// Settings sensor list. Runs on the sampling queue so it never races the
+    /// monitor's own SMC reads. Read-only: it does not change which sensors
+    /// the CPU temperature uses; `isCPU` only marks the ones it already does.
+    func temperatureSensorReadings() async -> [TemperatureSensorReading] {
+        await withCheckedContinuation { continuation in
+            queue.async { [weak self] in
+                guard let self else { return continuation.resume(returning: []) }
+                self.prepareIfNeeded(needSMC: true, needTemperature: false, needFanSpeed: false)
+                guard let smc = self.smc else { return continuation.resume(returning: []) }
+                if self.allTemperatureKeys == nil {
+                    self.allTemperatureKeys = smc.keys { $0.hasPrefix("T") }
+                }
+                let platform = self.cpuTemperaturePlatform
+                let usesCoreSet = TemperatureSensorSelector.hasCPUCoreSet(platform: platform)
+                let readings = (self.allTemperatureKeys ?? []).compactMap { key -> TemperatureSensorReading? in
+                    // The same plausibility window the monitor applies: T* keys
+                    // include flags and counters that are not temperatures.
+                    guard let value = smc.readValue(key), value > 1, value < 125 else { return nil }
+                    let isCPU = usesCoreSet
+                        ? TemperatureSensorSelector.isCPUCoreKey(key.name, platform: platform)
+                        : TemperatureSensorSelector.isCPUTemperatureKey(key.name, platform: platform)
+                    return TemperatureSensorReading(name: key.name, value: value, isCPU: isCPU)
+                }
+                continuation.resume(returning: readings.sorted { $0.name < $1.name })
+            }
+        }
     }
 
     private func temperatureReadings(of keys: [SMCClient.Key]) -> [(key: String, value: Double)] {

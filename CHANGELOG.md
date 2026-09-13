@@ -73,6 +73,14 @@ Forked from Vorssaint 3.3.5 and rebranded. No user-facing feature changes yet.
 - On Intel Macs, the CPU speed limit from `pmset -g therm`, the only real
   throttle figure macOS gives without root. Apple Silicon has no equivalent, so
   the reader never spawns anything there.
+- A thermal throttling alert beside the other Monitor alerts: it notifies when
+  pressure enters heavy or critical, and optionally when throttling clears. It
+  fires on a change of level, since the kernel's level is already a governed
+  state rather than a spiky sensor, and the shared cooldown limits repeats.
+- A Sensors list in Monitor settings showing every SMC temperature sensor with
+  live values, read only while the list is expanded. It is browse-only: the CPU
+  temperature keeps its curated per-chip sensor selection, and the list marks
+  which sensors that selection uses.
 - Both are sampled through the existing monitor plan and strides, gated by the
   CPU monitor feature, and localized in all 13 languages.
 - Ported from [MacTelemetry](https://github.com/ishaanpilar/MacTelemetry)

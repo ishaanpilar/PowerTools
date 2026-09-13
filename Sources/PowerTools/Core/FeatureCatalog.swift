@@ -348,6 +348,7 @@ extension AppFeature {
                     || boolFor(DefaultsKey.brightnessOSDEnabled)
             case (.monitorCPU, .notifications):
                 return boolFor(DefaultsKey.monitorAlertCPU) || boolFor(DefaultsKey.monitorAlertCPUTemperature)
+                    || boolFor(DefaultsKey.monitorAlertThermal)
             case (.monitorMemory, .notifications):
                 return boolFor(DefaultsKey.monitorAlertMemory)
             case (.monitorDisk, .notifications):
@@ -384,6 +385,7 @@ extension AppFeature {
     static let monitorAlertPairs: [(key: String, feature: AppFeature)] = [
         (DefaultsKey.monitorAlertCPU, .monitorCPU),
         (DefaultsKey.monitorAlertCPUTemperature, .monitorCPU),
+        (DefaultsKey.monitorAlertThermal, .monitorCPU),
         (DefaultsKey.monitorAlertBatteryTemperature, .monitorPower),
         (DefaultsKey.monitorAlertMemory, .monitorMemory),
         (DefaultsKey.monitorAlertDisk, .monitorDisk),

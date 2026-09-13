@@ -200,6 +200,12 @@ struct Strings {
     let thermalHeavy: String
     let thermalCritical: String
     let cpuSpeedLimitLabel: String
+    let monitorSensorsSection: String
+    let monitorSensorsCaption: String
+    let monitorSensorsShow: String
+    let monitorSensorsEmpty: String
+    let monitorSensorsCountFormat: String
+    let monitorSensorsCPUBadge: String
     let cpuLabel: String
     let gpuLabel: String
     let batteryLabel: String
@@ -1260,6 +1266,12 @@ extension Strings {
         thermalHeavy: "Alto",
         thermalCritical: "Crítico",
         cpuSpeedLimitLabel: "Limite da CPU",
+        monitorSensorsSection: "Sensores",
+        monitorSensorsCaption: "Todos os sensores de temperatura que este Mac informa, lidos ao vivo enquanto a lista está aberta. Os marcados como CPU são os que o PowerTools usa para a temperatura da CPU.",
+        monitorSensorsShow: "Mostrar todos os sensores",
+        monitorSensorsEmpty: "Este Mac não informa sensores de temperatura.",
+        monitorSensorsCountFormat: "Sensores: %d",
+        monitorSensorsCPUBadge: "CPU",
         cpuLabel: "CPU",
         gpuLabel: "GPU",
         batteryLabel: "Bateria",
@@ -2278,6 +2290,12 @@ extension Strings {
         thermalHeavy: "Heavy",
         thermalCritical: "Critical",
         cpuSpeedLimitLabel: "CPU limit",
+        monitorSensorsSection: "Sensors",
+        monitorSensorsCaption: "Every temperature sensor this Mac reports, read live while the list is open. Sensors marked CPU are the ones PowerTools uses for the CPU temperature.",
+        monitorSensorsShow: "Show all sensors",
+        monitorSensorsEmpty: "This Mac reports no temperature sensors.",
+        monitorSensorsCountFormat: "Sensors: %d",
+        monitorSensorsCPUBadge: "CPU",
         cpuLabel: "CPU",
         gpuLabel: "GPU",
         batteryLabel: "Battery",

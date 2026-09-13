@@ -14596,6 +14596,12 @@ struct MetricsTests {
                "pmset output without throttle fields reads as unavailable, not as zero")
         expect(ThrottleReader.parse("") == nil,
                "empty pmset output reads as unavailable")
+        expect(AppFeature.anyMonitorAlertEnabled(isAvailable: { $0 == .monitorCPU },
+                                                 boolFor: { $0 == DefaultsKey.monitorAlertThermal }),
+               "the thermal alert alone keeps monitor alerts running")
+        expect(!AppFeature.anyMonitorAlertEnabled(isAvailable: { _ in false },
+                                                  boolFor: { $0 == DefaultsKey.monitorAlertThermal }),
+               "the thermal alert is silent while CPU monitoring is uninstalled")
         expect(MonitorSamplingPolicy.sampleStride(for: .disk, intervalSeconds: 2, foreground: true) == 1,
                "monitor disk sampling stays live while the panel is open")
         expect(MonitorSamplingPolicy.shouldSample(.disk, tick: 4, intervalSeconds: 2, foreground: false) == false,

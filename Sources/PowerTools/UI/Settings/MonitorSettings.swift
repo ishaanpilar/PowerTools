@@ -97,6 +97,9 @@ struct MonitorSettings: View {
                 }
             }
             monitorAlertsSection
+            if AppFeature.monitorCPU.isAvailable {
+                TemperatureSensorsSection()
+            }
             Section(l10n.s.monitorPanelSection) {
                 MonitorPanelConfig()
                 Text(l10n.s.monitorPanelConfigHint)

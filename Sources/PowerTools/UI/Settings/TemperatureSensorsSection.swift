@@ -15,12 +15,6 @@ struct TemperatureSensorsSection: View {
     @ObservedObject private var l10n = L10n.shared
     @AppStorage(DefaultsKey.temperatureUnit) private var temperatureUnit = TemperatureUnit.celsius.rawValue
     @State private var expanded = false
-    @State private var sensors: [TemperatureSensorReading] = []
-    @State private var loaded = false
-
-    private var unit: TemperatureUnit {
-        TemperatureUnit(rawValue: temperatureUnit) ?? .celsius
-    }
 
     var body: some View {
         Section(l10n.s.monitorSensorsSection) {
@@ -29,27 +23,42 @@ struct TemperatureSensorsSection: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             DisclosureGroup(l10n.s.monitorSensorsShow, isExpanded: $expanded) {
-                if !loaded {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity)
-                } else if sensors.isEmpty {
-                    Text(l10n.s.monitorSensorsEmpty)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(sensors) { sensor in
-                        row(sensor)
-                    }
-                    Text(String(format: l10n.s.monitorSensorsCountFormat, sensors.count))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                SensorList(unit: TemperatureUnit(rawValue: temperatureUnit) ?? .celsius)
             }
         }
-        // Polls only while expanded; the task is cancelled when the list
-        // collapses or the page goes away, so a closed list costs nothing.
-        .task(id: expanded) {
-            guard expanded else { return }
+    }
+}
+
+/// The expanded list. It owns the polling, and it only exists while the
+/// disclosure is open, so polling starts on expand and is cancelled on
+/// collapse or when the page goes away. Kept as one container so `.task`
+/// attaches once rather than once per row.
+private struct SensorList: View {
+    @ObservedObject private var l10n = L10n.shared
+    let unit: TemperatureUnit
+    @State private var sensors: [TemperatureSensorReading] = []
+    @State private var loaded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            if !loaded {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity)
+            } else if sensors.isEmpty {
+                Text(l10n.s.monitorSensorsEmpty)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(sensors) { sensor in
+                    row(sensor)
+                }
+                Text(String(format: l10n.s.monitorSensorsCountFormat, sensors.count))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+            }
+        }
+        .task {
             while !Task.isCancelled {
                 sensors = await SystemMonitor.shared.temperatureSensorReadings()
                 loaded = true

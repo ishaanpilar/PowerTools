@@ -46,6 +46,19 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>86</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<!-- The Finder right-click menu hands actions over through this
+			     scheme. build.sh gives the Developer variant its own. -->
+			<key>CFBundleURLName</key>
+			<string>com.powertools.utils.finder-menu</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>powertools-finder</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>

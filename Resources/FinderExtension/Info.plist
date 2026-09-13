@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- build.sh sets the identifiers, versions and URL scheme per variant so
+	     the Developer build's extension talks to the Developer app. -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>PowerTools</string>
+	<key>CFBundleExecutable</key>
+	<string>PowerToolsFinderMenu</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.powertools.utils.finder-menu</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>PowerToolsFinderMenu</string>
+	<key>CFBundlePackageType</key>
+	<string>XPC!</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0</string>
+	<key>CFBundleVersion</key>
+	<string>0</string>
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict/>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.FinderSync</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>PowerToolsFinderMenuExtension</string>
+	</dict>
+	<key>PowerToolsHostBundleIdentifier</key>
+	<string>com.powertools.utils</string>
+	<key>PowerToolsFinderURLScheme</key>
+	<string>powertools-finder</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 PowerTools</string>
+</dict>
+</plist>

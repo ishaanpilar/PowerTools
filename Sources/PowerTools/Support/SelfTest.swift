@@ -167,6 +167,22 @@ enum SelfTest {
             warnings.append("app icon not bundled; brand colour unchecked")
         }
 
+        // The Settings sensor list reads through the monitor's sampling queue.
+        // Prove that path answers and finds sensors, end to end, without a UI.
+        // No SMC (a VM, some hardware) only warns; no answer at all is a bug.
+        final class SensorProbe: @unchecked Sendable { var count = -1 }
+        let sensorProbe = SensorProbe()
+        let sensorsAnswered = DispatchSemaphore(value: 0)
+        Task.detached {
+            sensorProbe.count = await SystemMonitor.shared.temperatureSensorReadings().count
+            sensorsAnswered.signal()
+        }
+        if sensorsAnswered.wait(timeout: .now() + 8) == .timedOut {
+            failures.append("temperature sensor list did not answer within 8 s")
+        } else if sensorProbe.count == 0 {
+            warnings.append("no temperature sensors reported (no SMC on this Mac?)")
+        }
+
         for warning in warnings {
             print("SELFTEST WARNING: \(warning)")
         }

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Vorssaint
+# Copyright (C) 2026 PowerTools contributors
 
 """Compile selected production methods against test doubles, without an app.
 
@@ -36,9 +37,9 @@ def write(name, text):
 
 def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
-    service = "Sources/Vorssaint/Services/QuickTools/QuickLauncherService.swift"
-    view = "Sources/Vorssaint/UI/QuickLauncher/QuickLauncherView.swift"
-    panel_layout = (ROOT / "Sources/Vorssaint/UI/MenuPanel/PanelLayout.swift").read_text()
+    service = "Sources/PowerTools/Services/QuickTools/QuickLauncherService.swift"
+    view = "Sources/PowerTools/UI/QuickLauncher/QuickLauncherView.swift"
+    panel_layout = (ROOT / "Sources/PowerTools/UI/MenuPanel/PanelLayout.swift").read_text()
     protocol = next(line for line in panel_layout.splitlines() if line.startswith("protocol PanelOrderItem:"))
     write("QuickLauncherBodies.swift", "import Foundation\n" + protocol + "\n\nextension QuickLauncherContract {\n"
           + declaration(service, "enum QuickLauncherItem:")
@@ -52,7 +53,7 @@ def main():
 
     factories = []
     pattern = r"static\s+func\s+(\w+)\s*\(\s*_\s+\w+:\s*AppLanguage\s*\)\s*->"
-    for path in sorted((ROOT / "Sources/Vorssaint/Core").glob("*Strings.swift")):
+    for path in sorted((ROOT / "Sources/PowerTools/Core").glob("*Strings.swift")):
         source = path.read_text()
         if "extension FeatureStrings" in source or "enum FeatureStrings" in source:
             scopes = re.findall(r"(?:extension|enum) FeatureStrings \{(.*?)^\}", source, re.S | re.M)

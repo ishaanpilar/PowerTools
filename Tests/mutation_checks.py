@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Vorssaint
+# Copyright (C) 2026 PowerTools contributors
 
 """Verify that selected real regressions fail their existing tests.
 
@@ -20,23 +21,23 @@ MUTATIONS = [
     ("invalid numeric result", "harness", "Tests/TestSuite.swift",
      "actual.isFinite && expected.isFinite && tol.isFinite && tol >= 0\n                   && abs(actual - expected) <= tol",
      "!(abs(actual - expected) > tol)", "every invalid numeric comparison fails"),
-    ("invalid saved zoom", "core", "Sources/Vorssaint/Services/QuickTools/ScreenshotSupport.swift",
+    ("invalid saved zoom", "core", "Sources/PowerTools/Services/QuickTools/ScreenshotSupport.swift",
      "guard requested.isFinite else { return 1 }", "guard requested.isFinite else { return requested }",
      "an invalid saved magnifier zoom falls back safely"),
-    ("missing recording action", "launcher", "Sources/Vorssaint/Services/QuickTools/QuickLauncherService.swift",
+    ("missing recording action", "launcher", "Sources/PowerTools/Services/QuickTools/QuickLauncherService.swift",
      "                ScreenRecorderService.shared.toggle()", "                // ScreenRecorderService.shared.toggle()",
      "screenRecorder executes the intended action exactly once"),
-    ("incorrect recording icon", "launcher", "Sources/Vorssaint/UI/QuickLauncher/QuickLauncherView.swift",
+    ("incorrect recording icon", "launcher", "Sources/PowerTools/UI/QuickLauncher/QuickLauncherView.swift",
      'case .screenRecorder: return recorder.isRecording ? "stop.circle" : "record.circle"',
      'case .screenRecorder: return "record.circle"', "an active recording tile offers stopping"),
-    ("missing translation", "localization", "Sources/Vorssaint/Core/FeatureStrings.swift",
+    ("missing translation", "localization", "Sources/PowerTools/Core/FeatureStrings.swift",
      'shortcutHint: "Clique numa linha para colar no app anterior. ⌘+clique seleciona várias; ⌘C copia sem colar."',
      'shortcutHint: ""', "clipboard/pt-BR: missing text in shortcutHint"),
     ("unsafe argument comparison", "harness", "Tests/LocalizationTests.swift",
      "actual?.arguments == expected?.arguments",
      "actual?.arguments.values.sorted() == expected?.arguments.values.sorted()",
      "localization validation detects missing text and unsafe argument swaps"),
-    ("overwrite unreadable notes", "storage", "Sources/Vorssaint/Services/QuickTools/ScratchpadStore.swift",
+    ("overwrite unreadable notes", "storage", "Sources/PowerTools/Services/QuickTools/ScratchpadStore.swift",
      "        guard canSave else { return false }", "        // guard canSave else { return false }",
      "damaged scratchpad blocks subsequent saves of empty and nonempty documents"),
 ]
@@ -56,7 +57,7 @@ def run(directory, arguments):
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix="vorss-mutation-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="pwrt-mutation-") as temporary:
         directory = Path(temporary)
         # APFS clones keep the snapshot cheap and preserve timestamps so the
         # compiler can reuse unaffected objects after the baseline build.

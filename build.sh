@@ -1,8 +1,9 @@
 #!/bin/zsh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Vorssaint
+# Copyright (C) 2026 PowerTools contributors
 
-# Builds Vorssaint, assembles the .app bundle, signs it and (with --install)
+# Builds PowerTools, assembles the .app bundle, signs it and (with --install)
 # installs it into /Applications.
 #
 # The bundle is staged in a temporary directory outside ~/Documents: folders synced
@@ -26,7 +27,7 @@ trap cleanup EXIT
 # into the build sweeps like any other ending.
 trap 'exit 1' INT TERM HUP
 
-# Flags: --dev builds the local-only "Vorssaint (Developer)" variant (its own
+# Flags: --dev builds the local-only "PowerTools (Developer)" variant (its own
 # bundle id, so it coexists with the official app); --install puts it in /Applications.
 DEV=0
 INSTALL=0
@@ -43,16 +44,16 @@ for arg in "$@"; do
 done
 
 if (( DEV )); then
-    APP_NAME="Vorssaint (Developer)"
-    EXECUTABLE="VorssaintDeveloper"
-    APP_BUNDLE_ID="com.vorssaint.utils.dev"
-    BUILD_VARIANT_FLAGS=(-D VORSSAINT_DEVELOPMENT)
+    APP_NAME="PowerTools (Developer)"
+    EXECUTABLE="PowerToolsDeveloper"
+    APP_BUNDLE_ID="com.powertools.utils.dev"
+    BUILD_VARIANT_FLAGS=(-D POWERTOOLS_DEVELOPMENT)
     APP_OPTIMIZATION_FLAGS=(-Onone)
     BUILD_CONFIGURATION="debug"
 else
-    APP_NAME="Vorssaint"
-    EXECUTABLE="Vorssaint"
-    APP_BUNDLE_ID="com.vorssaint.utils"
+    APP_NAME="PowerTools"
+    EXECUTABLE="PowerTools"
+    APP_BUNDLE_ID="com.powertools.utils"
     BUILD_VARIANT_FLAGS=()
     APP_OPTIMIZATION_FLAGS=(-O)
     BUILD_CONFIGURATION="release"
@@ -61,10 +62,10 @@ FAN_HELPER_ID="$APP_BUNDLE_ID.fan-control"
 # Now Playing is read through /usr/bin/perl loading this library; see
 # Sources/NowPlayingAdapter. Staged under Contents/Frameworks, signed on its own.
 NOW_PLAYING_ADAPTER_ID="$APP_BUNDLE_ID.now-playing"
-NOW_PLAYING_ADAPTER="libVorssaintNowPlaying.dylib"
+NOW_PLAYING_ADAPTER="libPowerToolsNowPlaying.dylib"
 TARGET="arm64-apple-macosx14.0"
-ENTITLEMENTS="Resources/Vorssaint.entitlements"
-LEGACY_IDENTITY="Vorssaint Utils Signing"
+ENTITLEMENTS="Resources/PowerTools.entitlements"
+LEGACY_IDENTITY="PowerTools Signing"
 
 developer_id_identity() {
     security find-identity -v -p codesigning 2>/dev/null \
@@ -80,8 +81,8 @@ legacy_identity_installed() {
     local probe signed=1
     # A locked keychain still lists its identities but cannot sign with them,
     # and this one is locked after every reboot; unlock it before asking.
-    security unlock-keychain -p vorssaint-signing \
-        "$HOME/Library/Keychains/vorssaint-signing.keychain-db" 2>/dev/null || true
+    security unlock-keychain -p powertools-signing \
+        "$HOME/Library/Keychains/powertools-signing.keychain-db" 2>/dev/null || true
     probe="$(mktemp)"
     cp /bin/echo "$probe"
     /usr/bin/codesign --force --strip-disallowed-xattrs --sign "$LEGACY_IDENTITY" "$probe" \
@@ -184,8 +185,8 @@ finalize_installed_bundle_after_child() {
     echo "✓ Signature ready: $bundle"
 }
 
-if (( INSTALL && ! TEST )) && [[ "${VORSSAINT_INSTALL_CHILD:-0}" != "1" ]]; then
-    VORSSAINT_INSTALL_CHILD=1 "$0" "$@"
+if (( INSTALL && ! TEST )) && [[ "${POWERTOOLS_INSTALL_CHILD:-0}" != "1" ]]; then
+    POWERTOOLS_INSTALL_CHILD=1 "$0" "$@"
     child_status=$?
     if (( child_status != 0 )); then
         exit "$child_status"
@@ -225,13 +226,13 @@ discard_test_preferences() {
     # cfprefsd can recreate an emptied domain after the first removal. Require
     # two quiet checks, but keep a hard limit so persistent failures still fail CI.
     for attempt in {1..10}; do
-        for name in "vorss.tests." "com.vorssaint.tests."; do
+        for name in "pwrt.tests." "com.powertools.tests."; do
             rm -f "$preferences"/$name*.plist(N)
         done
         rm -f "$preferences/metrics-tests.plist"
         sleep 0.2
         survivors=$(find "$preferences" -maxdepth 1 \
-            \( -name "vorss.tests.*.plist" -o -name "com.vorssaint.tests.*.plist" \
+            \( -name "pwrt.tests.*.plist" -o -name "com.powertools.tests.*.plist" \
                -o -name "metrics-tests.plist" \) 2>/dev/null | wc -l | tr -d ' ')
         if [[ "$survivors" == "0" ]]; then
             quiet_passes=$((quiet_passes + 1))
@@ -251,183 +252,183 @@ if (( TEST )); then
     TEST_OBJECT_DIR="build/objects/tests"
     mkdir -p "$TEST_OBJECT_DIR"
     TEST_SOURCES=(
-        Sources/Vorssaint/Services/Media/MediaSupport.swift
-        Sources/Vorssaint/Core/QuitProtectionSupport.swift
-        Sources/Vorssaint/Core/QuitProtectionStrings.swift
-        Sources/Vorssaint/Core/Defaults.swift
-        Sources/Vorssaint/Core/FeatureCatalog.swift
-        Sources/Vorssaint/Core/FeaturePresets.swift
-        Sources/Vorssaint/Core/FeatureHubStrings.swift
-        Sources/Vorssaint/Core/ShortcutSettingsStrings.swift
-        Sources/Vorssaint/Core/SettingsBackupSupport.swift
-        Sources/Vorssaint/Core/BackupStrings.swift
-        Sources/Vorssaint/Core/SnippetStrings.swift
-        Sources/Vorssaint/Core/BrightnessStrings.swift
-        Sources/Vorssaint/Core/MediaImageStrings.swift
-        Sources/Vorssaint/Core/QuickToggleStrings.swift
-        Sources/Vorssaint/Core/ScreenshotStrings.swift
-        Sources/Vorssaint/Core/RecentCaptureStrings.swift
-        Sources/Vorssaint/Core/RecorderStrings.swift
-        Sources/Vorssaint/Core/RecorderShareStrings.swift
-        Sources/Vorssaint/Core/CameraPreviewStrings.swift
-        Sources/Vorssaint/Core/ScratchpadStrings.swift
-        Sources/Vorssaint/Core/FinderRenameStrings.swift
-        Sources/Vorssaint/Core/CommandBarStrings.swift
-        Sources/Vorssaint/Core/FeedbackStrings.swift
-        Sources/Vorssaint/Core/RadialMenuStrings.swift
-        Sources/Vorssaint/Core/MenuBarAppearanceStrings.swift
-        Sources/Vorssaint/Core/AppAppearance.swift
-        Sources/Vorssaint/Core/AppearanceStrings.swift
-        Sources/Vorssaint/Core/BatteryTimeStrings.swift
-        Sources/Vorssaint/Core/KeepAwakeStrings.swift
-        Sources/Vorssaint/Core/BluetoothSleepStrings.swift
-        Sources/Vorssaint/Core/PermissionGuideStrings.swift
-        Sources/Vorssaint/Core/FanControlStrings.swift
-        Sources/Vorssaint/Services/FanControl/FanControlSupport.swift
-        Sources/Vorssaint/Services/Snippets/TextSnippetSupport.swift
-        Sources/Vorssaint/Services/RadialMenu/RadialMenuSupport.swift
-        Sources/Vorssaint/Services/QuickTools/ScratchpadSupport.swift
-        Sources/Vorssaint/Services/QuickTools/ScratchpadStore.swift
-        Sources/Vorssaint/Services/KillProcess/KillProcessSupport.swift
-        Sources/Vorssaint/Services/Recorder/RecorderSupport.swift
-        Sources/Vorssaint/Services/Recorder/RecorderSampleTiming.swift
-        Sources/Vorssaint/Services/Recorder/RecorderWriter.swift
-        Sources/Vorssaint/Services/Recorder/RecorderCaptureEngine.swift
-        Sources/Vorssaint/Services/Recorder/RecorderComposition.swift
-        Sources/Vorssaint/Services/Recorder/RecordingSharingSupport.swift
-        Sources/Vorssaint/Services/PrivateFileStore.swift
-        Sources/Vorssaint/Services/Recorder/RecorderTakeStore.swift
-        Sources/Vorssaint/Services/Recorder/RecorderPresetImageStore.swift
-        Sources/Vorssaint/Services/Recorder/RecorderMotion.swift
-        Sources/Vorssaint/Services/Recorder/RecorderPointerTrack.swift
-        Sources/Vorssaint/Services/Recorder/RecorderTypingTrack.swift
-        Sources/Vorssaint/Services/Recorder/RecorderTimeline.swift
-        Sources/Vorssaint/Services/Recorder/RecorderTextOverlay.swift
-        Sources/Vorssaint/Services/Recorder/RecorderImageOverlay.swift
-        Sources/Vorssaint/Services/Recorder/RecorderBlurRegion.swift
-        Sources/Vorssaint/Services/Recorder/RecorderEditDocument.swift
-        Sources/Vorssaint/Core/AppInfo.swift
-        Sources/Vorssaint/Core/GlobalShortcut.swift
-        Sources/Vorssaint/Core/SymbolicHotKeys.swift
-        Sources/Vorssaint/Services/SystemShortcutTakeoverSupport.swift
-        Sources/Vorssaint/Core/Localization.swift
-        Sources/Vorssaint/Core/Localizations/Strings+*.swift
-        Sources/Vorssaint/Core/FeatureStrings.swift
-        Sources/Vorssaint/Core/KillProcessStrings.swift
-        Sources/Vorssaint/Core/WhatsAppDownloadStrings.swift
-        Sources/Vorssaint/Core/WhatsAppOrganizerStrings.swift
-        Sources/Vorssaint/Core/ReleaseNotes.swift
-        Sources/Vorssaint/Core/URLCleaning.swift
-        Sources/Vorssaint/Services/GeneralPasteboardAccess.swift
-        Sources/Vorssaint/Services/Audio/MixerRoutingSupport.swift
-        Sources/Vorssaint/Services/Audio/MusicLaunchSupport.swift
-        Sources/Vorssaint/Services/Bluetooth/BluetoothSleepSupport.swift
-        Sources/Vorssaint/UI/MenuPanel/MixerPercentNativeTextField.swift
-        Sources/Vorssaint/Services/Audio/BoostLimiter.swift
-        Sources/Vorssaint/Services/Audio/MixerRender.swift
-        Sources/Vorssaint/Services/Audio/PreciseVolumeRollerSupport.swift
-        Sources/Vorssaint/Services/DockPreview/DockPreviewSupport.swift
-        Sources/Vorssaint/Services/Homebrew/HomebrewSupport.swift
-        Sources/Vorssaint/Services/AppUpdates/AppUpdatesSupport.swift
-        Sources/Vorssaint/Services/AppUpdates/AppUpdateFeedSupport.swift
-        Sources/Vorssaint/Core/AppUpdateStrings.swift
-        Sources/Vorssaint/Core/DiskImageInstallerStrings.swift
-        Sources/Vorssaint/Services/DiskImageInstaller/DiskImageInstallerSupport.swift
-        Sources/Vorssaint/Services/Clipboard/ClipboardHistorySupport.swift
-        Sources/Vorssaint/Services/Clipboard/ClipboardAutoClearSupport.swift
-        Sources/Vorssaint/Services/AutoQuit/AutoQuitSupport.swift
-        Sources/Vorssaint/Services/Shelf/ShelfSupport.swift
-        Sources/Vorssaint/Services/Finder/FinderRenameSupport.swift
-        Sources/Vorssaint/Services/Update/UpdateInstallerSupport.swift
-        Sources/Vorssaint/Services/Update/UpdateServiceSupport.swift
-        Sources/Vorssaint/Services/InstalledApps.swift
-        Sources/Vorssaint/Services/LaunchAtLoginSupport.swift
-        Sources/Vorssaint/UI/Settings/SettingsSearchSupport.swift
-        Sources/Vorssaint/UI/Settings/FeatureVisibilitySupport.swift
-        Sources/Vorssaint/App/MenuBarSpacingSupport.swift
-        Sources/Vorssaint/App/StatusItemAnchorSupport.swift
-        Sources/Vorssaint/Services/DockClick/DockClickSupport.swift
-        Sources/Vorssaint/Services/Finder/CutPasteProgressSupport.swift
-        Sources/Vorssaint/Services/Finder/CutPastePrivilegeSupport.swift
-        Sources/Vorssaint/Services/Finder/FinderPasteImageSupport.swift
-        Sources/Vorssaint/Services/MiddleClick/MiddleClickSupport.swift
-        Sources/Vorssaint/Services/MouseNavigation/MouseNavigationSupport.swift
-        Sources/Vorssaint/Services/MouseButtons/MouseButtonShortcutSupport.swift
-        Sources/Vorssaint/Services/MouseButtons/MouseSpacesGestureSupport.swift
-        Sources/Vorssaint/Services/MouseClickDebounce/MouseClickDebounceSupport.swift
-        Sources/Vorssaint/Services/MouseExceptions/MouseAppExceptionSupport.swift
-        Sources/Vorssaint/Services/MouseExceptions/MouseAppExceptions.swift
-        Sources/Vorssaint/Services/WindowServerSupport.swift
-        Sources/Vorssaint/Core/MouseButtonStrings.swift
-        Sources/Vorssaint/Core/MouseClickDebounceStrings.swift
-        Sources/Vorssaint/Core/MouseExceptionStrings.swift
-        Sources/Vorssaint/Core/ClipboardIgnoredAppsStrings.swift
-        Sources/Vorssaint/Core/WindowPreviewExclusionStrings.swift
-        Sources/Vorssaint/Core/DiskExclusionStrings.swift
-        Sources/Vorssaint/Core/SwitcherAppRulesStrings.swift
-        Sources/Vorssaint/Services/QuickTools/QuickToolsSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarPreferences.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarMath.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarUnits.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarEmoji.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarLinks.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarDates.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarRowShortcuts.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarSystemSettingsSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarFileSearchSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarQueryMemory.swift
-        Sources/Vorssaint/Services/SpotlightNamesSupport.swift
-        Sources/Vorssaint/Services/QuickTools/MicMuteSupport.swift
-        Sources/Vorssaint/Services/QuickTools/QuickTogglesSupport.swift
-        Sources/Vorssaint/Services/QuickTools/ScreenshotCapturePolicy.swift
-        Sources/Vorssaint/Services/QuickTools/ScreenshotSupport.swift
-        Sources/Vorssaint/Services/QuickTools/RecentCaptureStore.swift
-        Sources/Vorssaint/Services/QuickTools/ScreenshotSharingSupport.swift
-        Sources/Vorssaint/Services/QuickTools/WindowActivationPolicy.swift
-        Sources/Vorssaint/Services/KeyboardDebounce/KeyboardDebounceSupport.swift
-        Sources/Vorssaint/Services/SuperKey/SuperKeySupport.swift
-        Sources/Vorssaint/Services/SuperKey/SuperKeyMappingGuard.swift
-        Sources/Vorssaint/Core/SuperKeyStrings.swift
-        Sources/Vorssaint/Services/SessionActivity.swift
-        Sources/Vorssaint/Services/SessionActivitySupport.swift
-        Sources/Vorssaint/Services/ScrollWheelSupport.swift
-        Sources/Vorssaint/Services/SmoothScrollSupport.swift
-        Sources/Vorssaint/Services/MouseAcceleration/MouseAccelerationSupport.swift
-        Sources/Vorssaint/Services/FocusFollowsMouse/FocusFollowsMouseSupport.swift
-        Sources/Vorssaint/Services/AssistiveKeyboard.swift
-        Sources/Vorssaint/Services/Switcher/SwitcherModels.swift
-        Sources/Vorssaint/Services/Switcher/SwitcherSupport.swift
-        Sources/Vorssaint/Services/Switcher/SpaceHopSupport.swift
-        Sources/Vorssaint/Services/Switcher/WindowUseOrder.swift
-        Sources/Vorssaint/Services/Metrics/MetricFormat.swift
-        Sources/Vorssaint/Services/Metrics/VMStatisticsDecoder.swift
-        Sources/Vorssaint/Services/KeepAwakeAutomationSupport.swift
-        Sources/Vorssaint/Services/SudoersSupport.swift
-        Sources/Vorssaint/Services/Metrics/BatteryTimeSupport.swift
-        Sources/Vorssaint/Services/BoundedProcessRunner.swift
-        Sources/Vorssaint/Services/DetachedProcess.swift
-        Sources/Vorssaint/Services/ShellSupport.swift
-        Sources/Vorssaint/Services/Metrics/NetworkProcessSupport.swift
-        Sources/Vorssaint/Services/Metrics/NetworkSampler.swift
-        Sources/Vorssaint/Services/Metrics/SpeedTest.swift
-        Sources/Vorssaint/Services/Metrics/PeripheralBatterySupport.swift
-        Sources/Vorssaint/Services/Metrics/DiskSupport.swift
-        Sources/Vorssaint/Services/Metrics/MonitorSamplingPolicy.swift
-        Sources/Vorssaint/Services/Metrics/MaxCapacityProbe.swift
-        Sources/Vorssaint/Services/Metrics/TemperatureSensorSelector.swift
-        Sources/Vorssaint/Services/Metrics/SustainedAlertGate.swift
-        Sources/Vorssaint/Services/WindowLayout/WindowLayoutSupport.swift
-        Sources/Vorssaint/Services/WindowLayout/WindowGestureSupport.swift
-        Sources/Vorssaint/Core/WindowDirectionalStrings.swift
-        Sources/Vorssaint/Services/CleaningMode/CleaningUnlockCounter.swift
-        Sources/Vorssaint/Services/Display/ExtraBrightnessSupport.swift
-        Sources/Vorssaint/Services/Display/BrightnessSupport.swift
-        Sources/Vorssaint/Services/Cleaner/CleanerSupport.swift
-        Sources/Vorssaint/Services/Cleaner/CleanerPolicy.swift
-        Sources/Vorssaint/Services/Cleaner/CleanerSchedule.swift
-        Sources/Vorssaint/Services/Uninstall/UninstallerSupport.swift
-        Sources/Vorssaint/Services/ManagedDownloads/WhatsAppDownloadSupport.swift
+        Sources/PowerTools/Services/Media/MediaSupport.swift
+        Sources/PowerTools/Core/QuitProtectionSupport.swift
+        Sources/PowerTools/Core/QuitProtectionStrings.swift
+        Sources/PowerTools/Core/Defaults.swift
+        Sources/PowerTools/Core/FeatureCatalog.swift
+        Sources/PowerTools/Core/FeaturePresets.swift
+        Sources/PowerTools/Core/FeatureHubStrings.swift
+        Sources/PowerTools/Core/ShortcutSettingsStrings.swift
+        Sources/PowerTools/Core/SettingsBackupSupport.swift
+        Sources/PowerTools/Core/BackupStrings.swift
+        Sources/PowerTools/Core/SnippetStrings.swift
+        Sources/PowerTools/Core/BrightnessStrings.swift
+        Sources/PowerTools/Core/MediaImageStrings.swift
+        Sources/PowerTools/Core/QuickToggleStrings.swift
+        Sources/PowerTools/Core/ScreenshotStrings.swift
+        Sources/PowerTools/Core/RecentCaptureStrings.swift
+        Sources/PowerTools/Core/RecorderStrings.swift
+        Sources/PowerTools/Core/RecorderShareStrings.swift
+        Sources/PowerTools/Core/CameraPreviewStrings.swift
+        Sources/PowerTools/Core/ScratchpadStrings.swift
+        Sources/PowerTools/Core/FinderRenameStrings.swift
+        Sources/PowerTools/Core/CommandBarStrings.swift
+        Sources/PowerTools/Core/FeedbackStrings.swift
+        Sources/PowerTools/Core/RadialMenuStrings.swift
+        Sources/PowerTools/Core/MenuBarAppearanceStrings.swift
+        Sources/PowerTools/Core/AppAppearance.swift
+        Sources/PowerTools/Core/AppearanceStrings.swift
+        Sources/PowerTools/Core/BatteryTimeStrings.swift
+        Sources/PowerTools/Core/KeepAwakeStrings.swift
+        Sources/PowerTools/Core/BluetoothSleepStrings.swift
+        Sources/PowerTools/Core/PermissionGuideStrings.swift
+        Sources/PowerTools/Core/FanControlStrings.swift
+        Sources/PowerTools/Services/FanControl/FanControlSupport.swift
+        Sources/PowerTools/Services/Snippets/TextSnippetSupport.swift
+        Sources/PowerTools/Services/RadialMenu/RadialMenuSupport.swift
+        Sources/PowerTools/Services/QuickTools/ScratchpadSupport.swift
+        Sources/PowerTools/Services/QuickTools/ScratchpadStore.swift
+        Sources/PowerTools/Services/KillProcess/KillProcessSupport.swift
+        Sources/PowerTools/Services/Recorder/RecorderSupport.swift
+        Sources/PowerTools/Services/Recorder/RecorderSampleTiming.swift
+        Sources/PowerTools/Services/Recorder/RecorderWriter.swift
+        Sources/PowerTools/Services/Recorder/RecorderCaptureEngine.swift
+        Sources/PowerTools/Services/Recorder/RecorderComposition.swift
+        Sources/PowerTools/Services/Recorder/RecordingSharingSupport.swift
+        Sources/PowerTools/Services/PrivateFileStore.swift
+        Sources/PowerTools/Services/Recorder/RecorderTakeStore.swift
+        Sources/PowerTools/Services/Recorder/RecorderPresetImageStore.swift
+        Sources/PowerTools/Services/Recorder/RecorderMotion.swift
+        Sources/PowerTools/Services/Recorder/RecorderPointerTrack.swift
+        Sources/PowerTools/Services/Recorder/RecorderTypingTrack.swift
+        Sources/PowerTools/Services/Recorder/RecorderTimeline.swift
+        Sources/PowerTools/Services/Recorder/RecorderTextOverlay.swift
+        Sources/PowerTools/Services/Recorder/RecorderImageOverlay.swift
+        Sources/PowerTools/Services/Recorder/RecorderBlurRegion.swift
+        Sources/PowerTools/Services/Recorder/RecorderEditDocument.swift
+        Sources/PowerTools/Core/AppInfo.swift
+        Sources/PowerTools/Core/GlobalShortcut.swift
+        Sources/PowerTools/Core/SymbolicHotKeys.swift
+        Sources/PowerTools/Services/SystemShortcutTakeoverSupport.swift
+        Sources/PowerTools/Core/Localization.swift
+        Sources/PowerTools/Core/Localizations/Strings+*.swift
+        Sources/PowerTools/Core/FeatureStrings.swift
+        Sources/PowerTools/Core/KillProcessStrings.swift
+        Sources/PowerTools/Core/WhatsAppDownloadStrings.swift
+        Sources/PowerTools/Core/WhatsAppOrganizerStrings.swift
+        Sources/PowerTools/Core/ReleaseNotes.swift
+        Sources/PowerTools/Core/URLCleaning.swift
+        Sources/PowerTools/Services/GeneralPasteboardAccess.swift
+        Sources/PowerTools/Services/Audio/MixerRoutingSupport.swift
+        Sources/PowerTools/Services/Audio/MusicLaunchSupport.swift
+        Sources/PowerTools/Services/Bluetooth/BluetoothSleepSupport.swift
+        Sources/PowerTools/UI/MenuPanel/MixerPercentNativeTextField.swift
+        Sources/PowerTools/Services/Audio/BoostLimiter.swift
+        Sources/PowerTools/Services/Audio/MixerRender.swift
+        Sources/PowerTools/Services/Audio/PreciseVolumeRollerSupport.swift
+        Sources/PowerTools/Services/DockPreview/DockPreviewSupport.swift
+        Sources/PowerTools/Services/Homebrew/HomebrewSupport.swift
+        Sources/PowerTools/Services/AppUpdates/AppUpdatesSupport.swift
+        Sources/PowerTools/Services/AppUpdates/AppUpdateFeedSupport.swift
+        Sources/PowerTools/Core/AppUpdateStrings.swift
+        Sources/PowerTools/Core/DiskImageInstallerStrings.swift
+        Sources/PowerTools/Services/DiskImageInstaller/DiskImageInstallerSupport.swift
+        Sources/PowerTools/Services/Clipboard/ClipboardHistorySupport.swift
+        Sources/PowerTools/Services/Clipboard/ClipboardAutoClearSupport.swift
+        Sources/PowerTools/Services/AutoQuit/AutoQuitSupport.swift
+        Sources/PowerTools/Services/Shelf/ShelfSupport.swift
+        Sources/PowerTools/Services/Finder/FinderRenameSupport.swift
+        Sources/PowerTools/Services/Update/UpdateInstallerSupport.swift
+        Sources/PowerTools/Services/Update/UpdateServiceSupport.swift
+        Sources/PowerTools/Services/InstalledApps.swift
+        Sources/PowerTools/Services/LaunchAtLoginSupport.swift
+        Sources/PowerTools/UI/Settings/SettingsSearchSupport.swift
+        Sources/PowerTools/UI/Settings/FeatureVisibilitySupport.swift
+        Sources/PowerTools/App/MenuBarSpacingSupport.swift
+        Sources/PowerTools/App/StatusItemAnchorSupport.swift
+        Sources/PowerTools/Services/DockClick/DockClickSupport.swift
+        Sources/PowerTools/Services/Finder/CutPasteProgressSupport.swift
+        Sources/PowerTools/Services/Finder/CutPastePrivilegeSupport.swift
+        Sources/PowerTools/Services/Finder/FinderPasteImageSupport.swift
+        Sources/PowerTools/Services/MiddleClick/MiddleClickSupport.swift
+        Sources/PowerTools/Services/MouseNavigation/MouseNavigationSupport.swift
+        Sources/PowerTools/Services/MouseButtons/MouseButtonShortcutSupport.swift
+        Sources/PowerTools/Services/MouseButtons/MouseSpacesGestureSupport.swift
+        Sources/PowerTools/Services/MouseClickDebounce/MouseClickDebounceSupport.swift
+        Sources/PowerTools/Services/MouseExceptions/MouseAppExceptionSupport.swift
+        Sources/PowerTools/Services/MouseExceptions/MouseAppExceptions.swift
+        Sources/PowerTools/Services/WindowServerSupport.swift
+        Sources/PowerTools/Core/MouseButtonStrings.swift
+        Sources/PowerTools/Core/MouseClickDebounceStrings.swift
+        Sources/PowerTools/Core/MouseExceptionStrings.swift
+        Sources/PowerTools/Core/ClipboardIgnoredAppsStrings.swift
+        Sources/PowerTools/Core/WindowPreviewExclusionStrings.swift
+        Sources/PowerTools/Core/DiskExclusionStrings.swift
+        Sources/PowerTools/Core/SwitcherAppRulesStrings.swift
+        Sources/PowerTools/Services/QuickTools/QuickToolsSupport.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarSupport.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarPreferences.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarMath.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarUnits.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarEmoji.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarLinks.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarDates.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarRowShortcuts.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarSystemSettingsSupport.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarFileSearchSupport.swift
+        Sources/PowerTools/Services/CommandBar/CommandBarQueryMemory.swift
+        Sources/PowerTools/Services/SpotlightNamesSupport.swift
+        Sources/PowerTools/Services/QuickTools/MicMuteSupport.swift
+        Sources/PowerTools/Services/QuickTools/QuickTogglesSupport.swift
+        Sources/PowerTools/Services/QuickTools/ScreenshotCapturePolicy.swift
+        Sources/PowerTools/Services/QuickTools/ScreenshotSupport.swift
+        Sources/PowerTools/Services/QuickTools/RecentCaptureStore.swift
+        Sources/PowerTools/Services/QuickTools/ScreenshotSharingSupport.swift
+        Sources/PowerTools/Services/QuickTools/WindowActivationPolicy.swift
+        Sources/PowerTools/Services/KeyboardDebounce/KeyboardDebounceSupport.swift
+        Sources/PowerTools/Services/SuperKey/SuperKeySupport.swift
+        Sources/PowerTools/Services/SuperKey/SuperKeyMappingGuard.swift
+        Sources/PowerTools/Core/SuperKeyStrings.swift
+        Sources/PowerTools/Services/SessionActivity.swift
+        Sources/PowerTools/Services/SessionActivitySupport.swift
+        Sources/PowerTools/Services/ScrollWheelSupport.swift
+        Sources/PowerTools/Services/SmoothScrollSupport.swift
+        Sources/PowerTools/Services/MouseAcceleration/MouseAccelerationSupport.swift
+        Sources/PowerTools/Services/FocusFollowsMouse/FocusFollowsMouseSupport.swift
+        Sources/PowerTools/Services/AssistiveKeyboard.swift
+        Sources/PowerTools/Services/Switcher/SwitcherModels.swift
+        Sources/PowerTools/Services/Switcher/SwitcherSupport.swift
+        Sources/PowerTools/Services/Switcher/SpaceHopSupport.swift
+        Sources/PowerTools/Services/Switcher/WindowUseOrder.swift
+        Sources/PowerTools/Services/Metrics/MetricFormat.swift
+        Sources/PowerTools/Services/Metrics/VMStatisticsDecoder.swift
+        Sources/PowerTools/Services/KeepAwakeAutomationSupport.swift
+        Sources/PowerTools/Services/SudoersSupport.swift
+        Sources/PowerTools/Services/Metrics/BatteryTimeSupport.swift
+        Sources/PowerTools/Services/BoundedProcessRunner.swift
+        Sources/PowerTools/Services/DetachedProcess.swift
+        Sources/PowerTools/Services/ShellSupport.swift
+        Sources/PowerTools/Services/Metrics/NetworkProcessSupport.swift
+        Sources/PowerTools/Services/Metrics/NetworkSampler.swift
+        Sources/PowerTools/Services/Metrics/SpeedTest.swift
+        Sources/PowerTools/Services/Metrics/PeripheralBatterySupport.swift
+        Sources/PowerTools/Services/Metrics/DiskSupport.swift
+        Sources/PowerTools/Services/Metrics/MonitorSamplingPolicy.swift
+        Sources/PowerTools/Services/Metrics/MaxCapacityProbe.swift
+        Sources/PowerTools/Services/Metrics/TemperatureSensorSelector.swift
+        Sources/PowerTools/Services/Metrics/SustainedAlertGate.swift
+        Sources/PowerTools/Services/WindowLayout/WindowLayoutSupport.swift
+        Sources/PowerTools/Services/WindowLayout/WindowGestureSupport.swift
+        Sources/PowerTools/Core/WindowDirectionalStrings.swift
+        Sources/PowerTools/Services/CleaningMode/CleaningUnlockCounter.swift
+        Sources/PowerTools/Services/Display/ExtraBrightnessSupport.swift
+        Sources/PowerTools/Services/Display/BrightnessSupport.swift
+        Sources/PowerTools/Services/Cleaner/CleanerSupport.swift
+        Sources/PowerTools/Services/Cleaner/CleanerPolicy.swift
+        Sources/PowerTools/Services/Cleaner/CleanerSchedule.swift
+        Sources/PowerTools/Services/Uninstall/UninstallerSupport.swift
+        Sources/PowerTools/Services/ManagedDownloads/WhatsAppDownloadSupport.swift
         Tests/*.swift
         build/generated-tests/*.swift
     )
@@ -435,7 +436,7 @@ if (( TEST )); then
     write_swift_output_file_map "$TEST_OUTPUT_FILE_MAP" "$TEST_OBJECT_DIR" "${TEST_SOURCES[@]}"
     echo "▸ Building & running tests against $(basename "$SDK")…"
     swiftc -Onone -incremental -enable-batch-mode -j "$(sysctl -n hw.logicalcpu)" \
-        -module-name VorssaintTests -output-file-map "$TEST_OUTPUT_FILE_MAP" \
+        -module-name PowerToolsTests -output-file-map "$TEST_OUTPUT_FILE_MAP" \
         -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" \
         "${VM_STATISTICS_COMPAT_FLAGS[@]}" "${TEST_SOURCES[@]}" -o build/metrics-tests
     test_status=0
@@ -448,7 +449,7 @@ if (( TEST )); then
 fi
 
 echo "▸ Compiling ($BUILD_CONFIGURATION) against $(basename "$SDK")…"
-APP_SOURCES=(Sources/Vorssaint/**/*.swift)
+APP_SOURCES=(Sources/PowerTools/**/*.swift)
 if (( DEV )); then
     APP_OBJECT_DIR="build/objects/$EXECUTABLE"
     mkdir -p build "$APP_OBJECT_DIR"
@@ -469,18 +470,18 @@ fi
 
 echo "▸ Compiling protected fan helper…"
 swiftc -O -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" "${BUILD_VARIANT_FLAGS[@]}" \
-    Sources/Vorssaint/Services/FanControl/FanControlSupport.swift \
-    Sources/Vorssaint/Services/FanControl/FanControlXPC.swift \
-    Sources/Vorssaint/Services/SystemMonitor/SMCClient.swift \
-    Sources/Vorssaint/Services/Metrics/TemperatureSensorSelector.swift \
-    Sources/Vorssaint/Services/FanControl/FanControlHardware.swift \
+    Sources/PowerTools/Services/FanControl/FanControlSupport.swift \
+    Sources/PowerTools/Services/FanControl/FanControlXPC.swift \
+    Sources/PowerTools/Services/SystemMonitor/SMCClient.swift \
+    Sources/PowerTools/Services/Metrics/TemperatureSensorSelector.swift \
+    Sources/PowerTools/Services/FanControl/FanControlHardware.swift \
     Sources/FanControlHelper/main.swift \
     -o "build/$FAN_HELPER_ID"
 "build/$FAN_HELPER_ID" --selftest
 
 echo "▸ Compiling Now Playing adapter…"
 swiftc -O -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" -emit-library \
-    -module-name VorssaintNowPlaying \
+    -module-name PowerToolsNowPlaying \
     Sources/NowPlayingAdapter/NowPlayingAdapter.swift \
     -o "build/$NOW_PLAYING_ADAPTER"
 
@@ -526,7 +527,7 @@ cp "build/$FAN_HELPER_ID" "$STAGE/Contents/Library/LaunchServices/$FAN_HELPER_ID
 mkdir -p "$STAGE/Contents/Frameworks"
 cp "build/$NOW_PLAYING_ADAPTER" "$STAGE/Contents/Frameworks/$NOW_PLAYING_ADAPTER"
 cp Resources/now-playing.pl "$STAGE/Contents/Resources/now-playing.pl"
-cp Resources/com.vorssaint.utils.fan-control.plist \
+cp Resources/com.powertools.utils.fan-control.plist \
     "$STAGE/Contents/Library/LaunchDaemons/$FAN_HELPER_ID.plist"
 cp Resources/Info.plist "$STAGE/Contents/Info.plist"
 cp CHANGELOG.md "$STAGE/Contents/Resources/CHANGELOG.md"
@@ -543,14 +544,14 @@ if (( DEV )); then
     FAN_PLIST="$STAGE/Contents/Library/LaunchDaemons/$FAN_HELPER_ID.plist"
     /usr/libexec/PlistBuddy -c "Set :Label $FAN_HELPER_ID" "$FAN_PLIST"
     /usr/libexec/PlistBuddy -c "Set :BundleProgram Contents/Library/LaunchServices/$FAN_HELPER_ID" "$FAN_PLIST"
-    /usr/libexec/PlistBuddy -c "Delete :MachServices:com.vorssaint.utils.fan-control" "$FAN_PLIST"
+    /usr/libexec/PlistBuddy -c "Delete :MachServices:com.powertools.utils.fan-control" "$FAN_PLIST"
     /usr/libexec/PlistBuddy -c "Add :MachServices:$FAN_HELPER_ID bool true" "$FAN_PLIST"
     # Stamp the source commit + build time so the running dev app shows (in About)
     # exactly which code it was compiled from. Lets you verify it matches HEAD before
     # testing, instead of unknowingly running a stale build. Dev-only; never shipped.
     SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
     [[ -n "$(git status --porcelain 2>/dev/null)" ]] && SHA="$SHA-dirty"
-    /usr/libexec/PlistBuddy -c "Add :VorssaintBuildCommit string '$SHA · $(date '+%Y-%m-%d %H:%M')'" "$STAGE/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Add :PowerToolsBuildCommit string '$SHA · $(date '+%Y-%m-%d %H:%M')'" "$STAGE/Contents/Info.plist"
     echo "  stamped dev build: $SHA"
 fi
 FAN_HELPER_VERSION="$(
@@ -561,7 +562,7 @@ FAN_HELPER_VERSION="$(
         | /usr/bin/awk '{print $1}' | /usr/bin/shasum -a 256 \
         | /usr/bin/awk '{print $1}'
 )"
-/usr/libexec/PlistBuddy -c "Add :VorssaintFanControlHelperVersion string '$FAN_HELPER_VERSION'" \
+/usr/libexec/PlistBuddy -c "Add :PowerToolsFanControlHelperVersion string '$FAN_HELPER_VERSION'" \
     "$STAGE/Contents/Info.plist"
 printf 'APPL????' > "$STAGE/Contents/PkgInfo"
 cp build/AppIcon.icns "$STAGE/Contents/Resources/AppIcon.icns"
@@ -585,7 +586,7 @@ xattr -c -r "$STAGE" 2>/dev/null || true
 #      notarization), the app's entitlements and a secure timestamp. Gives a
 #      stable, team-based designated requirement, so permissions persist across
 #      updates AND Gatekeeper shows no "unverified developer" warning.
-#   2. "Vorssaint Utils Signing" — the legacy stable self-signed identity, kept
+#   2. "PowerTools Signing" — the legacy stable self-signed identity, kept
 #      as a fallback so contributors without a Developer ID still get a constant
 #      designated requirement across their local builds.
 #   3. Ad-hoc — fresh clone with no identity at all.
@@ -729,16 +730,6 @@ echo "✓ Bundle ready: $BUILD_STAGE"
 if (( INSTALL )); then
     echo "▸ Installing into /Applications…"
     stop_process "$EXECUTABLE"
-    # Remove the pre-rename apps so two menu bar items never coexist. Same bundle
-    # id, so macOS keeps the granted permissions for the new bundle.
-    for legacy in "Vorss:Vorss" "Vorssaint Utils:VorssaintUtils"; do
-        name="${legacy%%:*}"; proc="${legacy##*:}"
-        if [[ -d "/Applications/$name.app" ]]; then
-            stop_process "$proc"
-            rm -rf "/Applications/$name.app"
-            echo "  (legacy $name.app removed)"
-        fi
-    done
     INSTALL_DEST="/Applications/$APP_NAME.app"
     rm -rf "$INSTALL_DEST"
     ditto --noextattr --noqtn "$STAGE" "$INSTALL_DEST"

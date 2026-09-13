@@ -169,7 +169,10 @@ struct PanelDashboardView: View {
 
     let sections: [PanelSectionID]
     let openSection: (PanelSectionID) -> Void
-    let openMetric: (MetricDetailKind) -> Void
+    /// The card currently expanded in place; nil collapses them all. Owned by
+    /// `MenuPanelView` so the sampling plan can see it too — an expanded
+    /// card's detail needs readings the collapsed card never asked for.
+    @Binding var expandedTile: PanelDashboardTile?
 
     private static let cardShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
 
@@ -179,6 +182,7 @@ struct PanelDashboardView: View {
             if layout.showsThermal {
                 thermalCard
             }
+            chargingCard
             cardsSection
             if layout.showsKeepAwake {
                 keepAwakeRow
@@ -187,6 +191,77 @@ struct PanelDashboardView: View {
                 sectionsGrid
                     .padding(.top, 4)
             }
+        }
+    }
+
+    private func toggleExpanded(_ tile: PanelDashboardTile) {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            expandedTile = (expandedTile == tile) ? nil : tile
+        }
+    }
+
+    // MARK: Charging
+
+    /// A card that exists only while actually drawing power from a charger —
+    /// hidden on battery, and hidden while plugged in but not charging (already
+    /// full, or paused by Optimized Battery Charging) — appearing and leaving
+    /// with the same animation a card's own expansion uses.
+    @ViewBuilder
+    private var chargingCard: some View {
+        if PowerSampler.hasInternalBattery, let power = monitor.snapshot.power, power.isCharging {
+            let tint = PanelMetricColor.yellow(for: colorScheme)
+            DashboardCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(tint)
+                            .frame(width: 16)
+                        Text(l10n.s.powerCharging)
+                            .font(.system(size: 13, weight: .semibold))
+                            .lineLimit(1)
+                        Spacer(minLength: 6)
+                        Text(power.batteryWatts.map { MetricFormat.watts(abs($0)) } ?? "–")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(tint)
+                    }
+                    HStack(spacing: 8) {
+                        Text(l10n.s.batteryLabel)
+                        Spacer(minLength: 8)
+                        Text(power.chargePercent.map { "\($0)%" } ?? "–")
+                            .monospacedDigit()
+                    }
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    if let adapterWatts = power.adapterWatts {
+                        HStack(spacing: 8) {
+                            Text(l10n.s.powerAdapter)
+                            Spacer(minLength: 8)
+                            Text(MetricFormat.watts(adapterWatts))
+                                .monospacedDigit()
+                        }
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                    }
+                    if let remaining = power.timeRemainingSeconds.flatMap(BatteryTimeSupport.formatted) {
+                        HStack(spacing: 8) {
+                            Text(FeatureStrings.batteryTime(l10n.language).title)
+                            Spacer(minLength: 8)
+                            Text(remaining)
+                        }
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                    }
+                    UsageBar(fraction: power.chargePercent.map { Double($0) / 100 } ?? 0, tint: tint)
+                        .frame(height: 6)
+                    if monitor.snapshot.batteryHistory.count >= 2 {
+                        Sparkline(values: monitor.snapshot.batteryHistory, color: tint, maxValue: 1, lineWidth: 1.4)
+                            .frame(height: 48)
+                    }
+                }
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
@@ -204,11 +279,15 @@ struct PanelDashboardView: View {
         let snapshot = monitor.snapshot
         let pressure = snapshot.thermalPressure
         let tint = pressure?.panelColor(for: colorScheme) ?? Color.secondary
+        // The menu-bar circle is laid over the card, not inside its Button's
+        // label: a Button nested inside another Button's label never gets its
+        // own tap on macOS — the outer one swallows it. An .overlay sits as a
+        // true sibling in the view tree, so it keeps its own hit-testing.
         return DashboardCard(action: { openSection(.system) }) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 7) {
                     Image(systemName: "thermometer.medium")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(tint)
                     Text(l10n.s.thermalPressureLabel)
                         .font(.system(size: 13, weight: .semibold))
@@ -227,11 +306,16 @@ struct PanelDashboardView: View {
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(snapshot.cpuTemperature == nil ? Color.secondary : tint)
-                    DashboardMenuBarToggle(metric: .cpuTemperature)
+                    Color.clear.frame(width: 20, height: 20)
                 }
                 temperatureGraph(snapshot.cpuTemperatureHistory, tint: tint)
                 temperatureReadouts(snapshot)
             }
+        }
+        .overlay(alignment: .topTrailing) {
+            DashboardMenuBarToggle(metric: .cpuTemperature)
+                .padding(.top, 10)
+                .padding(.trailing, 10)
         }
     }
 
@@ -248,7 +332,7 @@ struct PanelDashboardView: View {
                       maxValue: span,
                       fillOpacity: 0.24,
                       lineWidth: 1.6)
-                .frame(height: 44)
+                .frame(height: 56)
                 .padding(.top, 14)
                 .padding(.bottom, 12)
                 .padding(.horizontal, 6)
@@ -380,11 +464,21 @@ struct PanelDashboardView: View {
                 }
                 .padding(.leading, 2)
                 ForEach(available.filter { editingCards || isTileShown($0) }) { tile in
-                    PanelReorderableItem(item: tile,
-                                         isEnabled: editingCards,
-                                         order: tileOrderBinding,
-                                         dragging: $draggingTile) {
-                        tileView(tile, editing: editingCards)
+                    VStack(alignment: .leading, spacing: 0) {
+                        PanelReorderableItem(item: tile,
+                                             isEnabled: editingCards,
+                                             order: tileOrderBinding,
+                                             dragging: $draggingTile) {
+                            tileView(tile, editing: editingCards)
+                        }
+                        // Expands in place instead of navigating away: the
+                        // card's own detail drops in right under it, and
+                        // collapses the same way on a second tap.
+                        if !editingCards, expandedTile == tile {
+                            MetricDetailView(kind: tile.detailKind)
+                                .padding(.top, 6)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
                 }
             }
@@ -393,7 +487,10 @@ struct PanelDashboardView: View {
 
     private var cardsEditButton: some View {
         Button {
-            withAnimation(.easeOut(duration: 0.15)) { editingCards.toggle() }
+            withAnimation(.easeOut(duration: 0.15)) {
+                editingCards.toggle()
+                if editingCards { expandedTile = nil }
+            }
         } label: {
             if editingCards {
                 Label(l10n.s.uninstallerDoneTitle, systemImage: "checkmark")
@@ -437,7 +534,7 @@ struct PanelDashboardView: View {
     @ViewBuilder
     private func tileView(_ tile: PanelDashboardTile, editing: Bool) -> some View {
         let snapshot = monitor.snapshot
-        let open = { openMetric(tile.detailKind) }
+        let open = { toggleExpanded(tile) }
         let visibility = tileVisibilityBinding(tile)
         switch tile {
         case .cpu:
@@ -711,24 +808,33 @@ struct PanelDashboardView: View {
 private struct DashboardCard<Label: View>: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var hovering = false
-    let action: () -> Void
+    /// Nil for a card that only ever displays, like the charging summary —
+    /// no button, no hover wash, matching MacTelemetry's own cards, which
+    /// carry no tap action at all.
+    var action: (() -> Void)? = nil
     @ViewBuilder let label: () -> Label
 
-    private let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+    private let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
 
     var body: some View {
-        Button(action: action) {
-            label()
-                .padding(10)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(shape.fill(PanelSurface.cardFill(for: colorScheme)))
-                .overlay(shape.fill(Color.primary.opacity(hovering ? 0.045 : 0)))
-                .overlay(shape.strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7))
-                .contentShape(shape)
+        if let action {
+            Button(action: action) { cardBody }
+                .buttonStyle(.plain)
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: hovering)
+        } else {
+            cardBody
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovering)
+    }
+
+    private var cardBody: some View {
+        label()
+            .padding(10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(shape.fill(PanelSurface.cardFill(for: colorScheme)))
+            .overlay(shape.fill(Color.primary.opacity(hovering ? 0.045 : 0)))
+            .overlay(shape.strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7))
+            .contentShape(shape)
     }
 }
 
@@ -803,16 +909,24 @@ private struct DashboardMetricTile: View {
         if isEditing {
             editingRow
         } else {
+            // Same reasoning as the Thermal card: the circle is a sibling
+            // overlay, not nested inside the card's own Button, or macOS
+            // SwiftUI hands its taps to the outer button instead.
             DashboardCard(action: action) { content }
+                .overlay(alignment: .topTrailing) {
+                    DashboardMenuBarToggle(metric: menuBarMetric)
+                        .padding(.top, 10)
+                        .padding(.trailing, 10)
+                }
                 .accessibilityElement(children: .combine)
         }
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(accent)
                     .frame(width: 16)
                 Text(title)
@@ -821,12 +935,12 @@ private struct DashboardMetricTile: View {
                     .lineLimit(1)
                 Spacer(minLength: 6)
                 Text(value)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(valueColor ?? accent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                DashboardMenuBarToggle(metric: menuBarMetric)
+                Color.clear.frame(width: 20, height: 20)
             }
             if let bar {
                 UsageBar(fraction: bar.fraction, tint: bar.tint ?? accent)
@@ -834,7 +948,7 @@ private struct DashboardMetricTile: View {
             }
             if let graph, graph.values.count >= 2 {
                 Sparkline(values: graph.values, color: graph.color, maxValue: graph.maxValue, lineWidth: 1.4)
-                    .frame(height: 26)
+                    .frame(height: 48)
             }
             if let captionRow {
                 HStack(spacing: 8) {
@@ -914,6 +1028,29 @@ private struct PanelGlassControlModifier<S: InsettableShape>: ViewModifier {
         content
             .background(shape.fill(PanelSurface.controlFill(for: colorScheme)))
             .overlay(shape.strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7))
+    }
+}
+
+extension SystemMonitorPanelNeeds {
+    /// Everything either side needs: an expanded card's full detail rides
+    /// along with whatever the collapsed dashboard already samples.
+    func union(_ other: SystemMonitorPanelNeeds) -> SystemMonitorPanelNeeds {
+        var merged = self
+        merged.system = system || other.system
+        merged.network = network || other.network
+        merged.disk = disk || other.disk
+        merged.power = power || other.power
+        merged.cpu = cpu || other.cpu
+        merged.gpu = gpu || other.gpu
+        merged.memory = memory || other.memory
+        merged.battery = battery || other.battery
+        merged.peripheralBattery = peripheralBattery || other.peripheralBattery
+        merged.cpuTemperature = cpuTemperature || other.cpuTemperature
+        merged.gpuTemperature = gpuTemperature || other.gpuTemperature
+        merged.batteryTemperature = batteryTemperature || other.batteryTemperature
+        merged.fanSpeed = fanSpeed || other.fanSpeed
+        merged.thermal = thermal || other.thermal
+        return merged
     }
 }
 

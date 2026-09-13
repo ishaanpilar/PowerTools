@@ -85,6 +85,9 @@ struct MenuPanelView: View {
     /// The section opened from the dashboard; nil is the dashboard itself.
     @State private var openedSection: PanelSectionID?
     @State private var selectedMetric: MetricDetailKind?
+    /// The dashboard card currently expanded in place; owned here (not inside
+    /// the dashboard view) so the sampling plan below can see it too.
+    @State private var expandedDashboardTile: PanelDashboardTile?
 
     /// Cap the panel to the usable screen height so it never overflows the menu
     /// bar; taller content scrolls inside. Measured against the display the
@@ -134,7 +137,13 @@ struct MenuPanelView: View {
             return selectedMetric.monitorNeeds
         }
         guard let activeSection else {
-            return PanelDashboardLayout(sections: visibleSections).monitorNeeds
+            var needs = PanelDashboardLayout(sections: visibleSections).monitorNeeds
+            if let expandedDashboardTile {
+                // An expanded card shows its full metric detail, which reads
+                // more than the collapsed card ever needed.
+                needs = needs.union(expandedDashboardTile.detailKind.monitorNeeds)
+            }
+            return needs
         }
         switch activeSection {
         case .system: return SystemMonitorPanelNeeds(system: true)
@@ -173,10 +182,6 @@ struct MenuPanelView: View {
         openedSection = id
     }
 
-    private func openMetric(_ kind: MetricDetailKind) {
-        selectedMetric = kind
-    }
-
     private var navigablePanel: some View {
         VStack(alignment: .leading, spacing: 12) {
             UpdateBanner()
@@ -197,7 +202,7 @@ struct MenuPanelView: View {
                     } else {
                         PanelDashboardView(sections: visibleSections,
                                            openSection: openSection,
-                                           openMetric: openMetric)
+                                           expandedTile: $expandedDashboardTile)
                     }
                 }
                 .frame(width: 308)

@@ -464,21 +464,11 @@ struct PanelDashboardView: View {
                 }
                 .padding(.leading, 2)
                 ForEach(available.filter { editingCards || isTileShown($0) }) { tile in
-                    VStack(alignment: .leading, spacing: 0) {
-                        PanelReorderableItem(item: tile,
-                                             isEnabled: editingCards,
-                                             order: tileOrderBinding,
-                                             dragging: $draggingTile) {
-                            tileView(tile, editing: editingCards)
-                        }
-                        // Expands in place instead of navigating away: the
-                        // card's own detail drops in right under it, and
-                        // collapses the same way on a second tap.
-                        if !editingCards, expandedTile == tile {
-                            MetricDetailView(kind: tile.detailKind)
-                                .padding(.top, 6)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                        }
+                    PanelReorderableItem(item: tile,
+                                         isEnabled: editingCards,
+                                         order: tileOrderBinding,
+                                         dragging: $draggingTile) {
+                        tileView(tile, editing: editingCards)
                     }
                 }
             }
@@ -552,6 +542,8 @@ struct PanelDashboardView: View {
                                 bar: (snapshot.cpuUsage ?? 0, nil),
                                 graph: graphCPU ? (snapshot.cpuHistory, cpuTint, 1) : nil,
                                 menuBarMetric: tile.menuBarMetric,
+                                detailKind: tile.detailKind,
+                                isExpanded: expandedTile == tile,
                                 isEditing: editing,
                                 visibility: visibility,
                                 action: open)
@@ -566,6 +558,8 @@ struct PanelDashboardView: View {
                                 bar: (snapshot.gpuUsage ?? 0, nil),
                                 graph: graphGPU ? (snapshot.gpuHistory, tint, 1) : nil,
                                 menuBarMetric: tile.menuBarMetric,
+                                detailKind: tile.detailKind,
+                                isExpanded: expandedTile == tile,
                                 isEditing: editing,
                                 visibility: visibility,
                                 action: open)
@@ -589,6 +583,8 @@ struct PanelDashboardView: View {
                                 bar: (fraction ?? 0, nil),
                                 graph: graphMemory ? (MonitorMemoryMetric.current.history(in: snapshot), tint, 1) : nil,
                                 menuBarMetric: tile.menuBarMetric,
+                                detailKind: tile.detailKind,
+                                isExpanded: expandedTile == tile,
                                 isEditing: editing,
                                 visibility: visibility,
                                 action: open)
@@ -605,6 +601,8 @@ struct PanelDashboardView: View {
                                 captionRow: disk.map { (l10n.s.diskAvailable, MetricFormat.diskBytes($0.freeBytes)) },
                                 bar: (disk?.usedFraction ?? 0, nil),
                                 menuBarMetric: tile.menuBarMetric,
+                                detailKind: tile.detailKind,
+                                isExpanded: expandedTile == tile,
                                 isEditing: editing,
                                 visibility: visibility,
                                 action: open)
@@ -624,6 +622,8 @@ struct PanelDashboardView: View {
                                 bar: (fraction ?? 0, nil),
                                 graph: graphBattery ? (snapshot.batteryHistory, tint, 1) : nil,
                                 menuBarMetric: tile.menuBarMetric,
+                                detailKind: tile.detailKind,
+                                isExpanded: expandedTile == tile,
                                 isEditing: editing,
                                 visibility: visibility,
                                 action: open)
@@ -636,6 +636,8 @@ struct PanelDashboardView: View {
                                 caption: snapshot.netUpBytesPerSec.map { "↑ \(MetricFormat.bytesPerSecCompact($0))" },
                                 graph: graphNetwork ? (snapshot.netDownHistory, tint, nil) : nil,
                                 menuBarMetric: tile.menuBarMetric,
+                                detailKind: tile.detailKind,
+                                isExpanded: expandedTile == tile,
                                 isEditing: editing,
                                 visibility: visibility,
                                 action: open)
@@ -883,6 +885,9 @@ struct DashboardMenuBarToggle: View {
 /// name, eye button) like every other reorderable list in the panel, instead
 /// of dragging a live graph.
 private struct DashboardMetricTile: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var hovering = false
+
     let title: String
     let systemImage: String
     let accent: Color
@@ -901,24 +906,56 @@ private struct DashboardMetricTile: View {
     /// matching Settings → Monitor toggle; nil hides it outright.
     var graph: (values: [Double], color: Color, maxValue: Double?)? = nil
     let menuBarMetric: MenuBarMetric
+    /// What a tap expands, embedded (no nested card, no repeated headline
+    /// value) right under the header rather than swapped in from outside.
+    let detailKind: MetricDetailKind
+    var isExpanded = false
     var isEditing = false
     var visibility: Binding<Bool>? = nil
     let action: () -> Void
+
+    private let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
 
     var body: some View {
         if isEditing {
             editingRow
         } else {
-            // Same reasoning as the Thermal card: the circle is a sibling
-            // overlay, not nested inside the card's own Button, or macOS
-            // SwiftUI hands its taps to the outer button instead.
-            DashboardCard(action: action) { content }
-                .overlay(alignment: .topTrailing) {
-                    DashboardMenuBarToggle(metric: menuBarMetric)
-                        .padding(.top, 10)
-                        .padding(.trailing, 10)
+            VStack(alignment: .leading, spacing: 0) {
+                // Only the collapsed header/bar/graph/caption is the tap
+                // target: expanding reveals plain rows, not a second button,
+                // so nothing below can be mistaken for another card to tap.
+                Button(action: action) {
+                    content
+                        .contentShape(Rectangle())
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color.primary.opacity(hovering ? 0.045 : 0))
+                        )
                 }
-                .accessibilityElement(children: .combine)
+                .buttonStyle(.plain)
+                .onHover { hovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: hovering)
+
+                if isExpanded {
+                    MetricDetailView(kind: detailKind, style: .embedded)
+                        .padding(.top, 8)
+                        .transition(.opacity)
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .background(shape.fill(PanelSurface.cardFill(for: colorScheme)))
+            .overlay(shape.strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7))
+            .clipShape(shape)
+            .overlay(alignment: .topTrailing) {
+                // Same reasoning as the Thermal card: the circle is a sibling
+                // overlay, not nested inside the header's own Button, or
+                // macOS SwiftUI hands its taps to the outer button instead.
+                DashboardMenuBarToggle(metric: menuBarMetric)
+                    .padding(.top, 10)
+                    .padding(.trailing, 10)
+            }
+            .accessibilityElement(children: .combine)
         }
     }
 

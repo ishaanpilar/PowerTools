@@ -139,6 +139,18 @@ struct ActivityMonitorButton: View {
     }
 }
 
+/// `.full` is a self-contained screen: its own summary card up top, then a
+/// detail card, each in its own rounded rectangle — built for the dedicated
+/// metric screen a menu bar tap opens.
+/// `.embedded` drops the summary (whatever hosts it already shows the
+/// headline value and graph) and renders the rest as plain divided rows
+/// instead of nested cards, so it reads as one continuation of the card
+/// it is appended to rather than a stack of separate boxes.
+enum MetricDetailStyle {
+    case full
+    case embedded
+}
+
 struct MetricDetailView: View {
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var monitor = SystemMonitor.shared
@@ -147,6 +159,7 @@ struct MetricDetailView: View {
     @AppStorage(DefaultsKey.temperatureUnit) private var temperatureUnit = TemperatureUnit.celsius.rawValue
     @AppStorage(DefaultsKey.monitorInterval) private var monitorInterval = 2
     let kind: MetricDetailKind
+    var style: MetricDetailStyle = .full
     @State private var processRows: [ProcessUsage] = []
     @State private var processRowsLoading = false
     @State private var lastProcessRefresh = Date.distantPast
@@ -155,8 +168,10 @@ struct MetricDetailView: View {
     private let processLimit = 15
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            summaryCard
+        VStack(alignment: .leading, spacing: style == .full ? 10 : 8) {
+            if style == .full {
+                summaryCard
+            }
             detailCard
             if kind == .network {
                 speedTestCard
@@ -288,7 +303,7 @@ struct MetricDetailView: View {
                 detailRow(row)
             }
         }
-        .panelCard()
+        .cardOrDivider(style)
     }
 
     private var speedTestCard: some View {
@@ -327,7 +342,7 @@ struct MetricDetailView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .panelCard()
+        .cardOrDivider(style)
     }
 
     private var processCard: some View {
@@ -349,7 +364,7 @@ struct MetricDetailView: View {
                 }
             }
         }
-        .panelCard()
+        .cardOrDivider(style)
     }
 
     private var detailRows: [MetricDetailRow] {
@@ -758,6 +773,23 @@ struct MetricDetailView: View {
         formatter.countStyle = .memory
         return formatter
     }()
+}
+
+private extension View {
+    /// `.full` gets the usual boxed card; `.embedded` gets a leading divider
+    /// and no background of its own, so it reads as one more section of
+    /// whatever card is already hosting it rather than a stack of boxes.
+    @ViewBuilder
+    func cardOrDivider(_ style: MetricDetailStyle) -> some View {
+        if style == .full {
+            self.panelCard()
+        } else {
+            VStack(alignment: .leading, spacing: 7) {
+                Divider()
+                self
+            }
+        }
+    }
 }
 
 private struct MetricDetailRow: Identifiable {

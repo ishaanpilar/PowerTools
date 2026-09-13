@@ -804,6 +804,8 @@ extension Strings {
         monitorPanelConfigHint: "開啟某個模組以選取它顯示的內容。",
         monitorOrderSection: "分區次序",
         monitorOrderHint: "拖曳以重新排列面板分區，按一下眼睛圖示可顯示或隱藏各分區。",
+        monitorDashboardCardsSection: "儀表板卡片",
+        monitorDashboardCardsHint: "拖曳以重新排列儀表板卡片，按一下眼睛圖示可顯示或隱藏各卡片。",
         obStepPanelTitle: "面板中顯示的內容",
         obStepPanelBody: "開啟每個模組，精確選取按一下圖示時顯示的內容。",
         obStepPanelNavigationTitle: "分區式面板",

@@ -803,6 +803,8 @@ extension Strings {
         monitorPanelConfigHint: "Ne göstereceğini seçmek için bir blok aç.",
         monitorOrderSection: "Bölüm sırası",
         monitorOrderHint: "Panel bölümlerini yeniden sıralamak için sürükle ve her birini göstermek veya gizlemek için göz simgesini kullan.",
+        monitorDashboardCardsSection: "Kontrol paneli kartları",
+        monitorDashboardCardsHint: "Kontrol paneli kartlarını yeniden sıralamak için sürükle ve her birini göstermek veya gizlemek için göz simgesini kullan.",
         obStepPanelTitle: "Panelde neler var",
         obStepPanelBody: "Her bloğu aç ve simgeye tıkladığında tam olarak ne görüneceğini seç.",
         obStepPanelNavigationTitle: "Bölüm tabanlı panel",

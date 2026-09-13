@@ -803,6 +803,8 @@ extension Strings {
         monitorPanelConfigHint: "Ouvrez un bloc pour choisir ce qu’il affiche.",
         monitorOrderSection: "Ordre des sections",
         monitorOrderHint: "Glissez pour réordonner les sections du panneau et utilisez l’œil pour afficher ou masquer chacune.",
+        monitorDashboardCardsSection: "Cartes du tableau de bord",
+        monitorDashboardCardsHint: "Glissez pour réordonner les cartes du tableau de bord et utilisez l’œil pour afficher ou masquer chacune.",
         obStepPanelTitle: "Ce qui s’affiche dans le panneau",
         obStepPanelBody: "Ouvrez chaque bloc et choisissez exactement ce qui s’affiche quand vous cliquez sur l’icône.",
         obStepPanelNavigationTitle: "Panneau par sections",

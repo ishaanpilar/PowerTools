@@ -803,6 +803,8 @@ extension Strings {
         monitorPanelConfigHint: "Öffne einen Block, um zu wählen, was er anzeigt.",
         monitorOrderSection: "Reihenfolge der Bereiche",
         monitorOrderHint: "Ziehen, um die Panel-Bereiche neu anzuordnen, und mit dem Auge jeden ein- oder ausblenden.",
+        monitorDashboardCardsSection: "Dashboard-Karten",
+        monitorDashboardCardsHint: "Ziehen, um die Dashboard-Karten neu anzuordnen, und mit dem Auge jede ein- oder ausblenden.",
         obStepPanelTitle: "Was im Panel erscheint",
         obStepPanelBody: "Öffne jeden Block und wähle genau, was angezeigt wird, wenn du auf das Symbol klickst.",
         obStepPanelNavigationTitle: "Panel nach Bereichen",

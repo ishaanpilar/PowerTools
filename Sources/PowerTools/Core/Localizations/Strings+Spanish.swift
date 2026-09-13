@@ -803,6 +803,8 @@ extension Strings {
         monitorPanelConfigHint: "Abre un bloque para elegir qué muestra.",
         monitorOrderSection: "Orden de las secciones",
         monitorOrderHint: "Arrastra para reordenar las secciones del panel y usa el ojo para mostrar u ocultar cada una.",
+        monitorDashboardCardsSection: "Tarjetas del panel",
+        monitorDashboardCardsHint: "Arrastra para reordenar las tarjetas del panel y usa el ojo para mostrar u ocultar cada una.",
         obStepPanelTitle: "Qué aparece en el panel",
         obStepPanelBody: "Abre cada bloque y elige exactamente qué se muestra al hacer clic en el icono.",
         obStepPanelNavigationTitle: "Panel por secciones",

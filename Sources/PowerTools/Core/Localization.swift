@@ -951,6 +951,8 @@ struct Strings {
     let monitorPanelConfigHint: String
     let monitorOrderSection: String
     let monitorOrderHint: String
+    let monitorDashboardCardsSection: String
+    let monitorDashboardCardsHint: String
     let obStepPanelTitle: String
     let obStepPanelBody: String
     let obStepPanelNavigationTitle: String
@@ -1982,6 +1984,8 @@ extension Strings {
         monitorPanelConfigHint: "Abra um bloco para escolher o que ele mostra.",
         monitorOrderSection: "Ordem das seções",
         monitorOrderHint: "Arraste para reordenar as seções do painel e use o olho para mostrar ou ocultar cada uma.",
+        monitorDashboardCardsSection: "Cartões do painel",
+        monitorDashboardCardsHint: "Arraste para reordenar os cartões do painel e use o olho para mostrar ou ocultar cada um.",
         obStepPanelTitle: "O que aparece no painel",
         obStepPanelBody: "Abra cada bloco e escolha exatamente o que mostrar quando você clica no ícone.",
         obStepPanelNavigationTitle: "Painel por seções",
@@ -3006,6 +3010,8 @@ extension Strings {
         monitorPanelConfigHint: "Open a block to choose what it shows.",
         monitorOrderSection: "Section order",
         monitorOrderHint: "Drag to reorder the panel sections and use the eye to show or hide each one.",
+        monitorDashboardCardsSection: "Dashboard cards",
+        monitorDashboardCardsHint: "Drag to reorder the dashboard cards and use the eye to show or hide each one.",
         obStepPanelTitle: "What’s in the panel",
         obStepPanelBody: "Open each block and pick exactly what shows when you click the icon.",
         obStepPanelNavigationTitle: "Section-based panel",

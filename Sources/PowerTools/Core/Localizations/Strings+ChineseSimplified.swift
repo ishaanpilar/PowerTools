@@ -803,6 +803,8 @@ extension Strings {
         monitorPanelConfigHint: "打开某个模块以选择它显示的内容。",
         monitorOrderSection: "分区顺序",
         monitorOrderHint: "拖动以重新排列面板分区，点按眼睛图标可显示或隐藏各分区。",
+        monitorDashboardCardsSection: "仪表盘卡片",
+        monitorDashboardCardsHint: "拖动以重新排列仪表盘卡片，点按眼睛图标可显示或隐藏各卡片。",
         obStepPanelTitle: "面板中显示的内容",
         obStepPanelBody: "打开每个模块，精确选择点按图标时显示的内容。",
         obStepPanelNavigationTitle: "分区式面板",

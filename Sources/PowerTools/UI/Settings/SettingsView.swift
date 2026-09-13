@@ -451,6 +451,15 @@ struct GeneralSettings: View {
                     .foregroundStyle(.secondary)
             }
             .settingsSectionAnchor(.panelConfiguration)
+            // The dashboard's own cards, one level down from the section order
+            // above: which of them show, and in what order, on the panel's
+            // first screen.
+            Section(l10n.s.monitorDashboardCardsSection) {
+                PanelDashboardOrderEditor()
+                Text(l10n.s.monitorDashboardCardsHint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             if AppFeature.keepAwake.isAvailable {
                 Section(l10n.s.globalHotkeySection) {
                     Toggle(l10n.s.hotkeyToggle, isOn: $hotkeyEnabled)

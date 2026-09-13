@@ -130,19 +130,18 @@ struct MenuPanelView: View {
     }
 
     private var monitorNeeds: SystemMonitorPanelNeeds {
-        let header = PanelHeaderStats.monitorNeeds
         if let selectedMetric {
-            return selectedMetric.monitorNeeds.union(header)
+            return selectedMetric.monitorNeeds
         }
         guard let activeSection else {
-            return PanelDashboardLayout(sections: visibleSections).monitorNeeds.union(header)
+            return PanelDashboardLayout(sections: visibleSections).monitorNeeds
         }
         switch activeSection {
-        case .system: return SystemMonitorPanelNeeds(system: true).union(header)
-        case .network: return SystemMonitorPanelNeeds(network: true).union(header)
-        case .disk: return SystemMonitorPanelNeeds(disk: true).union(header)
-        case .power: return SystemMonitorPanelNeeds(power: true).union(header)
-        default: return header
+        case .system: return SystemMonitorPanelNeeds(system: true)
+        case .network: return SystemMonitorPanelNeeds(network: true)
+        case .disk: return SystemMonitorPanelNeeds(disk: true)
+        case .power: return SystemMonitorPanelNeeds(power: true)
+        default: return .none
         }
     }
 
@@ -394,7 +393,7 @@ struct MenuPanelView: View {
     }
 
     private var header: some View {
-        MenuPanelHeader(openMetric: openMetric)
+        MenuPanelHeader()
     }
 
     private var footer: some View {
@@ -439,17 +438,17 @@ struct MenuPanelView: View {
     }
 }
 
-/// The top row on every screen: the mark on the leading edge, where a Mac
-/// window's identity sits, and the live readings right beside it.
+/// The top row on every screen: just the mark, on the leading edge, where a
+/// Mac window's identity sits. The panel's own readings live in the
+/// dashboard's cards below, not duplicated up here.
 private struct MenuPanelHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var l10n = L10n.shared
-    let openMetric: (MetricDetailKind) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            BrandMark(width: 30, tint: markTint)
-                .frame(height: 22)
+            BrandMark(width: 34, tint: markTint)
+                .frame(height: 24)
                 .accessibilityHidden(true)
 
             if AppInfo.isBeta {
@@ -462,8 +461,6 @@ private struct MenuPanelHeader: View {
                     .clipShape(Capsule())
                     .fixedSize()
             }
-
-            PanelHeaderStats(openMetric: openMetric)
 
             Spacer(minLength: 0)
 

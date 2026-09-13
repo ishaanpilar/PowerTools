@@ -409,6 +409,14 @@ enum DefaultsKey {
     static let panelNetworkOrder = "panelNetworkOrder"
     static let panelDiskOrder = "panelDiskOrder"
     static let panelPowerOrder = "panelPowerOrder"
+    static let panelDashboardOrder = "panelDashboardOrder"
+    // Dashboard metric cards: each hideable independently, like a panel section.
+    static let panelDashboardShowCPU = "panelDashboardShowCPU"
+    static let panelDashboardShowMemory = "panelDashboardShowMemory"
+    static let panelDashboardShowStorage = "panelDashboardShowStorage"
+    static let panelDashboardShowNetwork = "panelDashboardShowNetwork"
+    static let panelDashboardShowGPU = "panelDashboardShowGPU"
+    static let panelDashboardShowBattery = "panelDashboardShowBattery"
     static let panelNavigationEnabled = "panelNavigationEnabled" // legacy: the panel always navigates by sections since 3.1.8
     static let updateLastInstallFailure = "updateLastInstallFailure" // last installer step that failed (fail-copy etc.)
     static let windowLayoutHiddenActions = "windowLayoutHiddenActions" // comma-separated action ids hidden from the grid
@@ -1178,6 +1186,13 @@ enum Defaults {
         DefaultsKey.monitorSysMemory: true,
         DefaultsKey.monitorSysAlerts: true,
         DefaultsKey.monitorSysUptime: true,
+        // Every dashboard card shows by default; users hide what they don't want.
+        DefaultsKey.panelDashboardShowCPU: true,
+        DefaultsKey.panelDashboardShowMemory: true,
+        DefaultsKey.panelDashboardShowStorage: true,
+        DefaultsKey.panelDashboardShowNetwork: true,
+        DefaultsKey.panelDashboardShowGPU: true,
+        DefaultsKey.panelDashboardShowBattery: true,
         DefaultsKey.monitorNetSpeed: true,
         DefaultsKey.monitorNetApps: true,
         DefaultsKey.monitorNetTotals: true,

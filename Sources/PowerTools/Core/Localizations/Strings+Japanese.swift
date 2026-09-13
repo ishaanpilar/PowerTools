@@ -803,6 +803,8 @@ extension Strings {
         monitorPanelConfigHint: "ブロックを開いて、表示する内容を選びます。",
         monitorOrderSection: "セクションの並び順",
         monitorOrderHint: "ドラッグしてパネルのセクションを並べ替え、目のアイコンで各セクションを表示/非表示にできます。",
+        monitorDashboardCardsSection: "ダッシュボードのカード",
+        monitorDashboardCardsHint: "ドラッグしてダッシュボードのカードを並べ替え、目のアイコンで各カードを表示/非表示にできます。",
         obStepPanelTitle: "パネルに表示する内容",
         obStepPanelBody: "各ブロックを開いて、アイコンをクリックしたときに表示する内容を細かく選びます。",
         obStepPanelNavigationTitle: "セクション式パネル",

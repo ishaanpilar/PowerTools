@@ -3,29 +3,101 @@
 // Copyright (C) 2026 PowerTools contributors
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - Dashboard
 
-/// The monitor tiles the dashboard can show, in display order. Tiles are laid
-/// out two to a row, so the order also decides which ones share a row.
-enum PanelDashboardTile: Hashable {
-    case cpu, memory, storage, battery, gpu, network
+/// The monitor cards the dashboard can show, one full-width row each, in
+/// display order. Declaration order is the default order: CPU, Memory,
+/// Storage, Network, GPU, Battery.
+enum PanelDashboardTile: String, PanelOrderItem, Identifiable {
+    case cpu, memory, storage, network, gpu, battery
+
+    var id: String { rawValue }
 
     var detailKind: MetricDetailKind {
         switch self {
         case .cpu: return .cpu
         case .memory: return .memory
         case .storage: return .disk
-        case .battery: return .battery
-        case .gpu: return .gpu
         case .network: return .network
+        case .gpu: return .gpu
+        case .battery: return .battery
         }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .cpu: return "cpu"
+        case .memory: return "memorychip"
+        case .storage: return "internaldrive"
+        case .network: return "network"
+        case .gpu: return "rectangle.connected.to.line.below"
+        case .battery: return "battery.100"
+        }
+    }
+
+    func title(_ s: Strings) -> String {
+        switch self {
+        case .cpu: return s.cpuLabel
+        case .memory: return s.memorySection
+        case .storage: return s.diskSection
+        case .network: return s.networkSection
+        case .gpu: return s.gpuLabel
+        case .battery: return s.batteryLabel
+        }
+    }
+
+    /// The equivalent existing menu-bar metric: the card's own circle toggle
+    /// shows or hides this reading next to the status icon, reusing the same
+    /// keys the Menu bar settings page already writes to.
+    var menuBarMetric: MenuBarMetric {
+        switch self {
+        case .cpu: return .cpu
+        case .memory: return .memory
+        case .storage: return .diskUsage
+        case .network: return .network
+        case .gpu: return .gpu
+        case .battery: return .battery
+        }
+    }
+
+    /// A card follows its section: hiding System in Settings, or uninstalling
+    /// the metric in the Features hub, takes the card (and its sampling) away
+    /// with it, independent of the card's own show/hide switch below.
+    func isAvailable(sections: [PanelSectionID]) -> Bool {
+        switch self {
+        case .cpu: return sections.contains(.system) && AppFeature.monitorCPU.isAvailable
+        case .memory: return sections.contains(.system) && AppFeature.monitorMemory.isAvailable
+        case .storage: return sections.contains(.disk) && AppFeature.monitorDisk.isAvailable
+        case .network: return sections.contains(.network) && AppFeature.monitorNetwork.isAvailable
+        case .gpu: return sections.contains(.system) && AppFeature.monitorGPU.isAvailable
+        case .battery:
+            return sections.contains(.power) && AppFeature.monitorPower.isAvailable
+                && PowerSampler.hasInternalBattery
+        }
+    }
+
+    var visibilityKey: String {
+        switch self {
+        case .cpu: return DefaultsKey.panelDashboardShowCPU
+        case .memory: return DefaultsKey.panelDashboardShowMemory
+        case .storage: return DefaultsKey.panelDashboardShowStorage
+        case .network: return DefaultsKey.panelDashboardShowNetwork
+        case .gpu: return DefaultsKey.panelDashboardShowGPU
+        case .battery: return DefaultsKey.panelDashboardShowBattery
+        }
+    }
+
+    static func isShown(_ tile: PanelDashboardTile, defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: tile.visibilityKey) as? Bool ?? true
     }
 }
 
-/// What the dashboard shows for the sections currently in the panel. A tile
-/// follows its section: hiding System in Settings, or uninstalling the metric
-/// in the Features hub, takes the tile (and its sampling) away with it.
+/// What the dashboard shows for the sections currently in the panel: the
+/// saved card order and visibility, intersected with what is actually
+/// installed and turned on. Read fresh each time (not a View), so the
+/// caption in Settings and the sampling plan in the live panel never disagree.
 struct PanelDashboardLayout {
     let showsThermal: Bool
     let showsKeepAwake: Bool
@@ -35,16 +107,8 @@ struct PanelDashboardLayout {
         let system = sections.contains(.system)
         showsThermal = system && AppFeature.monitorCPU.isAvailable
         showsKeepAwake = sections.contains(.keepAwake)
-        var tiles: [PanelDashboardTile] = []
-        if system, AppFeature.monitorCPU.isAvailable { tiles.append(.cpu) }
-        if system, AppFeature.monitorMemory.isAvailable { tiles.append(.memory) }
-        if sections.contains(.disk), AppFeature.monitorDisk.isAvailable { tiles.append(.storage) }
-        if sections.contains(.power), AppFeature.monitorPower.isAvailable, PowerSampler.hasInternalBattery {
-            tiles.append(.battery)
-        }
-        if system, AppFeature.monitorGPU.isAvailable { tiles.append(.gpu) }
-        if sections.contains(.network), AppFeature.monitorNetwork.isAvailable { tiles.append(.network) }
-        self.tiles = tiles
+        tiles = PanelLayout.itemOrder(PanelDashboardTile.self, key: DefaultsKey.panelDashboardOrder)
+            .filter { $0.isAvailable(sections: sections) && PanelDashboardTile.isShown($0) }
     }
 
     /// Only the readings the visible cards draw, so the dashboard costs no
@@ -75,8 +139,10 @@ struct PanelDashboardLayout {
 }
 
 /// The menu panel's first screen: the Mac's vital signs at a glance, Keep
-/// Awake one switch away, and every section one click away. Tiles open the
-/// matching metric detail; the section grid opens the full section.
+/// Awake one switch away, and every section one click away. Cards open the
+/// matching metric detail; the section grid opens the full section. The card
+/// list mirrors the section list: full width, one after another, reorderable
+/// and individually hideable from its own edit mode.
 struct PanelDashboardView: View {
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var monitor = SystemMonitor.shared
@@ -84,6 +150,22 @@ struct PanelDashboardView: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage(DefaultsKey.temperatureUnit) private var temperatureUnit = TemperatureUnit.celsius.rawValue
     @AppStorage(DefaultsKey.defaultDuration) private var defaultDuration: Int = 0
+    @AppStorage(DefaultsKey.panelDashboardOrder) private var cardOrderRaw = ""
+    @AppStorage(DefaultsKey.panelDashboardShowCPU) private var showCPU = true
+    @AppStorage(DefaultsKey.panelDashboardShowMemory) private var showMemory = true
+    @AppStorage(DefaultsKey.panelDashboardShowStorage) private var showStorage = true
+    @AppStorage(DefaultsKey.panelDashboardShowNetwork) private var showNetwork = true
+    @AppStorage(DefaultsKey.panelDashboardShowGPU) private var showGPU = true
+    @AppStorage(DefaultsKey.panelDashboardShowBattery) private var showBattery = true
+    // Whether each card's history graph draws under its bar — the same
+    // switches Settings → Monitor already exposes, now also live here.
+    @AppStorage(DefaultsKey.monitorGraphCPU) private var graphCPU = true
+    @AppStorage(DefaultsKey.monitorGraphMemory) private var graphMemory = true
+    @AppStorage(DefaultsKey.monitorGraphGPU) private var graphGPU = true
+    @AppStorage(DefaultsKey.monitorGraphNetwork) private var graphNetwork = true
+    @AppStorage(DefaultsKey.monitorGraphBattery) private var graphBattery = true
+    @State private var editingCards = false
+    @State private var draggingTile: PanelDashboardTile?
 
     let sections: [PanelSectionID]
     let openSection: (PanelSectionID) -> Void
@@ -97,14 +179,7 @@ struct PanelDashboardView: View {
             if layout.showsThermal {
                 thermalCard
             }
-            ForEach(Array(rows(of: layout.tiles, size: 2).enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 8) {
-                    ForEach(row, id: \.self) { tile in
-                        tileView(tile)
-                    }
-                }
-                .fixedSize(horizontal: false, vertical: true)
-            }
+            cardsSection
             if layout.showsKeepAwake {
                 keepAwakeRow
             }
@@ -152,6 +227,7 @@ struct PanelDashboardView: View {
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(snapshot.cpuTemperature == nil ? Color.secondary : tint)
+                    DashboardMenuBarToggle(metric: .cpuTemperature)
                 }
                 temperatureGraph(snapshot.cpuTemperatureHistory, tint: tint)
                 temperatureReadouts(snapshot)
@@ -181,10 +257,17 @@ struct PanelDashboardView: View {
                         .fill(tint.opacity(colorScheme == .light ? 0.07 : 0.10))
                 )
                 .overlay(alignment: .topLeading) {
-                    graphLabel(MetricFormat.temperatureCompact(high, unit: unit))
+                    // Equal readings (e.g. right after launch, one sample in)
+                    // would print the same number twice; wait for the graph
+                    // to actually say something before labeling its ends.
+                    if high > low {
+                        graphLabel(MetricFormat.temperatureCompact(high, unit: unit))
+                    }
                 }
                 .overlay(alignment: .bottomLeading) {
-                    graphLabel(MetricFormat.temperatureCompact(low, unit: unit))
+                    if high > low {
+                        graphLabel(MetricFormat.temperatureCompact(low, unit: unit))
+                    }
                 }
                 .accessibilityHidden(true)
         }
@@ -227,29 +310,167 @@ struct PanelDashboardView: View {
         }
     }
 
-    // MARK: Tiles
+    // MARK: Cards
+
+    /// The card order in the user's saved order; `PanelLayout` fills in any
+    /// card the saved order omits, in its canonical position, so a card can
+    /// never silently disappear from the editor.
+    private var orderedTiles: [PanelDashboardTile] {
+        _ = cardOrderRaw
+        return PanelLayout.itemOrder(PanelDashboardTile.self, key: DefaultsKey.panelDashboardOrder)
+    }
+
+    private func availableTiles(sections: [PanelSectionID]) -> [PanelDashboardTile] {
+        orderedTiles.filter { $0.isAvailable(sections: sections) }
+    }
+
+    private func isTileShown(_ tile: PanelDashboardTile) -> Bool {
+        switch tile {
+        case .cpu: return showCPU
+        case .memory: return showMemory
+        case .storage: return showStorage
+        case .network: return showNetwork
+        case .gpu: return showGPU
+        case .battery: return showBattery
+        }
+    }
+
+    private func tileVisibilityBinding(_ tile: PanelDashboardTile) -> Binding<Bool> {
+        switch tile {
+        case .cpu: return $showCPU
+        case .memory: return $showMemory
+        case .storage: return $showStorage
+        case .network: return $showNetwork
+        case .gpu: return $showGPU
+        case .battery: return $showBattery
+        }
+    }
+
+    private var tileOrderBinding: Binding<[PanelDashboardTile]> {
+        Binding {
+            orderedTiles
+        } set: { newValue in
+            PanelLayout.setItemOrder(newValue, key: DefaultsKey.panelDashboardOrder)
+        }
+    }
+
+    private func resetCards() {
+        PanelLayout.resetItemOrder(key: DefaultsKey.panelDashboardOrder)
+        cardOrderRaw = ""
+        showCPU = true
+        showMemory = true
+        showStorage = true
+        showNetwork = true
+        showGPU = true
+        showBattery = true
+    }
 
     @ViewBuilder
-    private func tileView(_ tile: PanelDashboardTile) -> some View {
+    private var cardsSection: some View {
+        let available = availableTiles(sections: sections)
+        if !available.isEmpty {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 6) {
+                    sectionTitle(l10n.s.monitorDashboardCardsSection)
+                    Spacer(minLength: 0)
+                    if editingCards {
+                        cardsResetButton
+                    }
+                    cardsEditButton
+                }
+                .padding(.leading, 2)
+                ForEach(available.filter { editingCards || isTileShown($0) }) { tile in
+                    PanelReorderableItem(item: tile,
+                                         isEnabled: editingCards,
+                                         order: tileOrderBinding,
+                                         dragging: $draggingTile) {
+                        tileView(tile, editing: editingCards)
+                    }
+                }
+            }
+        }
+    }
+
+    private var cardsEditButton: some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.15)) { editingCards.toggle() }
+        } label: {
+            if editingCards {
+                Label(l10n.s.uninstallerDoneTitle, systemImage: "checkmark")
+                    .font(.system(size: 10.5, weight: .bold))
+                    .labelStyle(.titleAndIcon)
+                    .padding(.horizontal, 8)
+                    .frame(height: 24)
+                    .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            } else {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 22, height: 18)
+                    .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(editingCards ? Color.white : Color.secondary)
+        .background(
+            RoundedRectangle(cornerRadius: editingCards ? 8 : 6, style: .continuous)
+                .fill(editingCards ? Color.accentColor : Color.clear)
+        )
+        .help(editingCards ? l10n.s.uninstallerDoneTitle : l10n.s.menuEdit)
+    }
+
+    private var cardsResetButton: some View {
+        Button(action: resetCards) {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 10.5, weight: .semibold))
+                .frame(width: 22, height: 22)
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(Color.primary.opacity(0.07))
+        )
+        .help(l10n.s.mixerOutputDefault)
+    }
+
+    @ViewBuilder
+    private func tileView(_ tile: PanelDashboardTile, editing: Bool) -> some View {
         let snapshot = monitor.snapshot
         let open = { openMetric(tile.detailKind) }
+        let visibility = tileVisibilityBinding(tile)
         switch tile {
         case .cpu:
+            // A fixed identity color, not .accentColor: CPU's own color has
+            // to stay itself regardless of the system accent, or a red accent
+            // (a legitimate, common choice) makes ordinary CPU load look like
+            // a standing warning every time the card is glanced at.
+            let cpuTint = PanelMetricColor.blue(for: colorScheme)
             DashboardMetricTile(title: l10n.s.cpuLabel,
                                 systemImage: "cpu",
-                                tint: .accentColor,
+                                accent: cpuTint,
                                 value: snapshot.cpuUsage.map(MetricFormat.percent) ?? "–",
+                                valueColor: snapshot.cpuUsage.map { metricValueColor(cpuTint, $0, for: colorScheme) },
                                 caption: "\(l10n.s.systemUptime) \(SystemSection.uptimeString())",
-                                accessory: .sparkline(snapshot.cpuHistory, .accentColor, 1),
+                                bar: (snapshot.cpuUsage ?? 0, nil),
+                                graph: graphCPU ? (snapshot.cpuHistory, cpuTint, 1) : nil,
+                                menuBarMetric: tile.menuBarMetric,
+                                isEditing: editing,
+                                visibility: visibility,
                                 action: open)
         case .gpu:
             let tint = PanelMetricColor.cyan(for: colorScheme)
             DashboardMetricTile(title: l10n.s.gpuLabel,
                                 systemImage: "rectangle.connected.to.line.below",
-                                tint: tint,
+                                accent: tint,
                                 value: snapshot.gpuUsage.map(MetricFormat.percent) ?? "–",
+                                valueColor: snapshot.gpuUsage.map { metricValueColor(tint, $0, for: colorScheme) },
                                 caption: snapshot.gpuTemperature.map { MetricFormat.temperature($0, unit: unit) },
-                                accessory: .sparkline(snapshot.gpuHistory, tint, 1),
+                                bar: (snapshot.gpuUsage ?? 0, nil),
+                                graph: graphGPU ? (snapshot.gpuHistory, tint, 1) : nil,
+                                menuBarMetric: tile.menuBarMetric,
+                                isEditing: editing,
+                                visibility: visibility,
                                 action: open)
         case .memory:
             let used = MonitorMemoryMetric.current.value(in: snapshot)
@@ -257,45 +478,69 @@ struct PanelDashboardView: View {
             let fraction = used.flatMap { used in
                 total.flatMap { $0 > 0 ? Double(used) / Double($0) : nil }
             }
+            // Memory already carries a kernel-driven pressure color; that is a
+            // better signal than a flat usage threshold, so it stands in for
+            // the warming rule the other cards use on their value text.
             let tint = snapshot.memoryPressure.panelColor(for: colorScheme)
             DashboardMetricTile(title: l10n.s.memorySection,
                                 systemImage: "memorychip",
-                                tint: tint,
+                                accent: tint,
                                 value: fraction.map(MetricFormat.percent) ?? "–",
                                 caption: used.flatMap { used in
                                     total.map { "\(MetricFormat.bytes(used)) / \(MetricFormat.bytes($0))" }
                                 },
-                                accessory: .bar(fraction ?? 0, tint),
+                                bar: (fraction ?? 0, nil),
+                                graph: graphMemory ? (MonitorMemoryMetric.current.history(in: snapshot), tint, 1) : nil,
+                                menuBarMetric: tile.menuBarMetric,
+                                isEditing: editing,
+                                visibility: visibility,
                                 action: open)
         case .storage:
             let disk = primaryDisk(in: snapshot)
+            // Same reasoning as CPU: storage keeps its own identity color
+            // rather than riding the system accent.
+            let storageTint = PanelMetricColor.orange(for: colorScheme)
             DashboardMetricTile(title: l10n.s.diskSection,
                                 systemImage: "internaldrive",
-                                tint: .accentColor,
+                                accent: storageTint,
                                 value: disk.map { MetricFormat.percent($0.usedFraction) } ?? "–",
-                                caption: disk.map { "\(MetricFormat.diskBytes($0.freeBytes)) \(l10n.s.diskAvailable)" },
-                                accessory: .bar(disk?.usedFraction ?? 0, nil),
+                                valueColor: disk.map { metricValueColor(storageTint, $0.usedFraction, for: colorScheme) },
+                                captionRow: disk.map { (l10n.s.diskAvailable, MetricFormat.diskBytes($0.freeBytes)) },
+                                bar: (disk?.usedFraction ?? 0, nil),
+                                menuBarMetric: tile.menuBarMetric,
+                                isEditing: editing,
+                                visibility: visibility,
                                 action: open)
         case .battery:
             let power = snapshot.power
             let charge = power?.chargePercent
             let fraction = charge.map { Double($0) / 100 }
+            // Low battery is the danger direction here, the opposite of every
+            // other card, so it keeps its own low-is-red tint rather than the
+            // shared high-is-red warming rule.
             let tint = batteryTint(fraction)
             DashboardMetricTile(title: l10n.s.batteryLabel,
                                 systemImage: batterySymbol(power),
-                                tint: tint,
+                                accent: tint,
                                 value: charge.map { "\($0)%" } ?? "–",
                                 caption: batteryCaption(power),
-                                accessory: .bar(fraction ?? 0, tint),
+                                bar: (fraction ?? 0, nil),
+                                graph: graphBattery ? (snapshot.batteryHistory, tint, 1) : nil,
+                                menuBarMetric: tile.menuBarMetric,
+                                isEditing: editing,
+                                visibility: visibility,
                                 action: open)
         case .network:
             let tint = PanelMetricColor.green(for: colorScheme)
             DashboardMetricTile(title: l10n.s.networkSection,
                                 systemImage: "network",
-                                tint: tint,
+                                accent: tint,
                                 value: snapshot.netDownBytesPerSec.map { "↓ \(MetricFormat.bytesPerSecCompact($0))" } ?? "–",
                                 caption: snapshot.netUpBytesPerSec.map { "↑ \(MetricFormat.bytesPerSecCompact($0))" },
-                                accessory: .sparkline(snapshot.netDownHistory, tint, nil),
+                                graph: graphNetwork ? (snapshot.netDownHistory, tint, nil) : nil,
+                                menuBarMetric: tile.menuBarMetric,
+                                isEditing: editing,
+                                visibility: visibility,
                                 action: open)
         }
     }
@@ -458,83 +703,6 @@ struct PanelDashboardView: View {
     }
 }
 
-// MARK: - Header stats
-
-/// The live readings beside the logo: temperature, CPU and memory, each a
-/// shortcut into its detail. They stay on every screen, so the numbers
-/// people open the panel for are there whichever section they left it on.
-struct PanelHeaderStats: View {
-    @ObservedObject private var l10n = L10n.shared
-    @ObservedObject private var monitor = SystemMonitor.shared
-    @Environment(\.colorScheme) private var colorScheme
-    @AppStorage(DefaultsKey.temperatureUnit) private var temperatureUnit = TemperatureUnit.celsius.rawValue
-
-    let openMetric: (MetricDetailKind) -> Void
-
-    static var monitorNeeds: SystemMonitorPanelNeeds {
-        SystemMonitorPanelNeeds(cpu: AppFeature.monitorCPU.isAvailable,
-                                memory: AppFeature.monitorMemory.isAvailable,
-                                cpuTemperature: AppFeature.monitorCPU.isAvailable)
-    }
-
-    var body: some View {
-        let snapshot = monitor.snapshot
-        HStack(spacing: 5) {
-            if AppFeature.monitorCPU.isAvailable, let temperature = snapshot.cpuTemperature {
-                chip(symbol: "thermometer.medium",
-                     value: MetricFormat.temperatureCompact(temperature,
-                                                            unit: TemperatureUnit(rawValue: temperatureUnit) ?? .celsius),
-                     tint: snapshot.thermalPressure?.panelColor(for: colorScheme) ?? .secondary,
-                     label: l10n.s.temperatures) {
-                    openMetric(.cpu)
-                }
-            }
-            if AppFeature.monitorCPU.isAvailable, let usage = snapshot.cpuUsage {
-                chip(symbol: "cpu",
-                     value: MetricFormat.percent(usage),
-                     tint: .accentColor,
-                     label: l10n.s.cpuLabel) {
-                    openMetric(.cpu)
-                }
-            }
-            if AppFeature.monitorMemory.isAvailable,
-               let used = MonitorMemoryMetric.current.value(in: snapshot),
-               let total = snapshot.memoryTotal, total > 0 {
-                chip(symbol: "memorychip",
-                     value: MetricFormat.percent(Double(used) / Double(total)),
-                     tint: snapshot.memoryPressure.panelColor(for: colorScheme),
-                     label: l10n.s.memorySection) {
-                    openMetric(.memory)
-                }
-            }
-        }
-    }
-
-    private func chip(symbol: String, value: String, tint: Color, label: String,
-                      action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 3) {
-                Image(systemName: symbol)
-                    .font(.system(size: 9.5, weight: .semibold))
-                    .foregroundStyle(tint)
-                Text(value)
-                    .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-            .padding(.horizontal, 7)
-            .frame(height: 22)
-            .contentShape(Capsule())
-            .panelGlassControl(in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel("\(label) \(value)")
-    }
-}
-
 // MARK: - Building blocks
 
 /// A tappable content card. Cards hold readings, so they keep the quiet card
@@ -564,69 +732,153 @@ private struct DashboardCard<Label: View>: View {
     }
 }
 
-private struct DashboardMetricTile: View {
-    enum Accessory {
-        case bar(Double, Color?)
-        /// Values, color, and a fixed top of scale (nil scales to the peak).
-        case sparkline([Double], Color, Double?)
+/// A value's color warms as its fraction climbs, independent of the card's
+/// identity color: the accent normally, orange from 75%, red from 90%.
+func metricValueColor(_ accent: Color, _ fraction: Double, for scheme: ColorScheme) -> Color {
+    if fraction >= 0.9 { return PanelMetricColor.red(for: scheme) }
+    if fraction >= 0.75 { return PanelMetricColor.orange(for: scheme) }
+    return accent
+}
+
+/// A small circle beside a card's value: filled when that reading is shown
+/// next to the menu bar icon, empty when it isn't — the same switch as the
+/// Menu bar settings page's per-metric list, one tap away from the card
+/// itself, exactly as its counterpart sits next to every value.
+struct DashboardMenuBarToggle: View {
+    @ObservedObject private var l10n = L10n.shared
+    let metric: MenuBarMetric
+    @AppStorage private var shown: Bool
+
+    init(metric: MenuBarMetric) {
+        self.metric = metric
+        _shown = AppStorage(wrappedValue: false, metric.defaultsKey)
     }
 
+    var body: some View {
+        Button {
+            shown.toggle()
+        } label: {
+            Image(systemName: shown ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 13))
+                .foregroundStyle(shown ? Color.accentColor : Color.secondary.opacity(0.45))
+                .frame(width: 20, height: 20)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(shown ? l10n.s.panelHideItem : l10n.s.panelShowItem)
+        .accessibilityLabel(shown ? l10n.s.panelHideItem : l10n.s.panelShowItem)
+    }
+}
+
+/// One full-width dashboard card: icon, title, the live value and its
+/// menu-bar tick on one row; a progress bar; an optional history graph,
+/// only while its Settings → Monitor graph switch is on; then a caption. In
+/// its list's edit mode it collapses to a single compact row (drag handle,
+/// name, eye button) like every other reorderable list in the panel, instead
+/// of dragging a live graph.
+private struct DashboardMetricTile: View {
     let title: String
     let systemImage: String
-    let tint: Color
+    let accent: Color
     let value: String
-    let caption: String?
-    let accessory: Accessory
+    /// Defaults to `accent`; pass a warmed color for values worth flagging
+    /// at high usage (`metricValueColor`).
+    var valueColor: Color? = nil
+    var caption: String? = nil
+    /// A label/value pair, right-aligned, for a caption that is itself a
+    /// reading rather than a sentence (e.g. "Available" / "13.9 GB").
+    var captionRow: (label: String, value: String)? = nil
+    /// The fraction bar under the header row; nil for readings with no
+    /// natural 0...1 bound, like a network rate.
+    var bar: (fraction: Double, tint: Color?)? = nil
+    /// The optional history graph under the bar, already gated by the
+    /// matching Settings → Monitor toggle; nil hides it outright.
+    var graph: (values: [Double], color: Color, maxValue: Double?)? = nil
+    let menuBarMetric: MenuBarMetric
+    var isEditing = false
+    var visibility: Binding<Bool>? = nil
     let action: () -> Void
 
     var body: some View {
-        DashboardCard(action: action) {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 5) {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(tint)
-                    Text(title)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 8.5, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                Text(value)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
+        if isEditing {
+            editingRow
+        } else {
+            DashboardCard(action: action) { content }
+                .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 16)
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                accessoryView
-                    .frame(height: 16)
-                Text(caption ?? " ")
-                    .font(.system(size: 10))
+                Spacer(minLength: 6)
+                Text(value)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(valueColor ?? accent)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                DashboardMenuBarToggle(metric: menuBarMetric)
+            }
+            if let bar {
+                UsageBar(fraction: bar.fraction, tint: bar.tint ?? accent)
+                    .frame(height: 6)
+            }
+            if let graph, graph.values.count >= 2 {
+                Sparkline(values: graph.values, color: graph.color, maxValue: graph.maxValue, lineWidth: 1.4)
+                    .frame(height: 26)
+            }
+            if let captionRow {
+                HStack(spacing: 8) {
+                    Text(captionRow.label)
+                    Spacer(minLength: 8)
+                    Text(captionRow.value)
+                        .monospacedDigit()
+                }
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            } else if let caption {
+                Text(caption)
+                    .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
         }
-        .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder
-    private var accessoryView: some View {
-        switch accessory {
-        case let .bar(fraction, color):
-            UsageBar(fraction: fraction, tint: color)
-                .frame(maxHeight: .infinity)
-        case let .sparkline(values, color, maxValue):
-            if values.count >= 2 {
-                Sparkline(values: values, color: color, maxValue: maxValue, lineWidth: 1.3)
-            } else {
-                Color.clear
+    private var editingRow: some View {
+        HStack(spacing: 9) {
+            PanelDragHandle()
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isHidden ? .secondary : accent)
+                .frame(width: 20)
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(isHidden ? .secondary : .primary)
+            Spacer(minLength: 0)
+            if isHidden {
+                PanelHiddenBadge()
+            }
+            if let visibility {
+                PanelInlineHideButton(isVisible: visibility)
             }
         }
+        .panelCard()
     }
+
+    private var isHidden: Bool { visibility?.wrappedValue == false }
 }
 
 extension View {
@@ -662,29 +914,6 @@ private struct PanelGlassControlModifier<S: InsettableShape>: ViewModifier {
         content
             .background(shape.fill(PanelSurface.controlFill(for: colorScheme)))
             .overlay(shape.strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7))
-    }
-}
-
-extension SystemMonitorPanelNeeds {
-    /// Everything either side needs: the header's readings ride along with
-    /// whatever screen is open beneath it.
-    func union(_ other: SystemMonitorPanelNeeds) -> SystemMonitorPanelNeeds {
-        var merged = self
-        merged.system = system || other.system
-        merged.network = network || other.network
-        merged.disk = disk || other.disk
-        merged.power = power || other.power
-        merged.cpu = cpu || other.cpu
-        merged.gpu = gpu || other.gpu
-        merged.memory = memory || other.memory
-        merged.battery = battery || other.battery
-        merged.peripheralBattery = peripheralBattery || other.peripheralBattery
-        merged.cpuTemperature = cpuTemperature || other.cpuTemperature
-        merged.gpuTemperature = gpuTemperature || other.gpuTemperature
-        merged.batteryTemperature = batteryTemperature || other.batteryTemperature
-        merged.fanSpeed = fanSpeed || other.fanSpeed
-        merged.thermal = thermal || other.thermal
-        return merged
     }
 }
 

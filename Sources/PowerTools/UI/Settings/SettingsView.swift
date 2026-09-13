@@ -1784,7 +1784,7 @@ struct SupportSettings: View {
             VStack(spacing: 18) {
                 ZStack {
                     Circle()
-                        .fill(Theme.spaceGradient)
+                        .fill(Theme.brandGradient)
                         .frame(width: 78, height: 78)
                     Image(systemName: "heart.fill")
                         .font(.system(size: 29, weight: .semibold))

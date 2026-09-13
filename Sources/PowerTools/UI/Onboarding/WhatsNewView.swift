@@ -318,7 +318,7 @@ private struct UpdateSupportContent: View {
         VStack(spacing: 13) {
             ZStack {
                 Circle()
-                    .fill(Theme.spaceGradient)
+                    .fill(Theme.brandGradient)
                     .frame(width: 74, height: 74)
                 Image(systemName: "heart.fill")
                     .font(.system(size: 28, weight: .semibold))

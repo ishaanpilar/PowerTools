@@ -653,7 +653,7 @@ extension Strings {
         obStatusRecheck: "Проверить снова",
         obStepDoneTitle: "Всё готово!",
         obStepDoneBody: "PowerTools уже заботится о вашем Mac.",
-        obDoneHint: "Ищите чёрную дыру в строке меню, в правом верхнем углу экрана.",
+        obDoneHint: "Ищите значок PowerTools в строке меню, в правом верхнем углу экрана.",
         obWhatsNewTitle: "Что нового в этой версии",
         obWhatsNewFallback: "В это обновление вошли последние исправления и улучшения.",
         obLanguageUpdateTitle: "Теперь и на вашем языке",

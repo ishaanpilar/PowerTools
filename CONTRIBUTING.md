@@ -65,7 +65,7 @@ and falls back to the self signed identity, then to ad hoc.
 | `Sources/PowerTools/Services` | All behavior, like energy, monitor, scroll and switcher |
 | `Sources/PowerTools/UI` | SwiftUI views only, no business logic |
 | `Sources/PowerTools/Support` | `--selftest` and `--sensors` diagnostics |
-| `Tools` | Icon generator and DMG packaging |
+| `Tools` | Brand asset and icon generators, DMG packaging |
 
 A few conventions to keep in mind.
 

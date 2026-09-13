@@ -653,7 +653,7 @@ extension Strings {
         obStatusRecheck: "重新檢查",
         obStepDoneTitle: "全部準備好！",
         obStepDoneBody: "PowerTools 已開始照顧你的 Mac。",
-        obDoneHint: "在選單列（螢幕右上角）尋找那個黑洞圖示。",
+        obDoneHint: "在選單列（螢幕右上角）尋找 PowerTools 圖示。",
         obWhatsNewTitle: "此版本的新功能",
         obWhatsNewFallback: "此更新包含最新的修復和改進。",
         obLanguageUpdateTitle: "現已支援你的語言",

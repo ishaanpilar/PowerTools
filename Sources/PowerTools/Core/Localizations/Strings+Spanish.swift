@@ -652,7 +652,7 @@ extension Strings {
         obStatusRecheck: "Comprobar de nuevo",
         obStepDoneTitle: "¡Todo listo!",
         obStepDoneBody: "PowerTools ya está cuidando de tu Mac.",
-        obDoneHint: "Busca el agujero negro en la barra de menús, en la esquina superior derecha de la pantalla.",
+        obDoneHint: "Busca el icono de PowerTools en la barra de menús, en la esquina superior derecha de la pantalla.",
         obWhatsNewTitle: "Novedades de esta versión",
         obWhatsNewFallback: "Esta actualización incluye las correcciones y mejoras más recientes.",
         obLanguageUpdateTitle: "Ahora en tu idioma",

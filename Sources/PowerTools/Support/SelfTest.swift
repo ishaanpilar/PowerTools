@@ -4,6 +4,7 @@
 
 import AppKit
 import IOKit.pwr_mgt
+import SwiftUI
 
 /// Quick subsystem check, run with `PowerTools --selftest`.
 /// Core capabilities fail the test; hardware-dependent readings only warn.
@@ -94,11 +95,11 @@ enum SelfTest {
         UserDefaults.standard.removeObject(forKey: "selftest")
 
         for style in KeepAwakeActiveIcon.allCases {
-            guard let image = BlackHoleGlyph.activeImage(style: style, tint: .orange) else {
+            guard let image = BrandGlyph.activeImage(style: style, tint: .orange) else {
                 failures.append("Keep Awake icon \(style.rawValue)")
                 continue
             }
-            if image.size != BlackHoleGlyph.pointSize {
+            if image.size != BrandGlyph.pointSize {
                 failures.append("Keep Awake icon size \(style.rawValue)")
             }
             // image.size stays correct even when the symbol inside it is scaled
@@ -108,20 +109,62 @@ enum SelfTest {
             }
         }
 
-        // Tools/MakeIcon.swift writes the glyph PNGs at BlackHoleGlyph.pointSize.
+        // Tools/MakeIcon.swift writes the glyph PNGs at BrandGlyph.pointSize.
         // Changing the canvas in one and not the other would squash the glyph.
         if Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png") == nil {
             warnings.append("menu bar glyph asset not bundled")
-        } else if let rep = BlackHoleGlyph.image(active: false)?
+        } else if let rep = BrandGlyph.image(active: false)?
             .representations.min(by: { $0.pixelsWide < $1.pixelsWide }) {
-            if rep.pixelsWide != Int(BlackHoleGlyph.pointSize.width)
-                || rep.pixelsHigh != Int(BlackHoleGlyph.pointSize.height) {
+            if rep.pixelsWide != Int(BrandGlyph.pointSize.width)
+                || rep.pixelsHigh != Int(BrandGlyph.pointSize.height) {
                 failures.append("menu bar glyph is \(rep.pixelsWide)×\(rep.pixelsHigh) px at 1x, "
-                                + "expected \(Int(BlackHoleGlyph.pointSize.width))×"
-                                + "\(Int(BlackHoleGlyph.pointSize.height))")
+                                + "expected \(Int(BrandGlyph.pointSize.width))×"
+                                + "\(Int(BrandGlyph.pointSize.height))")
             }
         } else {
             failures.append("menu bar glyph representations")
+        }
+
+        // The brand palette is written down twice: in Theme, for the in-app
+        // badge and mark, and in Tools/MakeBrandAssets.swift, which renders the
+        // app icon. They are meant to be the same object, so read the colour
+        // back out of the shipped icon rather than trusting the two to agree.
+        // The sample lands inside the tall left module, well clear of any edge.
+        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let icon = NSImage(contentsOf: iconURL),
+           let rep = icon.representations
+               .compactMap({ $0 as? NSBitmapImageRep })
+               .first(where: { $0.pixelsWide >= 512 }) {
+            // Design space: the mark box is inset 20% into a squircle that is
+            // itself inset 6%, and the left module starts at the box's origin.
+            let side = CGFloat(rep.pixelsWide)
+            let body = side * 0.88, bodyOrigin = side * 0.06
+            let markOrigin = bodyOrigin + body * 0.20
+            let unit = (body * 0.60) / 84            // 84 design units across
+            let x = Int(markOrigin + 16 * unit)      // inside the 33-wide module
+            let y = Int(markOrigin + 42 * unit)      // vertically centred
+            // The sampled colour is NOT converted: the rep already stores sRGB
+            // bytes, and asking for .sRGB again re-converts from a generic RGB
+            // space and shifts the value (#A3E635 reads back as #B0E643).
+            if let sampled = rep.colorAt(x: x, y: y),
+               let expected = NSColor(Theme.brandLime).usingColorSpace(.sRGB) {
+                let drift = max(abs(sampled.redComponent - expected.redComponent),
+                                abs(sampled.greenComponent - expected.greenComponent),
+                                abs(sampled.blueComponent - expected.blueComponent))
+                if drift > 0.02 {
+                    failures.append("Theme.brandLime and the app icon have drifted apart "
+                                    + "(icon sampled "
+                                    + String(format: "#%02X%02X%02X",
+                                             Int(sampled.redComponent * 255),
+                                             Int(sampled.greenComponent * 255),
+                                             Int(sampled.blueComponent * 255))
+                                    + "); re-run Tools/MakeBrandAssets.swift")
+                }
+            } else {
+                warnings.append("could not sample the app icon's brand colour")
+            }
+        } else {
+            warnings.append("app icon not bundled; brand colour unchecked")
         }
 
         for warning in warnings {

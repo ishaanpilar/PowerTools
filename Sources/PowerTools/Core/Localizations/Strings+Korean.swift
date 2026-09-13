@@ -653,7 +653,7 @@ extension Strings {
         obStatusRecheck: "다시 확인",
         obStepDoneTitle: "준비 완료!",
         obStepDoneBody: "PowerTools가 이미 Mac을 살피고 있습니다.",
-        obDoneHint: "화면 오른쪽 위 메뉴 막대에서 블랙홀 아이콘을 찾으세요.",
+        obDoneHint: "화면 오른쪽 위 메뉴 막대에서 PowerTools 아이콘을 찾으세요.",
         obWhatsNewTitle: "이번 버전의 새로운 기능",
         obWhatsNewFallback: "이 업데이트에는 최신 수정 사항과 개선 사항이 포함되어 있습니다.",
         obLanguageUpdateTitle: "내 언어로 사용하기",

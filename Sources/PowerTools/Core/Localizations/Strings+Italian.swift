@@ -652,7 +652,7 @@ extension Strings {
         obStatusRecheck: "Controlla di nuovo",
         obStepDoneTitle: "Tutto pronto!",
         obStepDoneBody: "PowerTools si sta già prendendo cura del tuo Mac.",
-        obDoneHint: "Cerca il buco nero nella barra dei menu, in alto a destra dello schermo.",
+        obDoneHint: "Cerca l’icona di PowerTools nella barra dei menu, in alto a destra dello schermo.",
         obWhatsNewTitle: "Novità di questa versione",
         obWhatsNewFallback: "Questo aggiornamento include le correzioni e i miglioramenti più recenti.",
         obLanguageUpdateTitle: "Ora nella tua lingua",

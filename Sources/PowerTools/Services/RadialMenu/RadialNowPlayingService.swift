@@ -216,7 +216,7 @@ private struct RadialNowPlayingCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         } else {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Theme.spaceGradient)
+                .fill(Theme.brandGradient)
                 .frame(width: 76, height: 76)
                 .overlay {
                     if let icon = RadialNowPlayingApplication.icon(for: snapshot) {

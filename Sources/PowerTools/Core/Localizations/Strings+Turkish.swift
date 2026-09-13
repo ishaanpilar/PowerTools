@@ -652,7 +652,7 @@ extension Strings {
         obStatusRecheck: "Tekrar denetle",
         obStepDoneTitle: "Her şey hazır!",
         obStepDoneBody: "PowerTools Mac’inle ilgilenmeye başladı bile.",
-        obDoneHint: "Ekranın sağ üstündeki menü çubuğunda kara deliği ara.",
+        obDoneHint: "Ekranın sağ üstündeki menü çubuğunda PowerTools simgesini ara.",
         obWhatsNewTitle: "Bu sürümdeki yenilikler",
         obWhatsNewFallback: "Bu güncelleme en son düzeltmeleri ve iyileştirmeleri içerir.",
         obLanguageUpdateTitle: "Artık kendi dilinde",

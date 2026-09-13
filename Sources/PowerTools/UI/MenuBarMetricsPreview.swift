@@ -61,8 +61,8 @@ struct MenuBarMetricsPreview: View {
             }
             HStack(spacing: 5) {
                 glyph
-                    .frame(width: BlackHoleGlyph.pointSize.width,
-                           height: BlackHoleGlyph.pointSize.height)
+                    .frame(width: BrandGlyph.pointSize.width,
+                           height: BrandGlyph.pointSize.height)
                 if !lines.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
@@ -305,7 +305,7 @@ struct MenuBarMetricsPreview: View {
 
     private var glyph: some View {
         Group {
-            if let image = BlackHoleGlyph.image(active: true) {
+            if let image = BrandGlyph.image(active: true) {
                 Image(nsImage: image).renderingMode(.template)
             } else {
                 Image(systemName: "circle.fill")

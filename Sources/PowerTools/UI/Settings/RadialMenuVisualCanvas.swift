@@ -119,7 +119,7 @@ struct RadialMenuVisualCanvas: View {
                 endRadius: 150
             )
 
-            Theme.spaceGradient.opacity(0.4)
+            Theme.brandGradient.opacity(0.4)
         }
     }
 

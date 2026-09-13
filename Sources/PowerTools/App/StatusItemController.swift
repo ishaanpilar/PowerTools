@@ -5,7 +5,7 @@
 import AppKit
 import Combine
 
-/// Owns the menu bar presence: the black hole glyph, the optional countdown
+/// Owns the menu bar presence: the brand glyph, the optional countdown
 /// title and the tooltip. Click handling is delegated back to the AppDelegate.
 final class StatusItemController {
     var onLeftClick: (() -> Void)?
@@ -100,7 +100,7 @@ final class StatusItemController {
         statusItem.behavior = []
         statusItem.isVisible = true
         if let button = statusItem.button {
-            button.image = BlackHoleGlyph.image(active: false)
+            button.image = BrandGlyph.image(active: false)
             button.font = MenuBarRenderer.statusFont(stacked: false)
             button.alignment = .left
             button.cell?.lineBreakMode = .byClipping
@@ -319,12 +319,12 @@ final class StatusItemController {
         }
         let stateImage: NSImage?
         if updateAvailable {
-            stateImage = BlackHoleGlyph.attentionImage()
+            stateImage = BrandGlyph.attentionImage()
         } else {
-            stateImage = BlackHoleGlyph.image(active: keepAwakeActive)
+            stateImage = BrandGlyph.image(active: keepAwakeActive)
         }
         if micBadgeActive {
-            button.image = BlackHoleGlyph.micMutedImage(over: stateImage) ?? stateImage
+            button.image = BrandGlyph.micMutedImage(over: stateImage) ?? stateImage
         } else {
             button.image = stateImage
         }
@@ -661,16 +661,16 @@ final class StatusItemController {
 
 /// The official mark, bundled as a template image so the idle state adapts to
 /// light and dark menu bars. Active states can use real colors for attention.
-enum BlackHoleGlyph {
-    /// Logical size of the glyph in the menu bar, in points. Wide because the
-    /// mark is ~1.97:1 and sized from its height. Tools/MakeIcon.swift writes
-    /// the bundled PNGs at this size; `--selftest` checks the two still agree.
+enum BrandGlyph {
+    /// Logical size of the glyph canvas in the menu bar, in points. Wider than
+    /// the square mark needs, because the same canvas also holds the compact
+    /// Keep Awake symbols. Tools/MakeIcon.swift writes the bundled PNGs at this
+    /// size; `--selftest` checks the two still agree.
     static let pointSize = NSSize(width: 26, height: 20)
 
-    /// Requested ink height for the active states' system symbols. A compact
-    /// symbol has to stand taller than the wide mark to read as the same size,
-    /// matching the menu bar's other compact icons at ~15 pt. Antialiasing
-    /// costs about a point of what is asked for here.
+    /// Requested ink height for the active states' system symbols, matching the
+    /// menu bar's other compact icons at ~15 pt and the brand glyph's own
+    /// height. Antialiasing costs about a point of what is asked for here.
     private static let symbolHeight: CGFloat = 16
 
     /// Both scale representations go into one NSImage — loading the 1x file

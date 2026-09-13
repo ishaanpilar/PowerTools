@@ -66,7 +66,7 @@ struct KeepAwakeIconPicker: View {
             iconValue = icon.rawValue
         } label: {
             Group {
-                if let image = BlackHoleGlyph.activeImage(style: icon, tint: selectedTint) {
+                if let image = BrandGlyph.activeImage(style: icon, tint: selectedTint) {
                     Image(nsImage: image)
                         .renderingMode(selectedTint == .none ? .template : .original)
                         .resizable()

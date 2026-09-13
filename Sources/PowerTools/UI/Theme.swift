@@ -6,12 +6,19 @@ import SwiftUI
 
 /// Shared look & feel: brand colors, card styling and the brand mark.
 enum Theme {
-    /// Near-black background behind the brand mark. Neutral greys into black, no
-    /// colour cast, with just a hint of depth so the badge does not read as flat.
-    static let spaceGradient = LinearGradient(
-        colors: [Color(white: 0.10),
-                 Color(white: 0.04),
-                 Color.black],
+    // The brand palette. Defined a second time, in sRGB, in
+    // Tools/MakeBrandAssets.swift, which renders the app icon itself — the two
+    // have to agree, because the badge below and the Dock icon are meant to
+    // read as the same object. `--selftest` checks that they still do.
+    static let brandLime = Color(red: 0.639, green: 0.902, blue: 0.208)     // #A3E635
+    static let brandMint = Color(red: 0.000, green: 0.898, blue: 0.627)     // #00E5A0
+    static let brandInk = Color(red: 0.043, green: 0.047, blue: 0.043)      // #0B0C0B
+    static let brandSurface = Color(red: 0.082, green: 0.090, blue: 0.078)  // #151714
+
+    /// The ground the brand mark sits on: the same near-black the app icon's
+    /// squircle uses, with a hint of depth so the badge does not read as flat.
+    static let brandGradient = LinearGradient(
+        colors: [brandSurface, brandInk],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
@@ -188,7 +195,9 @@ func appDelegate() -> AppDelegate? {
 /// tintable for light or dark surfaces.
 struct BrandMark: View {
     var width: CGFloat
-    var tint: Color = .white
+    /// Call sites sitting on an arbitrary surface pass their own tint for
+    /// contrast; the default is for the ones that sit on `brandGradient`.
+    var tint: Color = Theme.brandLime
 
     private static let mark: NSImage? = {
         guard let url = Bundle.main.url(forResource: "BrandMark", withExtension: "png") else { return nil }
@@ -242,9 +251,9 @@ struct BrandBadge: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-                .fill(Theme.spaceGradient)
-            BrandMark(width: size * 0.8)
+            RoundedRectangle(cornerRadius: size * 0.2237, style: .continuous)
+                .fill(Theme.brandGradient)
+            BrandMark(width: size * 0.60)
         }
         .frame(width: size, height: size)
     }

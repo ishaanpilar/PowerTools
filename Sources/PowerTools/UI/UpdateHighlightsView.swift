@@ -202,7 +202,7 @@ private struct UpdateHighlightArtwork: View {
                     .padding(14)
             } else {
                 ZStack {
-                    Theme.spaceGradient
+                    Theme.brandGradient
                     Image(systemName: fallbackSymbol)
                         .font(.system(size: 44, weight: .medium))
                         .foregroundStyle(.white)

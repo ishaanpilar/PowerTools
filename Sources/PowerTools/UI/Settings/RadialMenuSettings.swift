@@ -676,7 +676,7 @@ private struct RadialItemRow: View {
                 .frame(width: 30, height: 30)
         } else {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Theme.spaceGradient)
+                .fill(Theme.brandGradient)
                 .frame(width: 30, height: 30)
                 .overlay(
                     Image(systemName: item.effectiveSymbolName)

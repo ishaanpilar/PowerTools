@@ -32,13 +32,28 @@ PowerTools therefore uses its own name, its own bundle identifier
 Nothing in this repository is an official Vorssaint build, and nothing here is
 endorsed by or affiliated with the Vorssaint project.
 
-### Outstanding: the app icon and brandmark
+No Vorssaint artwork remains in this repository. The PowerTools mark is an
+original geometric design and carries none of upstream's trade dress.
 
-> [!WARNING]
-> The artwork under `Resources/Brand/` and `docs/assets/readme/logo*.svg` is
-> still Vorssaint's brandmark, retained only as an unreplaced placeholder while
-> the visual rebrand is in progress. It is Vorssaint brand material, is not
-> licensed to forks, and **must be replaced with original PowerTools artwork
-> before any build of this repository is distributed.**
+## The PowerTools mark
 
-Until that artwork is replaced, this repository is not in a shippable state.
+The mark is three rounded modules — one tall, two stacked — on a near-black
+squircle, in volt lime `#A3E635` with a single mint `#00E5A0` module.
+
+Its geometry is defined once, in `Tools/MakeBrandAssets.swift`, which renders
+every rendition from that one definition: the app icon master, the mono master
+the menu bar template and in-app mark are cut from, the Icon Composer vector,
+and the documentation logos. Change the mark there and re-run it; do not edit
+the generated files by hand, or the renditions will drift apart.
+
+```sh
+swift Tools/MakeBrandAssets.swift
+```
+
+`PowerTools --selftest` reads the brand colour back out of the shipped app icon
+and compares it with `Theme.brandLime`, so the app's own palette and its icon
+cannot silently diverge.
+
+The mark, the name, and the palette as applied to them are PowerTools brand
+material. They are excluded from the GPL-3.0-or-later license covering the
+source code, exactly as the first section of this document describes.

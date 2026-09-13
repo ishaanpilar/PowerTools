@@ -3,14 +3,15 @@
 // Copyright (C) 2026 PowerTools contributors
 
 // Generates all icon assets:
-// - the app iconset and .icns from the exported Default rendition of the
-//   adaptive source (Resources/Brand/AppIcon-Default.png)
-// - the menu bar template glyph and BrandMark from the wordmark master
+// - the app iconset and .icns from the Default rendition of the adaptive source
+//   (Resources/Brand/AppIcon-Default.png)
+// - the menu bar template glyph and BrandMark from the mono master
 //   (Resources/Brand/logo.png)
-// AppIcon-Default.png is a hand-exported twin of Resources/Brand/AppIcon.icon;
-// re-export it whenever the Icon Composer project changes. The build cannot read
-// .icon bundles directly: actool exists only inside full Xcode 26, and the
-// supported local floor is Command Line Tools alone.
+// Both masters, and the vector the Icon Composer project draws, are written by
+// Tools/MakeBrandAssets.swift from one definition of the mark, so they cannot
+// drift apart; run that tool when the mark changes, this one at build time.
+// The build cannot read .icon bundles directly: actool exists only inside full
+// Xcode 26, and the supported local floor is Command Line Tools alone.
 import AppKit
 
 // Current macOS misreads PNG payloads in the legacy small chunks. It downsamples
@@ -115,16 +116,18 @@ func renderAppIcon(px: Int) -> Data? {
 
 // MARK: - Menu bar glyph (template)
 
-// The mark is ~1.97:1, so fitting it into a fixed box made the width the
-// limiting side and left the height unused, rendering it far shorter than the
-// menu bar icons around it. Size from the height and let the width follow.
-let menuBarGlyphHeight: CGFloat = 12.5
-// Centered geometrically the mark reads high, since the thin ring tails carry
-// the bounding box below the planet body. Drop it onto the same visual floor
-// as its neighbours.
-let menuBarGlyphDrop: CGFloat = 1
-// Taller than the mark needs: the same canvas holds the compact Keep Awake
-// symbols. Keep in sync with BlackHoleGlyph.pointSize in
+// Size from the height and let the width follow, so a change to the mark's
+// aspect ratio cannot change how tall it sits. The PowerTools mark is square,
+// and a compact square has to stand taller than a wide one to read as the same
+// size — the same reason StatusItemController asks for 16pt from the compact
+// Keep Awake symbols.
+let menuBarGlyphHeight: CGFloat = 15
+// The mark is symmetric and its bounding box is its ink, so geometric centring
+// is already optical centring. Upstream needed a drop here because the thin
+// ring tails of its planet carried the bounding box below the visual body.
+let menuBarGlyphDrop: CGFloat = 0
+// Wider than the mark needs: the same canvas holds the compact Keep Awake
+// symbols. Keep in sync with BrandGlyph.pointSize in
 // Sources/PowerTools/App/StatusItemController.swift; `--selftest` enforces it.
 let menuBarCanvas = (width: 26, height: 20)
 
@@ -193,7 +196,8 @@ for scale in [1, 2] {
     try data.write(to: URL(fileURLWithPath: "\(outDir)/../MenuBarIcon\(suffix).png"))
 }
 
-// Trimmed mark for in-app use (panel header, onboarding, About).
+// Trimmed mark for in-app use (panel header, onboarding, About). Rendered as a
+// template and tinted at the call site, so only its alpha survives.
 let markWidth = 640
 let markHeight = Int(CGFloat(markWidth) * sourceRect.height / sourceRect.width)
 if let rep = bitmapCanvas(markWidth, markHeight), let ctx = NSGraphicsContext(bitmapImageRep: rep) {

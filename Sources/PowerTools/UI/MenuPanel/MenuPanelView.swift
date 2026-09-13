@@ -85,6 +85,9 @@ struct MenuPanelView: View {
     /// The section opened from the dashboard; nil is the dashboard itself.
     @State private var openedSection: PanelSectionID?
     @State private var selectedMetric: MetricDetailKind?
+    /// The dashboard card currently expanded in place; owned here (not inside
+    /// the dashboard view) so the sampling plan below can see it too.
+    @State private var expandedDashboardTile: PanelDashboardTile?
 
     /// Cap the panel to the usable screen height so it never overflows the menu
     /// bar; taller content scrolls inside. Measured against the display the
@@ -130,19 +133,24 @@ struct MenuPanelView: View {
     }
 
     private var monitorNeeds: SystemMonitorPanelNeeds {
-        let header = PanelHeaderStats.monitorNeeds
         if let selectedMetric {
-            return selectedMetric.monitorNeeds.union(header)
+            return selectedMetric.monitorNeeds
         }
         guard let activeSection else {
-            return PanelDashboardLayout(sections: visibleSections).monitorNeeds.union(header)
+            var needs = PanelDashboardLayout(sections: visibleSections).monitorNeeds
+            if let expandedDashboardTile {
+                // An expanded card shows its full metric detail, which reads
+                // more than the collapsed card ever needed.
+                needs = needs.union(expandedDashboardTile.detailKind.monitorNeeds)
+            }
+            return needs
         }
         switch activeSection {
-        case .system: return SystemMonitorPanelNeeds(system: true).union(header)
-        case .network: return SystemMonitorPanelNeeds(network: true).union(header)
-        case .disk: return SystemMonitorPanelNeeds(disk: true).union(header)
-        case .power: return SystemMonitorPanelNeeds(power: true).union(header)
-        default: return header
+        case .system: return SystemMonitorPanelNeeds(system: true)
+        case .network: return SystemMonitorPanelNeeds(network: true)
+        case .disk: return SystemMonitorPanelNeeds(disk: true)
+        case .power: return SystemMonitorPanelNeeds(power: true)
+        default: return .none
         }
     }
 
@@ -174,10 +182,6 @@ struct MenuPanelView: View {
         openedSection = id
     }
 
-    private func openMetric(_ kind: MetricDetailKind) {
-        selectedMetric = kind
-    }
-
     private var navigablePanel: some View {
         VStack(alignment: .leading, spacing: 12) {
             UpdateBanner()
@@ -198,14 +202,12 @@ struct MenuPanelView: View {
                     } else {
                         PanelDashboardView(sections: visibleSections,
                                            openSection: openSection,
-                                           openMetric: openMetric)
+                                           expandedTile: $expandedDashboardTile)
                     }
                 }
                 .frame(width: 308)
             }
             .frame(width: 308, height: navigableScrollHeight)
-
-            footer
         }
         .padding(12)
         .frame(width: 332, height: navigablePanelHeight)
@@ -230,8 +232,6 @@ struct MenuPanelView: View {
                 }
                 .frame(width: 308, height: metricScrollHeight)
             }
-
-            footer
         }
         .padding(12)
         .frame(width: 332, height: metricPanelHeight)
@@ -280,9 +280,11 @@ struct MenuPanelView: View {
         let bannerHeight = updates.state.showsMenuPanelBanner
             ? (max(updateBannerHeight, 48) + 12)
             : 0
-        // Padding, header and footer; a section or metric adds its back row.
+        // Padding and the header (now a two-line greeting, no separate
+        // footer row since Settings/Quit moved up into it); a section or
+        // metric adds its back row.
         let backRow: CGFloat = (selectedMetric != nil || activeSection != nil) ? 38 : 0
-        return 124 + backRow + bannerHeight
+        return 90 + backRow + bannerHeight
     }
 
     private var estimatedNavigableContentHeight: CGFloat {
@@ -394,63 +396,55 @@ struct MenuPanelView: View {
     }
 
     private var header: some View {
-        MenuPanelHeader(openMetric: openMetric)
-    }
-
-    private var footer: some View {
-        HStack(spacing: 8) {
-            footerButton(l10n.s.panelSettings,
-                         systemImage: "gearshape",
-                         horizontalPadding: 7) {
-                // The hosted utility's own page, or the general one from the
-                // panel's lists: the router is sticky, so it is set every time.
-                SettingsRouter.shared.page = PanelInteractionState.shared.hostedSettingsPage ?? .general
-                appDelegate()?.openSettingsWindow()
-            }
-
-            footerButton(l10n.s.panelQuit,
-                         systemImage: "power",
-                         horizontalPadding: 7) {
-                NSApp.terminate(nil)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 30)
-        .padding(.top, 4)
-    }
-
-    private func footerButton(_ title: String, systemImage: String,
-                              horizontalPadding: CGFloat = 8,
-                              action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 11, weight: .medium))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .minimumScaleFactor(0.78)
-                .labelStyle(.titleAndIcon)
-                .padding(.horizontal, horizontalPadding)
-                .frame(maxWidth: .infinity, minHeight: 28)
-                .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                .panelGlassControl(in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        MenuPanelHeader()
     }
 }
 
-/// The top row on every screen: the mark on the leading edge, where a Mac
-/// window's identity sits, and the live readings right beside it.
+/// The top row on every screen: just the mark, on the leading edge, where a
+/// Mac window's identity sits. The panel's own readings live in the
+/// dashboard's cards below, not duplicated up here.
 private struct MenuPanelHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var l10n = L10n.shared
-    let openMetric: (MetricDetailKind) -> Void
+    @ObservedObject private var monitor = SystemMonitor.shared
+    @ObservedObject private var updates = UpdateService.shared
+    /// Which of the current conditions the status line is showing; advances
+    /// on a timer only while there is more than one to cycle through.
+    @State private var conditionIndex = 0
+    @State private var rollTimer: Timer?
+
+    private static let rollInterval: TimeInterval = 3.4
+
+    /// Picked once per header lifetime, not recomputed in `body`: the pool
+    /// is read every time `monitor`/`updates` publish, and re-rolling on
+    /// every one of those would make the word visibly flicker.
+    @State private var greetingWordIndex = Int.random(in: 0..<6)
 
     var body: some View {
-        HStack(spacing: 8) {
-            BrandMark(width: 30, tint: markTint)
-                .frame(height: 22)
-                .accessibilityHidden(true)
+        HStack(alignment: .center, spacing: 10) {
+            logoBadge
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(greeting)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                    if monitor.isRefreshing {
+                        RefreshingIndicator()
+                            .transition(.opacity)
+                    }
+                }
+                Text(statusText)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+                    .id(conditionIndex)
+                    .transition(.opacity)
+            }
+
+            Spacer(minLength: 8)
 
             if AppInfo.isBeta {
                 Text(l10n.s.betaBadgeLabel.uppercased())
@@ -463,31 +457,143 @@ private struct MenuPanelHeader: View {
                     .fixedSize()
             }
 
-            PanelHeaderStats(openMetric: openMetric)
-
-            Spacer(minLength: 0)
-
-            if AppInfo.isBeta {
-                Button {
-                    appDelegate()?.openFeedbackWindow()
-                } label: {
-                    Image(systemName: "bubble.left.and.text.bubble.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .padding(4)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(FeatureStrings.feedback(l10n.language).openButton)
-            }
+            settingsButton
         }
-        .frame(height: 28)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.2), value: monitor.isRefreshing)
+        .animation(.easeInOut(duration: 0.3), value: conditionIndex)
+        .onAppear { restartRolling() }
+        .onChange(of: conditions.count) { _, _ in restartRolling() }
+        .onDisappear {
+            rollTimer?.invalidate()
+            rollTimer = nil
+        }
+    }
+
+    /// Sized to the text block beside it — the greeting line plus the
+    /// two-line status — rather than a fixed small square, so the mark
+    /// reads as a peer of that whole block instead of a stray icon pinned
+    /// to its top edge.
+    private var logoBadge: some View {
+        BrandMark(width: 26, tint: markTint)
+            .frame(width: 44, height: 44)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(colorScheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.08))
+            )
+            .accessibilityHidden(true)
+    }
+
+    /// The only icon left in the header, so the trailing Spacer carries it
+    /// all the way to the edge. Quit (and everything else — About, Check
+    /// for Updates, Uninstall, the Shelf) already lives one right-click on
+    /// the status item away; a second, narrower copy of that same menu up
+    /// here was redundant, not an extra convenience.
+    private var settingsButton: some View {
+        Button {
+            // The hosted utility's own page, or the general one from the
+            // panel's lists: the router is sticky, so it is set every time.
+            SettingsRouter.shared.page = PanelInteractionState.shared.hostedSettingsPage ?? .general
+            appDelegate()?.openSettingsWindow()
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 26, height: 26)
+                .contentShape(Circle())
+                .panelGlassControl(in: Circle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .help(l10n.s.panelSettings)
     }
 
     private var markTint: Color {
         colorScheme == .light ? Color(white: 0.03) : .white
+    }
+
+    /// The time-of-day word plus five casual, time-agnostic alternatives,
+    /// one of them picked at random per header lifetime so the panel does
+    /// not say the exact same word on every open. Combined with the Mac
+    /// account's own first name — already on the machine, no network
+    /// involved, the same kind of local-only personalization the rest of
+    /// the app already trades in.
+    private var greetingWordPool: [String] {
+        let timeWord: String
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 0..<12: timeWord = l10n.s.healthGreetingMorning
+        case 12..<17: timeWord = l10n.s.healthGreetingAfternoon
+        default: timeWord = l10n.s.healthGreetingEvening
+        }
+        return [timeWord, l10n.s.healthGreetingHello, l10n.s.healthGreetingHi,
+                l10n.s.healthGreetingHey, l10n.s.healthGreetingHowdy, l10n.s.healthGreetingGreetings]
+    }
+
+    private var greetingWord: String {
+        let pool = greetingWordPool
+        return pool[greetingWordIndex % pool.count]
+    }
+
+    /// The account's first name, read locally via NSFullUserName() — no
+    /// network call, nothing sent anywhere. nil only if the account somehow
+    /// has no display name at all, which real Mac accounts always do.
+    private var firstName: String? {
+        let full = NSFullUserName().trimmingCharacters(in: .whitespaces)
+        guard let first = full.split(separator: " ").first, !first.isEmpty else { return nil }
+        return String(first)
+    }
+
+    private var greeting: String {
+        guard let firstName else { return greetingWord }
+        return String(format: l10n.s.healthGreetingNameFormat, greetingWord, firstName)
+    }
+
+    private var updateAvailable: Bool {
+        if case .available = updates.state { return true }
+        return false
+    }
+
+    private var conditions: [SystemHealthCondition] {
+        SystemHealthSummary.conditions(for: monitor.snapshot, updateAvailable: updateAvailable)
+    }
+
+    private var statusText: String {
+        guard !conditions.isEmpty else { return l10n.s.healthEverythingGood }
+        return conditions[conditionIndex % conditions.count].message(l10n.s)
+    }
+
+    private func restartRolling() {
+        rollTimer?.invalidate()
+        conditionIndex = 0
+        guard conditions.count > 1 else { return }
+        rollTimer = Timer.scheduledTimer(withTimeInterval: Self.rollInterval, repeats: true) { _ in
+            DispatchQueue.main.async {
+                conditionIndex += 1
+            }
+        }
+    }
+}
+
+/// A small spinning glyph shown only while the panel just woke from an idle
+/// trickle and is catching up to a live reading: what's on screen already
+/// (up to a trickle tick old) is real, this just says a fresher one is
+/// landing any moment.
+private struct RefreshingIndicator: View {
+    @ObservedObject private var l10n = L10n.shared
+    @State private var spinning = false
+
+    var body: some View {
+        Image(systemName: "arrow.triangle.2.circlepath")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .rotationEffect(.degrees(spinning ? 360 : 0))
+            .onAppear {
+                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+                    spinning = true
+                }
+            }
+            .help(l10n.s.monitorRefreshingLabel)
+            .accessibilityLabel(l10n.s.monitorRefreshingLabel)
     }
 }
 

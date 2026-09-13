@@ -854,6 +854,27 @@ struct Strings {
     let diskFree: String
     let diskAvailable: String
     let diskPurgeable: String
+    let diskCriticallyLow: String
+    /// %@ is the freeable byte amount, already formatted (e.g. "15.4 GB").
+    let diskReclaimableFormat: String
+    let diskOpenCleaner: String
+    // Panel header: time-of-day greeting and the one-line health summary
+    // beneath it (SystemHealthSummary picks which one, most urgent first).
+    let healthGreetingMorning: String
+    let healthGreetingAfternoon: String
+    let healthGreetingEvening: String
+    let healthGreetingHello: String
+    let healthGreetingHi: String
+    let healthGreetingHey: String
+    let healthGreetingHowdy: String
+    let healthGreetingGreetings: String
+    /// %1$@ is the chosen greeting word, %2$@ the Mac account's first name.
+    let healthGreetingNameFormat: String
+    let healthEverythingGood: String
+    let healthBatteryCriticallyLow: String
+    let healthThermalCritical: String
+    let healthMemoryCritical: String
+    let healthDiskCriticallyLow: String
     let diskInternal: String
     let diskExternal: String
     let diskSelect: String
@@ -951,6 +972,11 @@ struct Strings {
     let monitorPanelConfigHint: String
     let monitorOrderSection: String
     let monitorOrderHint: String
+    let monitorDashboardCardsSection: String
+    let monitorDashboardCardsHint: String
+    /// Shown briefly on a fresh panel open, while a background-trickled
+    /// reading is on screen and a live one is still on its way in.
+    let monitorRefreshingLabel: String
     let obStepPanelTitle: String
     let obStepPanelBody: String
     let obStepPanelNavigationTitle: String
@@ -1889,6 +1915,23 @@ extension Strings {
         diskFree: "livre",
         diskAvailable: "disponível",
         diskPurgeable: "purgável",
+        diskCriticallyLow: "Armazenamento criticamente baixo",
+        diskReclaimableFormat: "Até %@ podem ser liberados",
+        diskOpenCleaner: "Abrir o Cleaner",
+        healthGreetingMorning: "Bom dia",
+        healthGreetingAfternoon: "Boa tarde",
+        healthGreetingEvening: "Boa noite",
+        healthGreetingHello: "Olá",
+        healthGreetingHi: "Oi",
+        healthGreetingHey: "E aí",
+        healthGreetingHowdy: "Opa",
+        healthGreetingGreetings: "Saudações",
+        healthGreetingNameFormat: "%1$@, %2$@!",
+        healthEverythingGood: "Está tudo bem.",
+        healthBatteryCriticallyLow: "Sua bateria está criticamente baixa.",
+        healthThermalCritical: "Seu Mac está sendo limitado por temperatura.",
+        healthMemoryCritical: "A pressão de memória está alta agora.",
+        healthDiskCriticallyLow: "Está tudo bem, exceto o armazenamento.",
         diskInternal: "Interno",
         diskExternal: "Externo",
         diskSelect: "Selecionar disco",
@@ -1982,6 +2025,9 @@ extension Strings {
         monitorPanelConfigHint: "Abra um bloco para escolher o que ele mostra.",
         monitorOrderSection: "Ordem das seções",
         monitorOrderHint: "Arraste para reordenar as seções do painel e use o olho para mostrar ou ocultar cada uma.",
+        monitorDashboardCardsSection: "Cartões do painel",
+        monitorDashboardCardsHint: "Arraste para reordenar os cartões do painel e use o olho para mostrar ou ocultar cada um.",
+        monitorRefreshingLabel: "Atualizando…",
         obStepPanelTitle: "O que aparece no painel",
         obStepPanelBody: "Abra cada bloco e escolha exatamente o que mostrar quando você clica no ícone.",
         obStepPanelNavigationTitle: "Painel por seções",
@@ -2913,6 +2959,23 @@ extension Strings {
         diskFree: "free",
         diskAvailable: "available",
         diskPurgeable: "purgeable",
+        diskCriticallyLow: "Critically low storage",
+        diskReclaimableFormat: "Up to %@ can be freed",
+        diskOpenCleaner: "Open Cleaner",
+        healthGreetingMorning: "Morning",
+        healthGreetingAfternoon: "Afternoon",
+        healthGreetingEvening: "Evening",
+        healthGreetingHello: "Hello",
+        healthGreetingHi: "Hi",
+        healthGreetingHey: "Hey",
+        healthGreetingHowdy: "Howdy",
+        healthGreetingGreetings: "Greetings",
+        healthGreetingNameFormat: "%1$@, %2$@!",
+        healthEverythingGood: "Everything looks good.",
+        healthBatteryCriticallyLow: "Your battery is critically low.",
+        healthThermalCritical: "Your Mac is being throttled.",
+        healthMemoryCritical: "Memory pressure is high right now.",
+        healthDiskCriticallyLow: "Everything looks good, except your storage.",
         diskInternal: "Internal",
         diskExternal: "External",
         diskSelect: "Select disk",
@@ -3006,6 +3069,9 @@ extension Strings {
         monitorPanelConfigHint: "Open a block to choose what it shows.",
         monitorOrderSection: "Section order",
         monitorOrderHint: "Drag to reorder the panel sections and use the eye to show or hide each one.",
+        monitorDashboardCardsSection: "Dashboard cards",
+        monitorDashboardCardsHint: "Drag to reorder the dashboard cards and use the eye to show or hide each one.",
+        monitorRefreshingLabel: "Refreshing…",
         obStepPanelTitle: "What’s in the panel",
         obStepPanelBody: "Open each block and pick exactly what shows when you click the icon.",
         obStepPanelNavigationTitle: "Section-based panel",

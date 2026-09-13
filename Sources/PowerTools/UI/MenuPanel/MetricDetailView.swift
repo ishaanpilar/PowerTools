@@ -139,6 +139,18 @@ struct ActivityMonitorButton: View {
     }
 }
 
+/// `.full` is a self-contained screen: its own summary card up top, then a
+/// detail card, each in its own rounded rectangle — built for the dedicated
+/// metric screen a menu bar tap opens.
+/// `.embedded` drops the summary (whatever hosts it already shows the
+/// headline value and graph) and renders the rest as plain divided rows
+/// instead of nested cards, so it reads as one continuation of the card
+/// it is appended to rather than a stack of separate boxes.
+enum MetricDetailStyle {
+    case full
+    case embedded
+}
+
 struct MetricDetailView: View {
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var monitor = SystemMonitor.shared
@@ -147,6 +159,7 @@ struct MetricDetailView: View {
     @AppStorage(DefaultsKey.temperatureUnit) private var temperatureUnit = TemperatureUnit.celsius.rawValue
     @AppStorage(DefaultsKey.monitorInterval) private var monitorInterval = 2
     let kind: MetricDetailKind
+    var style: MetricDetailStyle = .full
     @State private var processRows: [ProcessUsage] = []
     @State private var processRowsLoading = false
     @State private var lastProcessRefresh = Date.distantPast
@@ -155,9 +168,20 @@ struct MetricDetailView: View {
     private let processLimit = 15
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            summaryCard
-            detailCard
+        VStack(alignment: .leading, spacing: style == .full ? 10 : 8) {
+            if style == .full {
+                summaryCard
+            }
+            // Storage earns a richer, purpose-built visual instead of the
+            // generic label/value rows every other metric gets — capacity is
+            // inherently a "how full, of what, and can I get space back"
+            // question, not a flat list. Scoped to the dashboard's own
+            // expansion, not the standalone screen a menu bar tap opens.
+            if kind == .disk, style == .embedded {
+                diskStorageVisual
+            } else {
+                detailCard
+            }
             if kind == .network {
                 speedTestCard
             }
@@ -288,7 +312,162 @@ struct MetricDetailView: View {
                 detailRow(row)
             }
         }
-        .panelCard()
+        .cardOrDivider(style)
+    }
+
+    // MARK: - Storage visual
+
+    /// A capacity-first view of the startup volume: a segmented bar (used,
+    /// purgeable, free), a matching legend, a low-space warning, and — only
+    /// once space is actually tight — a nudge toward the Cleaner. Read/write
+    /// throughput, which the segments have nothing to do with, stays as two
+    /// quiet rows underneath rather than crowding the capacity picture.
+    @ViewBuilder
+    private var diskStorageVisual: some View {
+        let snapshot = monitor.snapshot
+        if let disk = primaryDisk(from: snapshot.disk) {
+            VStack(alignment: .leading, spacing: 7) {
+                Divider()
+                VStack(alignment: .leading, spacing: 10) {
+                    diskIdentityRow(disk)
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(MetricFormat.diskBytes(disk.freeBytes))
+                            .font(.system(size: 20, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                        Text(l10n.s.diskAvailable)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    if isCriticallyLow(disk) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(PanelMetricColor.red(for: colorScheme))
+                                .frame(width: 7, height: 7)
+                            Text(l10n.s.diskCriticallyLow)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(PanelMetricColor.red(for: colorScheme))
+                        }
+                    }
+                    DiskSegmentedBar(segments: diskSegments(disk))
+                        .frame(height: 10)
+                    diskLegend(disk)
+                }
+                if isCriticallyLow(disk), let purgeable = disk.purgeableBytes, purgeable >= 500_000_000 {
+                    diskReclaimCallout(purgeable)
+                }
+                if let activity = diskActivity(from: snapshot.disk) {
+                    diskActivityRow(activity)
+                }
+            }
+        } else {
+            Text(l10n.s.diskNoDisks)
+                .font(.system(size: 10.5))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private func diskIdentityRow(_ disk: DiskDeviceReading) -> some View {
+        let capacity = MetricFormat.diskBytes(disk.totalBytes)
+        let format = DiskSupport.fileSystemLabel(type: disk.fileSystem)
+        return Text([disk.name, [capacity, format].compactMap { $0 }.joined(separator: " · ")]
+            .joined(separator: " · "))
+            .font(.system(size: 10.5, weight: .medium))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .truncationMode(.middle)
+    }
+
+    /// 90% used is the same threshold `metricValueColor` warms a value's
+    /// text to red at — one definition of "worth worrying about" everywhere
+    /// storage shows a number.
+    private func isCriticallyLow(_ disk: DiskDeviceReading) -> Bool {
+        disk.usedFraction >= 0.9
+    }
+
+    /// fileprivate, not private: DiskSegmentedBar is a sibling type further
+    /// down this same file, not a member of MetricDetailView.
+    fileprivate struct DiskSegment {
+        let fraction: Double
+        let color: Color
+    }
+
+    private func diskSegments(_ disk: DiskDeviceReading) -> [DiskSegment] {
+        let total = max(disk.totalBytes, 1)
+        let purgeable = disk.purgeableBytes ?? 0
+        let usedFraction = Double(disk.usedBytes) / Double(total)
+        let purgeableFraction = Double(purgeable) / Double(total)
+        // Orange matches the collapsed card's own identity color for Storage;
+        // purgeable gets a distinct yellow so the two segments never collide
+        // even after "used" warms toward red at high fractions.
+        let usedColor = metricValueColor(PanelMetricColor.orange(for: colorScheme), disk.usedFraction, for: colorScheme)
+        var segments = [DiskSegment(fraction: max(0, usedFraction - purgeableFraction), color: usedColor)]
+        if purgeable >= 500_000_000 {
+            segments.append(DiskSegment(fraction: purgeableFraction, color: PanelMetricColor.yellow(for: colorScheme)))
+        }
+        return segments
+    }
+
+    private func diskLegend(_ disk: DiskDeviceReading) -> some View {
+        let purgeable = disk.purgeableBytes ?? 0
+        let usedColor = metricValueColor(PanelMetricColor.orange(for: colorScheme), disk.usedFraction, for: colorScheme)
+        var entries: [(label: String, value: String, color: Color)] = [
+            (l10n.s.diskUsed, MetricFormat.diskBytes(disk.usedBytes - purgeable), usedColor),
+        ]
+        if purgeable >= 500_000_000 {
+            entries.append((l10n.s.diskPurgeable, MetricFormat.diskBytes(purgeable), PanelMetricColor.yellow(for: colorScheme)))
+        }
+        entries.append((l10n.s.diskAvailable, MetricFormat.diskBytes(disk.freeBytes), Color.primary.opacity(0.28)))
+        return HStack(spacing: 0) {
+            ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Circle().fill(entry.color).frame(width: 6, height: 6)
+                        Text(entry.label)
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(entry.value)
+                        .font(.system(size: 11, weight: .semibold))
+                        .monospacedDigit()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private func diskReclaimCallout(_ purgeable: UInt64) -> some View {
+        HStack(spacing: 9) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(PanelMetricColor.yellow(for: colorScheme))
+            Text(String(format: l10n.s.diskReclaimableFormat, MetricFormat.diskBytes(purgeable)))
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Button(l10n.s.diskOpenCleaner) {
+                SettingsRouter.shared.page = .cleaner
+                appDelegate()?.openSettingsWindow()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.mini)
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(PanelMetricColor.yellow(for: colorScheme).opacity(0.10))
+        )
+    }
+
+    private func diskActivityRow(_ activity: (read: Double, write: Double)) -> some View {
+        HStack(spacing: 14) {
+            Label(MetricFormat.bytesPerSec(activity.read), systemImage: "arrow.down")
+            Label(MetricFormat.bytesPerSec(activity.write), systemImage: "arrow.up")
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 10))
+        .foregroundStyle(.tertiary)
+        .monospacedDigit()
     }
 
     private var speedTestCard: some View {
@@ -327,7 +506,7 @@ struct MetricDetailView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .panelCard()
+        .cardOrDivider(style)
     }
 
     private var processCard: some View {
@@ -349,7 +528,7 @@ struct MetricDetailView: View {
                 }
             }
         }
-        .panelCard()
+        .cardOrDivider(style)
     }
 
     private var detailRows: [MetricDetailRow] {
@@ -760,10 +939,49 @@ struct MetricDetailView: View {
     }()
 }
 
+private extension View {
+    /// `.full` gets the usual boxed card; `.embedded` gets a leading divider
+    /// and no background of its own, so it reads as one more section of
+    /// whatever card is already hosting it rather than a stack of boxes.
+    @ViewBuilder
+    func cardOrDivider(_ style: MetricDetailStyle) -> some View {
+        if style == .full {
+            self.panelCard()
+        } else {
+            VStack(alignment: .leading, spacing: 7) {
+                Divider()
+                self
+            }
+        }
+    }
+}
+
 private struct MetricDetailRow: Identifiable {
     let id: String
     let title: String
     let value: String
     var showsPressure = false
     var wrapsValue = false
+}
+
+/// A capsule made of one or more proportional colored segments over a
+/// neutral track, for a capacity made of more than one category (used,
+/// purgeable, free) — plain `UsageBar` only ever draws one filled fraction.
+private struct DiskSegmentedBar: View {
+    let segments: [MetricDetailView.DiskSegment]
+
+    var body: some View {
+        GeometryReader { proxy in
+            HStack(spacing: 2) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                    Capsule()
+                        .fill(segment.color)
+                        .frame(width: max(3, proxy.size.width * segment.fraction))
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .background(Capsule().fill(Color.primary.opacity(0.08)))
+        .clipShape(Capsule())
+    }
 }

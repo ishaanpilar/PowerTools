@@ -130,9 +130,18 @@ final class SystemMonitor: ObservableObject {
     static let shared = SystemMonitor()
 
     @Published private(set) var snapshot = SystemSnapshot()
+    /// True from the moment the panel opens out of an idle/trickled state
+    /// until that opening refresh publishes, so the UI can show a brief
+    /// "catching up to live" indicator instead of silently swapping numbers.
+    @Published private(set) var isRefreshing = false
 
     private let queue = DispatchQueue(label: "com.powertools.utils.system-monitor", qos: .utility)
     private var timer: Timer?
+    /// Runs only while `!shouldRun`: a slow, minimal sample so the dashboard's
+    /// graphs are never more than a trickle tick stale, instead of frozen at
+    /// whatever they showed when the panel closed. See `trickleSample()`.
+    private var trickleTimer: Timer?
+    private static let trickleIntervalSeconds: TimeInterval = 60
     private var intervalSeconds = 2
     private var panelClients = 0
     private var menuPanelNeeds: SystemMonitorPanelNeeds = .none
@@ -232,12 +241,14 @@ final class SystemMonitor: ObservableObject {
         if PowerSampler.hasInternalBattery {
             installPowerSourceObserver()
         }
+        ensureTrickleTimer()
     }
 
     deinit {
         if let powerSourceRunLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), powerSourceRunLoopSource, .defaultMode)
         }
+        trickleTimer?.invalidate()
     }
 
     // MARK: - Lifecycle
@@ -299,10 +310,15 @@ final class SystemMonitor: ObservableObject {
             let defaults = UserDefaults.standard
             let previousNeeds = menuPanelNeeds
             let neededGPUBefore = currentPlan(defaults: defaults).needGPUUsage
+            // Idle (including "idle but trickling") right up until this call:
+            // whatever is on screen right now is at best a trickle tick old,
+            // so the opening refresh gets to say so.
+            let wasIdle = !shouldRun
             menuPanelNeeds = needs
             let needsGPUAfter = currentPlan(defaults: defaults).needGPUUsage
             if shouldRun {
                 ensureTimer()
+                if wasIdle { isRefreshing = true }
                 let panelGPUBecameVisible = needs.system
                     && !previousNeeds.system
                     && defaults.bool(forKey: DefaultsKey.monitorSysGPU)
@@ -555,8 +571,32 @@ final class SystemMonitor: ObservableObject {
         return plan
     }
 
+    /// What the slow idle trickle reads: only the readings the dashboard's
+    /// own cards graph (CPU, GPU, memory, network, battery, and the
+    /// temperature/pressure the Thermal card always shows), gated on the
+    /// same hub availability `currentPlan` uses — never disk, fan, throttle,
+    /// peripheral batteries or process breakdowns, and never anything the
+    /// user has uninstalled. Independent of `menuPanelNeeds`/menu bar
+    /// pins/alerts on purpose: those already drive the fast timer, and a
+    /// trickle only exists for when none of them do.
+    private func trickleNeeds(defaults: UserDefaults) -> SamplingPlan {
+        var plan = SamplingPlan()
+        func available(_ feature: AppFeature) -> Bool { defaults.bool(forKey: feature.availabilityKey) }
+        if available(.monitorCPU) {
+            plan.needCPU = true
+            plan.needCPUTemperature = true
+            plan.needThermalPressure = true
+        }
+        plan.needMemory = available(.monitorMemory)
+        plan.needGPUUsage = available(.monitorGPU)
+        plan.needNetwork = available(.monitorNetwork)
+        plan.needPower = available(.monitorPower) && PowerSampler.hasInternalBattery
+        return plan
+    }
+
     private func ensureTimer() {
         guard shouldSample() else { return }
+        stopTrickleTimer()
         syncTimerCadence(plan: currentPlan(defaults: .standard))
         guard timer == nil else { return }
         startTimer()
@@ -566,6 +606,26 @@ final class SystemMonitor: ObservableObject {
         guard !shouldSample() else { return }
         timer?.invalidate()
         timer = nil
+        // The two timers are mutually exclusive: the foreground one just
+        // stood down, so the slow one takes over keeping the graphs warm.
+        if !shouldRun {
+            ensureTrickleTimer()
+        }
+    }
+
+    private func ensureTrickleTimer() {
+        guard trickleTimer == nil else { return }
+        let t = Timer(timeInterval: Self.trickleIntervalSeconds, repeats: true) { [weak self] _ in
+            self?.trickleSample()
+        }
+        t.tolerance = Self.trickleIntervalSeconds * 0.2
+        RunLoop.main.add(t, forMode: .common)
+        trickleTimer = t
+    }
+
+    private func stopTrickleTimer() {
+        trickleTimer?.invalidate()
+        trickleTimer = nil
     }
 
     /// Keeps the timer waking only when the next needed sample can be due.
@@ -893,6 +953,11 @@ final class SystemMonitor: ObservableObject {
                 self.pendingRefreshSuppressesGPU = false
                 if shouldRunPendingRefresh, self.shouldRun {
                     self.refresh(suppressImmediateGPU: suppressGPU)
+                } else {
+                    // A pending refresh means another one is about to run
+                    // right after this one — the indicator waits for that
+                    // one instead of flickering off between the two.
+                    self.isRefreshing = false
                 }
             }
         }
@@ -937,6 +1002,130 @@ final class SystemMonitor: ObservableObject {
         }
         memoryCache = held
         return (held, false)
+    }
+
+    // MARK: - Trickle
+
+    /// One slow, narrow sample: `trickleNeeds`' readings only, pushed onto
+    /// the same history rings `refresh()` uses so they keep a warm tail
+    /// while idle, and merged into `snapshot` so the values on screen (not
+    /// just the graphs) are never more than a trickle tick behind either.
+    /// Deliberately bypasses `refresh()` entirely: that function's stride
+    /// skipping, GPU-suppression window and pending-refresh coalescing are
+    /// all tuned for the fast foreground cadence and do not apply here.
+    private func trickleSample() {
+        guard !shouldRun else { return }
+        let plan = trickleNeeds(defaults: .standard)
+        guard plan.any else { return }
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.prepareIfNeeded(needSMC: plan.needSMC, needTemperature: plan.needTemperature, needFanSpeed: false)
+            let now = ProcessInfo.processInfo.systemUptime
+            var patch = SystemSnapshot()
+
+            if plan.needCPU, let cpu = self.readCPUUsage() {
+                self.lastCPUUsage = cpu
+                self.lastCPUUsageReadAt = now
+                self.cpuHistory.push(cpu)
+                patch.cpuUsage = cpu
+                patch.cpuUsageReadAt = now
+            }
+            if plan.needCPUTemperature, let temperature = self.cpuTemperature() {
+                self.cpuTemperatureCache = CachedSensorReading(value: temperature, updatedAt: now, missedSamples: 0)
+                self.cpuTemperatureHistory.push(temperature)
+                patch.cpuTemperature = temperature
+                patch.cpuTemperatureReadAt = now
+            }
+            if plan.needThermalPressure {
+                let pressure = self.thermalPressureReader.read()
+                self.lastThermalPressure = pressure
+                patch.thermalPressure = pressure
+            }
+            if plan.needMemory, let (memory, _) = self.stabilizedMemoryReading(now: now) {
+                patch.memoryUsed = memory.used
+                patch.memoryAppUsed = memory.appUsed
+                patch.memoryTotal = memory.total
+                patch.memoryCompressed = memory.compressed
+                patch.memoryCached = memory.cached
+                patch.memorySwapUsed = memory.swapUsed
+                patch.memoryPressure = memory.pressure
+                if memory.total > 0 {
+                    self.memoryHistory.push(Double(memory.used) / Double(memory.total))
+                    self.memoryAppHistory.push(Double(memory.appUsed) / Double(memory.total))
+                }
+            }
+            if plan.needGPUUsage, let gpu = Self.readGPUUsage() {
+                let stabilized = MetricFormat.stabilizedGPUUsage(previous: self.lastGPUUsage, current: gpu)
+                self.lastGPUUsage = stabilized
+                self.gpuHistory.push(stabilized)
+                patch.gpuUsage = stabilized
+            }
+            if plan.needNetwork {
+                let network = self.networkSampler.sample(now: now)
+                patch.netDownBytesPerSec = network.downBytesPerSec
+                patch.netUpBytesPerSec = network.upBytesPerSec
+                patch.netTotalDown = network.totalDown
+                patch.netTotalUp = network.totalUp
+                if let down = network.downBytesPerSec { self.netDownHistory.push(down) }
+                if let up = network.upBytesPerSec { self.netUpHistory.push(up) }
+            }
+            if plan.needPower, let powerSampler = self.powerSampler {
+                let power = powerSampler.sample()
+                self.lastPowerReading = power
+                patch.power = power
+                if let watts = power.systemWatts { self.powerHistory.push(watts) }
+                if let charge = power.chargePercent { self.batteryHistory.push(Double(charge) / 100.0) }
+            }
+
+            DispatchQueue.main.async { [weak self] in
+                self?.applyTricklePatch(patch, plan: plan)
+            }
+        }
+    }
+
+    /// Merges a trickle sample into the published snapshot field by field:
+    /// only what was actually trickled changes. Everything else (disk,
+    /// peripheral batteries, fan speeds, every history array) is left
+    /// exactly as published, since a trickle only ever touches the handful
+    /// of readings the dashboard's cards graph — the history arrays stay
+    /// whatever `refresh()` last set them to (almost always `[]`, since it
+    /// only publishes them `whileVisible`) until the panel actually reopens
+    /// and a real foreground refresh republishes the now-warm rings.
+    private func applyTricklePatch(_ patch: SystemSnapshot, plan: SamplingPlan) {
+        var next = snapshot
+        if plan.needCPU {
+            next.cpuUsage = patch.cpuUsage
+            next.cpuUsageReadAt = patch.cpuUsageReadAt
+        }
+        if plan.needCPUTemperature {
+            next.cpuTemperature = patch.cpuTemperature
+            next.cpuTemperatureReadAt = patch.cpuTemperatureReadAt
+        }
+        if plan.needThermalPressure {
+            next.thermalPressure = patch.thermalPressure
+        }
+        if plan.needMemory {
+            next.memoryUsed = patch.memoryUsed
+            next.memoryAppUsed = patch.memoryAppUsed
+            next.memoryTotal = patch.memoryTotal
+            next.memoryCompressed = patch.memoryCompressed
+            next.memoryCached = patch.memoryCached
+            next.memorySwapUsed = patch.memorySwapUsed
+            next.memoryPressure = patch.memoryPressure
+        }
+        if plan.needGPUUsage {
+            next.gpuUsage = patch.gpuUsage
+        }
+        if plan.needNetwork {
+            next.netDownBytesPerSec = patch.netDownBytesPerSec
+            next.netUpBytesPerSec = patch.netUpBytesPerSec
+            next.netTotalDown = patch.netTotalDown
+            next.netTotalUp = patch.netTotalUp
+        }
+        if plan.needPower {
+            next.power = patch.power
+        }
+        snapshot = next
     }
 
     // MARK: - Sensor preparation

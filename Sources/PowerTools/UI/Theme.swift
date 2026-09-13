@@ -33,6 +33,10 @@ enum PanelMetricColor {
         scheme == .light ? Color(red: 0.00, green: 0.43, blue: 0.54) : .cyan
     }
 
+    static func blue(for scheme: ColorScheme) -> Color {
+        scheme == .light ? Color(red: 0.06, green: 0.30, blue: 0.68) : .blue
+    }
+
     static func mint(for scheme: ColorScheme) -> Color {
         scheme == .light ? Color(red: 0.00, green: 0.44, blue: 0.40) : .mint
     }

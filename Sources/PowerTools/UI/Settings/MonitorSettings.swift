@@ -595,3 +595,134 @@ private struct PanelOrderDropDelegate: DropDelegate {
         return true
     }
 }
+
+/// Drag-to-reorder and show/hide list for the dashboard's metric cards.
+/// Mirrors `PanelOrderEditor` above, one level down: the panel's sections
+/// each hold their own cards, in their own saved order.
+struct PanelDashboardOrderEditor: View {
+    @ObservedObject private var l10n = L10n.shared
+    @State private var order: [PanelDashboardTile] =
+        PanelLayout.itemOrder(PanelDashboardTile.self, key: DefaultsKey.panelDashboardOrder)
+    @State private var dragging: PanelDashboardTile?
+    @State private var visibilityChanges = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(order) { tile in
+                VStack(spacing: 0) {
+                    HStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.tertiary)
+                            Image(systemName: tile.symbolName)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 18)
+                            Text(tile.title(l10n.s))
+                                .foregroundStyle(isShown(tile) ? .primary : .secondary)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .opacity(dragging == tile ? 0.45 : 1)
+                        .onDrag {
+                            dragging = tile
+                            return NSItemProvider(object: tile.rawValue as NSString)
+                        }
+                        .onDrop(of: [UTType.text],
+                                delegate: PanelDashboardOrderDropDelegate(target: tile,
+                                                                          order: $order,
+                                                                          dragging: $dragging))
+
+                        DashboardTileVisibilityEye(tile: tile,
+                                                   canHide: visibleCount > 1,
+                                                   onChange: { visibilityChanges += 1 })
+                    }
+                    .frame(height: 32)
+
+                    if tile != order.last {
+                        Divider()
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 2)
+        .onAppear {
+            order = PanelLayout.itemOrder(PanelDashboardTile.self, key: DefaultsKey.panelDashboardOrder)
+        }
+    }
+
+    private func isShown(_ tile: PanelDashboardTile) -> Bool {
+        _ = visibilityChanges
+        return PanelDashboardTile.isShown(tile)
+    }
+
+    /// How many cards are currently visible, so the last one can't be
+    /// hidden (which would leave the dashboard with an empty list).
+    private var visibleCount: Int {
+        _ = visibilityChanges
+        return order.reduce(0) { $0 + (PanelDashboardTile.isShown($1) ? 1 : 0) }
+    }
+}
+
+/// An eye button that shows/hides one dashboard card, backed by that card's
+/// own visibility key so the live dashboard updates immediately.
+private struct DashboardTileVisibilityEye: View {
+    @ObservedObject private var l10n = L10n.shared
+    let tile: PanelDashboardTile
+    let canHide: Bool
+    let onChange: () -> Void
+    @AppStorage private var shown: Bool
+
+    init(tile: PanelDashboardTile, canHide: Bool, onChange: @escaping () -> Void) {
+        self.tile = tile
+        self.canHide = canHide
+        self.onChange = onChange
+        _shown = AppStorage(wrappedValue: true, tile.visibilityKey)
+    }
+
+    var body: some View {
+        Button {
+            shown.toggle()
+            onChange()
+        } label: {
+            Image(systemName: shown ? "eye.fill" : "eye.slash.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(shown ? Color.accentColor : Color.secondary)
+                .frame(width: 30, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(shown && !canHide)
+        .help(shown ? l10n.s.panelHideItem : l10n.s.panelShowItem)
+    }
+}
+
+private struct PanelDashboardOrderDropDelegate: DropDelegate {
+    let target: PanelDashboardTile
+    @Binding var order: [PanelDashboardTile]
+    @Binding var dragging: PanelDashboardTile?
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging,
+              dragging != target,
+              let from = order.firstIndex(of: dragging),
+              let to = order.firstIndex(of: target) else { return }
+
+        withAnimation(.easeInOut(duration: 0.12)) {
+            order.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+        }
+        PanelLayout.setItemOrder(order, key: DefaultsKey.panelDashboardOrder)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        PanelLayout.setItemOrder(order, key: DefaultsKey.panelDashboardOrder)
+        return true
+    }
+}

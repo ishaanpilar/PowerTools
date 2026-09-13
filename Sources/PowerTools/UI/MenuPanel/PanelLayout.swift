@@ -186,8 +186,23 @@ enum PanelLayout {
 /// title plus a chevron) toggles a persisted collapsed state; collapsing hides
 /// the body but keeps the header so it can be reopened. Every major component in
 /// the panel uses this so they all collapse and reorder consistently.
+private struct PanelSectionShowsTitleKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+extension EnvironmentValues {
+    /// Off where the surrounding screen already names the section, like the
+    /// panel's back row above a section opened from the dashboard, so the
+    /// title is not shown twice. The section's edit controls stay.
+    var panelSectionShowsTitle: Bool {
+        get { self[PanelSectionShowsTitleKey.self] }
+        set { self[PanelSectionShowsTitleKey.self] = newValue }
+    }
+}
+
 struct PanelSection<Content: View>: View {
     @ObservedObject private var l10n = L10n.shared
+    @Environment(\.panelSectionShowsTitle) private var showsTitle
     private let id: PanelSectionID
     private let title: String
     private let collapsible: Bool
@@ -227,7 +242,9 @@ struct PanelSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            header
+            if collapsible || showsTitle || supportsEditing {
+                header
+            }
 
             if !collapsible || !collapsed {
                 content(isEditing)
@@ -248,7 +265,9 @@ struct PanelSection<Content: View>: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                sectionTitle(title)
+                if showsTitle {
+                    sectionTitle(title)
+                }
                 Spacer(minLength: 0)
             }
             if supportsEditing {

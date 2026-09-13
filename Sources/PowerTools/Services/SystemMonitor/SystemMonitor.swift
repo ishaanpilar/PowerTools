@@ -73,6 +73,7 @@ struct SystemSnapshot {
 
     // History (oldest → newest) for the graphs
     var cpuHistory: [Double] = []          // 0...1
+    var cpuTemperatureHistory: [Double] = [] // °C, real sensor reads only
     var gpuHistory: [Double] = []          // 0...1
     var memoryHistory: [Double] = []       // 0...1
     var memoryAppHistory: [Double] = []    // 0...1
@@ -204,6 +205,7 @@ final class SystemMonitor: ObservableObject {
     // History
     private let historyCapacity = 120
     private var cpuHistory: MetricHistory
+    private var cpuTemperatureHistory: MetricHistory
     private var gpuHistory: MetricHistory
     private var memoryHistory: MetricHistory
     private var memoryAppHistory: MetricHistory
@@ -217,6 +219,7 @@ final class SystemMonitor: ObservableObject {
 
     private init() {
         cpuHistory = MetricHistory(capacity: historyCapacity)
+        cpuTemperatureHistory = MetricHistory(capacity: historyCapacity)
         gpuHistory = MetricHistory(capacity: historyCapacity)
         memoryHistory = MetricHistory(capacity: historyCapacity)
         memoryAppHistory = MetricHistory(capacity: historyCapacity)
@@ -800,6 +803,11 @@ final class SystemMonitor: ObservableObject {
                         now: now,
                         maxAge: temperatureBridge,
                         minimum: TemperatureSensorSelector.minimumChipTemperature)
+                    // Only a real read joins the graph, so a carried value on a
+                    // stride-skipped tick cannot draw a flat line that never was.
+                    if let temperature = next.cpuTemperature {
+                        self.cpuTemperatureHistory.push(temperature)
+                    }
                 } else {
                     next.cpuTemperature = self.cpuTemperatureCache?.value
                 }
@@ -847,6 +855,8 @@ final class SystemMonitor: ObservableObject {
 
             next.cpuHistory = plan.needCPU
                 ? self.cpuHistory.publishedValues(whileVisible: foregroundSampling) : []
+            next.cpuTemperatureHistory = plan.needCPUTemperature
+                ? self.cpuTemperatureHistory.publishedValues(whileVisible: foregroundSampling) : []
             next.gpuHistory = plan.needGPUUsage
                 ? self.gpuHistory.publishedValues(whileVisible: foregroundSampling) : []
             next.memoryHistory = plan.needMemory

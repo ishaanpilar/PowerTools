@@ -82,9 +82,9 @@ struct MenuPanelView: View {
     @State private var navigableContentHeight: CGFloat = 0
     @State private var metricContentHeight: CGFloat = 0
     @State private var updateBannerHeight: CGFloat = 0
-    @State private var selectedSection: PanelSectionID = PanelLayout.order.first ?? .keepAwake
+    /// The section opened from the dashboard; nil is the dashboard itself.
+    @State private var openedSection: PanelSectionID?
     @State private var selectedMetric: MetricDetailKind?
-    @FocusState private var focusedSection: PanelSectionID?
 
     /// Cap the panel to the usable screen height so it never overflows the menu
     /// bar; taller content scrolls inside. Measured against the display the
@@ -127,21 +127,22 @@ struct MenuPanelView: View {
         .onChange(of: panelFocus.request) { _, request in
             applyFocus(request)
         }
-        .onChange(of: focusedSection) { _, section in
-            if let section { selectedSection = section }
-        }
     }
 
     private var monitorNeeds: SystemMonitorPanelNeeds {
+        let header = PanelHeaderStats.monitorNeeds
         if let selectedMetric {
-            return selectedMetric.monitorNeeds
+            return selectedMetric.monitorNeeds.union(header)
+        }
+        guard let activeSection else {
+            return PanelDashboardLayout(sections: visibleSections).monitorNeeds.union(header)
         }
         switch activeSection {
-        case .system: return SystemMonitorPanelNeeds(system: true)
-        case .network: return SystemMonitorPanelNeeds(network: true)
-        case .disk: return SystemMonitorPanelNeeds(disk: true)
-        case .power: return SystemMonitorPanelNeeds(power: true)
-        default: return .none
+        case .system: return SystemMonitorPanelNeeds(system: true).union(header)
+        case .network: return SystemMonitorPanelNeeds(network: true).union(header)
+        case .disk: return SystemMonitorPanelNeeds(disk: true).union(header)
+        case .power: return SystemMonitorPanelNeeds(power: true).union(header)
+        default: return header
         }
     }
 
@@ -153,17 +154,28 @@ struct MenuPanelView: View {
         guard let request else { return }
         switch request.target {
         case .normal:
+            // Opening the panel from the icon always lands on the dashboard.
             selectedMetric = nil
+            openedSection = nil
         case .section(let section):
             guard isSectionVisible(section) else { return }
             selectedMetric = nil
-            selectedSection = section
-            focusedSection = section
+            openedSection = section
         case .metric(let metric):
-            focusedSection = nil
+            // A menu bar metric opens its detail over the dashboard, so its
+            // back button goes home rather than to a section left open earlier.
+            openedSection = nil
             selectedMetric = metric
-            selectedSection = metric.panelSection
         }
+    }
+
+    private func openSection(_ id: PanelSectionID) {
+        selectedMetric = nil
+        openedSection = id
+    }
+
+    private func openMetric(_ kind: MetricDetailKind) {
+        selectedMetric = kind
     }
 
     private var navigablePanel: some View {
@@ -171,11 +183,23 @@ struct MenuPanelView: View {
             UpdateBanner()
                 .reportHeight($updateBannerHeight)
             header
-            sectionNavigation
+            if let activeSection {
+                navigationHeader(title: activeSection.title(l10n.s),
+                                 systemImage: activeSection.symbolName) {
+                    openedSection = nil
+                }
+            }
 
             OverlayScrollView(measuredHeight: $navigableContentHeight) {
                 VStack(alignment: .leading, spacing: 12) {
-                    section(for: activeSection, collapsible: false)
+                    if let activeSection {
+                        section(for: activeSection, collapsible: false)
+                            .environment(\.panelSectionShowsTitle, false)
+                    } else {
+                        PanelDashboardView(sections: visibleSections,
+                                           openSection: openSection,
+                                           openMetric: openMetric)
+                    }
                 }
                 .frame(width: 308)
             }
@@ -195,7 +219,11 @@ struct MenuPanelView: View {
             header
 
             if let selectedMetric {
-                metricNavigationHeader(selectedMetric)
+                navigationHeader(title: selectedMetric.title(l10n.s),
+                                 systemImage: selectedMetric.symbolName) {
+                    self.selectedMetric = nil
+                    MenuPanelFocus.shared.clearMetricFocus()
+                }
                 OverlayScrollView(measuredHeight: $metricContentHeight) {
                     MetricDetailView(kind: selectedMetric)
                         .frame(width: 308)
@@ -223,8 +251,11 @@ struct MenuPanelView: View {
         orderedSections.filter(isSectionVisible)
     }
 
-    private var activeSection: PanelSectionID {
-        visibleSections.contains(selectedSection) ? selectedSection : (visibleSections.first ?? .keepAwake)
+    /// The open section while it is still in the panel; a section hidden or
+    /// uninstalled while open falls back to the dashboard.
+    private var activeSection: PanelSectionID? {
+        guard let openedSection, visibleSections.contains(openedSection) else { return nil }
+        return openedSection
     }
 
     private var navigableScrollHeight: CGFloat {
@@ -249,10 +280,13 @@ struct MenuPanelView: View {
         let bannerHeight = updates.state.showsMenuPanelBanner
             ? (max(updateBannerHeight, 48) + 12)
             : 0
-        return 180 + bannerHeight
+        // Padding, header and footer; a section or metric adds its back row.
+        let backRow: CGFloat = (selectedMetric != nil || activeSection != nil) ? 38 : 0
+        return 124 + backRow + bannerHeight
     }
 
     private var estimatedNavigableContentHeight: CGFloat {
+        guard let activeSection else { return 560 }
         switch activeSection {
         case .keepAwake: return 250
         case .brightness: return 140
@@ -318,73 +352,36 @@ struct MenuPanelView: View {
         }
     }
 
-    private var sectionNavigation: some View {
-        HStack(spacing: 2) {
-            ForEach(visibleSections) { id in
-                let isActive = activeSection == id
-                Button {
-                    selectedSection = id
-                    focusedSection = id
-                } label: {
-                    Image(systemName: id.symbolName)
-                        .font(.system(size: 13.5, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 30)
-                        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .focused($focusedSection, equals: id)
-                .foregroundStyle(isActive ? Color.accentColor : Color.secondary.opacity(0.86))
-                .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isActive ? navigationActiveFill : Color.clear)
-                )
-                .help(id.title(l10n.s))
-            }
-        }
-        .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(PanelSurface.cardFill(for: colorScheme))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7)
-        )
-    }
-
-    private var navigationActiveFill: Color {
-        colorScheme == .light ? Color.accentColor.opacity(0.13) : Color.accentColor.opacity(0.20)
-    }
-
-    private func metricNavigationHeader(_ kind: MetricDetailKind) -> some View {
+    /// The row above a section or metric opened from the dashboard: the way
+    /// home (also ⌘[) and the name of the screen, which the section itself
+    /// then leaves out.
+    private func navigationHeader(title: String, systemImage: String,
+                                  back: @escaping () -> Void) -> some View {
         HStack(spacing: 8) {
-            Button {
-                selectedMetric = nil
-                selectedSection = kind.panelSection
-                MenuPanelFocus.shared.clearMetricFocus()
-            } label: {
+            Button(action: back) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 11, weight: .semibold))
-                    .frame(width: 24, height: 24)
-                    .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .frame(width: 26, height: 26)
+                    .contentShape(Circle())
+                    .panelGlassControl(in: Circle())
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(PanelSurface.cardFill(for: colorScheme))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7)
-            )
+            .keyboardShortcut("[", modifiers: .command)
+            .help(l10n.s.obBack)
+            .accessibilityLabel(l10n.s.obBack)
 
-            Label(kind.title(l10n.s), systemImage: kind.symbolName)
-                .font(.system(size: 12.5, weight: .semibold))
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .accessibilityHidden(true)
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
         }
+        .frame(height: 26)
     }
 
     /// Starts cleaning mode and closes the panel so the lock overlay is the only
@@ -397,7 +394,7 @@ struct MenuPanelView: View {
     }
 
     private var header: some View {
-        MenuPanelHeader()
+        MenuPanelHeader(openMetric: openMetric)
     }
 
     private var footer: some View {
@@ -434,60 +431,59 @@ struct MenuPanelView: View {
                 .labelStyle(.titleAndIcon)
                 .padding(.horizontal, horizontalPadding)
                 .frame(maxWidth: .infinity, minHeight: 28)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(PanelSurface.cardFill(for: colorScheme))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.8)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .panelGlassControl(in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
     }
 }
 
+/// The top row on every screen: the mark on the leading edge, where a Mac
+/// window's identity sits, and the live readings right beside it.
 private struct MenuPanelHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var l10n = L10n.shared
+    let openMetric: (MetricDetailKind) -> Void
 
     var body: some View {
-        ZStack {
-            BrandMark(width: 48, tint: markTint)
-                .frame(height: 28)
+        HStack(spacing: 8) {
+            BrandMark(width: 30, tint: markTint)
+                .frame(height: 22)
                 .accessibilityHidden(true)
 
             if AppInfo.isBeta {
-                HStack {
-                    Text(l10n.s.betaBadgeLabel.uppercased())
-                        .font(.system(size: 9, weight: .bold))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.orange.opacity(0.18))
-                        .foregroundStyle(.orange)
-                        .clipShape(Capsule())
+                Text(l10n.s.betaBadgeLabel.uppercased())
+                    .font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.18))
+                    .foregroundStyle(.orange)
+                    .clipShape(Capsule())
+                    .fixedSize()
+            }
 
-                    Spacer()
+            PanelHeaderStats(openMetric: openMetric)
 
-                    Button {
-                        appDelegate()?.openFeedbackWindow()
-                    } label: {
-                        Image(systemName: "bubble.left.and.text.bubble.right")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .padding(4)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(FeatureStrings.feedback(l10n.language).openButton)
+            Spacer(minLength: 0)
+
+            if AppInfo.isBeta {
+                Button {
+                    appDelegate()?.openFeedbackWindow()
+                } label: {
+                    Image(systemName: "bubble.left.and.text.bubble.right")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .padding(4)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help(FeatureStrings.feedback(l10n.language).openButton)
             }
         }
         .frame(height: 28)
         .padding(.vertical, 4)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var markTint: Color {
@@ -2741,7 +2737,7 @@ struct KeepAwakeCard: View {
         .font(.system(size: 10))
     }
 
-    private static func remainingText(until end: Date) -> String {
+    static func remainingText(until end: Date) -> String {
         let total = max(0, Int(end.timeIntervalSinceNow))
         let hours = total / 3600
         let minutes = (total % 3600) / 60

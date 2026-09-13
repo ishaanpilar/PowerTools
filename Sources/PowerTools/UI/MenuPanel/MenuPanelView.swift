@@ -421,7 +421,7 @@ private struct MenuPanelHeader: View {
     @State private var greetingWordIndex = Int.random(in: 0..<6)
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             logoBadge
 
             VStack(alignment: .leading, spacing: 2) {
@@ -471,11 +471,15 @@ private struct MenuPanelHeader: View {
         }
     }
 
+    /// Sized to the text block beside it — the greeting line plus the
+    /// two-line status — rather than a fixed small square, so the mark
+    /// reads as a peer of that whole block instead of a stray icon pinned
+    /// to its top edge.
     private var logoBadge: some View {
-        BrandMark(width: 20, tint: markTint)
-            .frame(width: 32, height: 32)
+        BrandMark(width: 26, tint: markTint)
+            .frame(width: 44, height: 44)
             .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(colorScheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.08))
             )
             .accessibilityHidden(true)

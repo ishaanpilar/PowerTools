@@ -78,8 +78,8 @@ status here as they land.
 
 | Task | Roadmap slice(s) | What it is | Status |
 | --- | --- | --- | --- |
-| 01 | 2.1 | `AppFeature` case, Feature Hub copy, energy badge, an empty Settings page. No model code. Proves the feature installs/uninstalls cleanly before anything uses it | Done — see below |
-| 02 | 2.2, part of 2.6 | Provider protocol, capability matrix, the on-device Apple provider (`#if canImport(FoundationModels)`), on-device availability/error states | Not started |
+| 01 | 2.1 | `AppFeature` case, Feature Hub copy, energy badge, an empty Settings page. No model code. Proves the feature installs/uninstalls cleanly before anything uses it | Done — `2e6a087` |
+| 02 | 2.2, part of 2.6 | Provider protocol, capability matrix, the on-device Apple provider (`#if canImport(FoundationModels)`), on-device availability/error states | Done — `af5b1fc` |
 | 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Not started |
 | 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Not started |
 | 05 | 2.7 | Context manifest, pre-send preview, cancellation | Not started |
@@ -93,14 +93,44 @@ and for anything user-visible, actually run it and say what Mac/macOS/Apple
 Intelligence state it was checked on — compiling is not evidence, per
 `AGENTS.md`.
 
-## Task 01 — done
+## Task 01 — done (`2e6a087`)
 
 - New `AppFeature.aiTextActions` case, in the `tools` group, alongside
-  `commandBar` and friends (`Core/FeatureCatalog.swift`).
+  `commandBar` and friends (`Core/FeatureCatalog.swift`), off by default like
+  every other opt-in feature.
 - `Core/AITextActionsStrings.swift`: hub title/description text, English only
   for now; the other twelve languages repeat the English strings, matching D5.
 - `UI/Settings/AITextActionsSettings.swift`: the minimal page the hub links
-  to — a title, a one-line explanation, and "Requires macOS 26" /
-  "Not available on this Mac" state text, no provider or model code yet.
-- No `FoundationModels` import anywhere in this task; nothing changes for the
-  Swift 6.0.3 compatibility job.
+  to — an intro sentence and a "Not built yet" notice. No provider or model
+  code, so it never claims a capability that doesn't exist yet.
+- Wired through every place the compiler forces for a new `AppFeature` case
+  (group, symbol, enabled keys, permissions, availability defaults, energy
+  profile, hub title/description, Settings routing, settings search,
+  `PanelSearchSupport`'s own exhaustive switch). No `FoundationModels`
+  import; nothing changes for the Swift 6.0.3 compatibility job.
+- Confirmed live in a running dev build (window captured by its own window
+  ID, not a full-screen capture): title bar reads "PowerTools AI Settings",
+  "AI text actions" appears in the sidebar under Utilities.
+
+## Task 02 — done (`af5b1fc`)
+
+- `Services/AI/AIProviderContracts.swift`: `AIProvider` protocol,
+  `AIProviderCapabilities`, `AIProviderAvailability`/`UnavailableReason`,
+  `AIGenerationError` — all pure, no `FoundationModels` dependency.
+- `Services/AI/AIOnDeviceTextProvider.swift`: the on-device implementation,
+  entirely inside `#if canImport(FoundationModels)` (not just `@available`,
+  since the Xcode 16.2 SDK the compatibility job builds against has no such
+  module to begin with). Type-checked directly against the local
+  `MacOSX15.sdk` (also pre-dates `FoundationModels`) with zero errors, as a
+  stand-in for that CI job.
+- Real, non-mocked verification on this Mac: a live rewrite request, a
+  guardrail-refusal probe that came back mapped to `.refused`, and
+  cancellation probes at two different points in the stream — all run
+  through a standalone driver built from the actual source files. Cancelling
+  mid-stream turned out to finish the stream normally with whatever partial
+  text had already streamed, not throw `.cancelled`; documented in the
+  protocol's doc comment for task 06.
+- `Tests/AIProviderTests.swift`: pure checks run on every SDK, plus two
+  `#if canImport(FoundationModels)`-gated checks against the real provider's
+  capabilities and availability (no generation calls, so they're fast and
+  side-effect-free in CI).

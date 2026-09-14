@@ -44,7 +44,7 @@ extension CameraPreviewFeatureStrings {
         panelCaption: "Check how you look before a call",
         openButton: "Open preview",
         cameraMenuLabel: "Camera",
-        deniedMessage: "Camera access for PowerTools is turned off in System Settings.",
+        deniedMessage: "Camera access for PowerTools AI is turned off in System Settings.",
         noCameraMessage: "No camera detected",
         permName: "Camera",
         permExplain: "Shows your camera only in the preview window, so you can check how you look before a call. Nothing is recorded or leaves your Mac."

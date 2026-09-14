@@ -72,7 +72,7 @@ extension MouseButtonFeatureStrings {
         addButton: "Add a button or side wheel",
         captureWaiting: "Now press an extra button or move the side wheel.",
         captureCancel: "Cancel",
-        captureBlind: "PowerTools cannot watch the mouse right now.",
+        captureBlind: "PowerTools AI cannot watch the mouse right now.",
         captureUnsupported: "That input cannot take a shortcut. Use an extra button or a side-wheel direction.",
         captureWheel: "That button already opens the radial menu. Pick another one, or free it there first.",
         captureExists: "That button or direction is already on the list below.",

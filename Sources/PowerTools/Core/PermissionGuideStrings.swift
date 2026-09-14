@@ -63,7 +63,7 @@ extension PermissionGuideStrings {
     static let enUS = PermissionGuideStrings(
         title: "One step left",
         stepOpen: "macOS opened System Settings on the right list.",
-        stepToggle: "Turn PowerTools on in that list.",
+        stepToggle: "Turn PowerTools AI on in that list.",
         stepReturn: "Come back. This card notices by itself.",
         waiting: "Waiting for the permission…",
         granted: "Permission granted!",

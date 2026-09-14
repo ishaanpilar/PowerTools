@@ -63,7 +63,7 @@ extension BackupFeatureStrings {
         importConfirmTitle: "Import these settings?",
         importConfirmBody: "Your current settings are replaced by the file’s and the app restarts. Nothing else on this Mac is touched.",
         importAction: "Import and restart",
-        invalidFile: "This file is not a valid PowerTools backup."
+        invalidFile: "This file is not a valid PowerTools AI backup."
     )
 
     static let ptBR = BackupFeatureStrings(

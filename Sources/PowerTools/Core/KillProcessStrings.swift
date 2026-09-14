@@ -91,7 +91,7 @@ extension KillProcessFeatureStrings {
         confirmKillTreeFormat: "Kill %@ and all its child processes?",
         killFailedTitle: "Couldn’t Kill Process",
         killFailedMessage: "The process may have already exited or require additional privileges.",
-        adminPromptFormat: "PowerTools needs administrator access to end “%@”."
+        adminPromptFormat: "PowerTools AI needs administrator access to end “%@”."
     )
 
     static let ptBR = KillProcessFeatureStrings(

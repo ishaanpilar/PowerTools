@@ -227,7 +227,7 @@ final class SnippetLibraryService: ObservableObject {
                                         styleMask: [.borderless, .nonactivatingPanel],
                                         backing: .buffered,
                                         defer: false)
-        panel.title = "PowerTools"
+        panel.title = "PowerTools AI"
         panel.isReleasedWhenClosed = false
         panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate = false

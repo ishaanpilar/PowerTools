@@ -61,7 +61,7 @@ extension Strings {
         keepAwakeMouseJiggleCaption: "Oturum sırasında seçilen aralıkta imleci biraz oynatır.",
         keepAwakeMouseJiggleInterval: "Aralık",
         keepAwakeActiveIconLabel: "Etkin simge",
-        keepAwakeActiveIconPowerTools: "PowerTools",
+        keepAwakeActiveIconPowerTools: "PowerTools AI",
         keepAwakeActiveIconCoffee: "Kahve",
         keepAwakeActiveIconEye: "Göz",
         keepAwakeActiveIconMoon: "Ay",

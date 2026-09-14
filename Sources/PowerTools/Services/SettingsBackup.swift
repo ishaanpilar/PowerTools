@@ -14,7 +14,7 @@ enum SettingsBackup {
     @discardableResult
     static func runExportPanel() -> Bool? {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "PowerTools Settings.plist"
+        panel.nameFieldStringValue = "PowerTools AI Settings.plist"
         panel.allowedContentTypes = [.propertyList]
         panel.canCreateDirectories = true
         NSApp.activate(ignoringOtherApps: true)

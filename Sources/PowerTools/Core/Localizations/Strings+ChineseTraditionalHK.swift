@@ -61,7 +61,7 @@ extension Strings {
         keepAwakeMouseJiggleCaption: "時段內按所選間隔輕微移動指標。",
         keepAwakeMouseJiggleInterval: "間隔",
         keepAwakeActiveIconLabel: "使用中的圖示",
-        keepAwakeActiveIconPowerTools: "PowerTools",
+        keepAwakeActiveIconPowerTools: "PowerTools AI",
         keepAwakeActiveIconCoffee: "咖啡",
         keepAwakeActiveIconEye: "眼睛",
         keepAwakeActiveIconMoon: "月亮",

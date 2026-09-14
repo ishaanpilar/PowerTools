@@ -80,7 +80,7 @@ status here as they land.
 | --- | --- | --- | --- |
 | 01 | 2.1 | `AppFeature` case, Feature Hub copy, energy badge, an empty Settings page. No model code. Proves the feature installs/uninstalls cleanly before anything uses it | Done — `2e6a087` |
 | 02 | 2.2, part of 2.6 | Provider protocol, capability matrix, the on-device Apple provider (`#if canImport(FoundationModels)`), on-device availability/error states | Done — `af5b1fc` |
-| 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Done — pending commit |
+| 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Done — `e3d3dbd` |
 | 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Not started |
 | 05 | 2.7 | Context manifest, pre-send preview, cancellation | Not started |
 | 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Not started |
@@ -135,7 +135,7 @@ Intelligence state it was checked on — compiling is not evidence, per
   capabilities and availability (no generation calls, so they're fast and
   side-effect-free in CI).
 
-## Task 03 — done
+## Task 03 — done (`e3d3dbd`)
 
 - `Services/AI/AIProviderKeyStore.swift`: `AIProviderCredentials`
   (key/setKey/removeKey, keyed by provider id) over an injectable

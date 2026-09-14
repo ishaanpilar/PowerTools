@@ -28,18 +28,61 @@ enum AIActionRisk: String, CaseIterable, Comparable {
     }
 }
 
+/// A target the Command Bar builds one row for; the row id is "<action id>.<entity id>".
+enum AIEntityKind: String, CaseIterable, Hashable {
+    case application
+    case window
+    case windowLayout
+    case audioOutputDevice
+    case featureToggle
+    case configuredFolder
+}
+
+enum AIArgumentKind: Equatable {
+    case none
+    case integer(ClosedRange<Int>, optional: Bool)
+    case entity(AIEntityKind)
+}
+
+enum AIActionArgument: Hashable {
+    case none
+    case integer(Int)
+    case entity(AIEntityKind, id: String)
+}
+
 /// A deterministic operation the app is prepared to offer to an AI planner.
 /// The executor is intentionally kept outside this pure contract so planning
 /// and approval can be tested without touching the Mac.
 struct AIActionDescriptor: Equatable {
+    /// A Command Bar row id; for an entity argument, the prefix before the target.
     let id: String
     let risk: AIActionRisk
+    let argument: AIArgumentKind
     let allowsBackgroundExecution: Bool
+
+    /// The Command Bar row this argument would run, or nil when the argument does not fit.
+    func catalogID(for value: AIActionArgument) -> String? {
+        switch (argument, value) {
+        case (.none, .none):
+            return id
+        case (.integer(_, let optional), .none):
+            return optional ? id : nil
+        case (.integer(let range, _), .integer(let number)):
+            return range.contains(number) ? id : nil
+        case (.entity(let kind), .entity(let valueKind, let entityID)):
+            guard valueKind == kind, !entityID.isEmpty,
+                  !entityID.contains(where: \.isNewline) else { return nil }
+            return "\(id).\(entityID)"
+        default:
+            return nil
+        }
+    }
 }
 
-/// One step a model proposed. It can name an action, never approve it.
+/// One step a model proposed. It can name an action and its argument, never approve it.
 struct AIPlanStep: Hashable {
     let actionID: String
+    let argument: AIActionArgument
 }
 
 /// `revision` is assigned by the app, and changes whenever the plan's content does.
@@ -81,8 +124,9 @@ typealias AIAvailabilitySnapshot = [String: AIActionAvailability]
 
 enum AIPlanViolation: Equatable {
     case emptyPlan
-    case duplicateAction(String)
+    case duplicateStep(AIPlanStep)
     case unknownAction(String)
+    case invalidArgument(actionID: String)
     case notOffered(catalogID: String)
     case needsSetup(catalogID: String)
     case needsPermission(catalogID: String)

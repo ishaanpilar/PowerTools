@@ -31,17 +31,20 @@ enum AIPlanValidator {
 
         var violations: [AIPlanViolation] = []
         var pending: [AIApprovalRequest] = []
-        var actionIDs = Set<String>()
+        var seenSteps = Set<AIPlanStep>()
         for step in plan.steps {
-            guard actionIDs.insert(step.actionID).inserted else {
-                violations.append(.duplicateAction(step.actionID))
+            guard seenSteps.insert(step).inserted else {
+                violations.append(.duplicateStep(step))
                 continue
             }
             guard let action = registry[step.actionID] else {
                 violations.append(.unknownAction(step.actionID))
                 continue
             }
-            let catalogID = action.id
+            guard let catalogID = action.catalogID(for: step.argument) else {
+                violations.append(.invalidArgument(actionID: action.id))
+                continue
+            }
             switch availability[catalogID] {
             case .ready?:
                 break

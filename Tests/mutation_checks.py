@@ -56,6 +56,10 @@ MUTATIONS = [
      "case .ready?:",
      "case .ready?, .needsPermission?:",
      "an approval cannot substitute for a macOS permission"),
+    ("number range ignored", "ai-harness", "Sources/PowerTools/Services/AI/AIHarnessContracts.swift",
+     "return range.contains(number) ? id : nil",
+     "return id",
+     "an out-of-range number is rejected"),
 ]
 
 

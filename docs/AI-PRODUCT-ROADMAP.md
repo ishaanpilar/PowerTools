@@ -14,6 +14,7 @@
 6. [Integrations and the Claude Code connector](#6-integrations-and-the-claude-code-connector)
 7. [Evaluation, quality and release gates](#7-evaluation-quality-and-release-gates)
 8. [Privacy](#8-privacy)
+9. [Performance, resources and where AI runs](#9-performance-resources-and-where-ai-runs)
 
 ---
 
@@ -37,6 +38,7 @@
 | --- | --- | --- | --- | --- |
 | D8 | Standalone identity: bundle identifier, release repository, signing identity, app icon | Give PowerTools AI its own bundle identifier and release repository before its first public release | While it uses `com.powertools.utils`, macOS treats it as the same app as any PowerTools install: shared settings, shared permission grants, and an update check against earlier PowerTools releases. No PowerTools AI user exists yet, so changing identity now costs nothing; after release it resets everyone's permissions. This replaces the earlier "branding only" choice, which assumed a rename rather than a standalone app. | First release |
 | D9 | Screenshot links, recording links and in-app feedback | Remove these controls, and the placeholder support, chat and social links, before release | They all point at `*.powertools.invalid`, a reserved domain that never resolves; there is no service behind them. The privacy policy says the app uploads none of this, which stays true only while they cannot work. Running a service instead means operating a server, which `CONTRIBUTING.md` rules out. | First release |
+| D10 | Bundle our own model inside the app? | No. Use Apple's on-device model where available and the person's chosen cloud provider or local server otherwise | A bundled model adds gigabytes to a 50 MB app, puts its memory and GPU load inside PowerTools, and adds a dependency to maintain. Apple's model costs the app about 9 MB and runs in a system process on the Neural Engine. See [section 9](#9-performance-resources-and-where-ai-runs). | M2 |
 
 ---
 
@@ -206,18 +208,37 @@ every document reads PowerTools AI. Nothing is released before M2.
 **Goal:** every guarantee in `AI-HARNESS.md` is enforced by a type or a check
 before any model output exists. Pure Swift: no interface, model or network.
 
-| Slice | Change | Check added |
-| --- | --- | --- |
-| 1.1 | `ValidatedPlan` with a private initialiser, produced only by `AIPlanValidator`; executors accept only `ValidatedPlan` | No executor entry point accepts an unvalidated plan |
-| 1.2 | Derive descriptors from `CommandBarCatalog`; add a risk class and background eligibility keyed by `stableKey`; delete the duplicated identity, feature and permission fields | Every catalog entry has exactly one risk class; an unclassified entry fails the suite |
-| 1.3 | `AIActionArgument`, a closed enum: `none`, `integer` within a declared range, `entity(kind, id)`; entity IDs must resolve against a supplied live snapshot | Out-of-range number, unknown entity, wrong kind and free-text path each rejected; duplicates keyed by action and argument |
-| 1.4 | Approval bound to a digest of action, resolved arguments and plan revision; `destructive`, `external` and `privileged` steps need their own approval issued after the final plan is shown | A changed target voids approval; a `reversible` approval does not satisfy a `destructive` step |
-| 1.5 | Use `Comparable` for plan severity, or delete the conformance | Ordering check, or none if deleted |
-| 1.6 | `AICapabilityLease` (tools, scope, turn cap, deadline) and `AIRunReceipt` | Out-of-lease tool, exceeded turn cap and expired deadline each rejected |
-| 1.7 | Context manifest: source, item count, size, local or remote boundary, provider, retention | A request with context but no manifest is rejected |
-| 1.8 | Each guarantee in `AI-HARNESS.md` names its enforcing check | No unenforced guarantee remains |
+**Implementation specs:** [docs/ai-harness/](ai-harness/README.md), one file per
+task, written on 2026-09-14 after reading the code. Work them in order.
 
-**Exit:** all checks pass, and each fails with its guard removed.
+| Task | Change | Replaces slices |
+| --- | --- | --- |
+| [01](ai-harness/01-validated-plan.md) | `AIPlanValidation` outcome and `ValidatedPlan`, which only the validator can create | 1.1 |
+| [02](ai-harness/02-approvals.md) | Approvals as a separate input from the review interface, bound to exact steps and revision, graduated by risk ordering | 1.4, 1.5 |
+| [03](ai-harness/03-live-availability.md) | Availability from a snapshot of live Command Bar rows replaces feature and permission fields | 1.2 (first half) |
+| [04](ai-harness/04-typed-arguments.md) | Typed arguments; targets resolve to row ids such as `app.<id>` | 1.3 |
+| [05](ai-harness/05-action-registry.md) | Production allow-list of 23 reversible rows; every catalog row registered or excluded with a reason | 1.2 (second half) |
+| [06](ai-harness/06-capability-lease.md) | Lease: allowed actions, step limit, deadline, injected clock | 1.6 (partly) |
+| [07](ai-harness/07-contract-docs.md) | `AI-HARNESS.md` lists each guarantee with its check and mutation | 1.8 |
+
+**What changed from the original slices, and why:**
+
+- **Approval was inside model output.** `AIPlanStep.isExplicitlyApproved` let a
+  model mark its own steps approved; task 02 removes it.
+- **Descriptors cannot be derived from `CommandBarCatalog` in tests.** The
+  catalog needs live services and is not in the test build, and its ids are
+  string literals, not `stableKey` data. Availability therefore comes from the
+  live rows at run time (task 03), and the registry is checked against the
+  catalog's source (task 05).
+- **Plan approval binds to the steps themselves**, not a digest or a revision
+  number alone, so whoever assigns revisions cannot carry approval across an
+  edit. No hashing is needed.
+- **Built only where used.** The context manifest (old 1.7) moves to M2 with the
+  first provider request. Run receipts and the model-turn limit (old 1.6) move to
+  M4 with the executor and agent loop.
+
+**Exit:** all checks pass, and `python3 Tests/mutation_checks.py` proves each
+guard by making its named check fail.
 
 ### M2 — First AI feature: text actions, on device and in the cloud
 
@@ -237,7 +258,7 @@ is involved.
 | 2.4 | Keys in Keychain only; a check that defaults and settings exports contain no key |
 | 2.5 | AI settings: On this Mac, a cloud provider or a local server; shows the endpoint and the provider's privacy policy link; tests the connection |
 | 2.6 | Availability and failure states: macOS earlier than 26, `deviceNotEligible`, `appleIntelligenceNotEnabled`, `modelNotReady`, each `GenerationError`; no provider, invalid key, quota or rate limit, offline, HTTP errors, cancellation |
-| 2.7 | Pre-send preview on the first send of each content type; cancel on every request |
+| 2.7 | Context manifest (source, item count, size, local or remote boundary, provider, retention) on every provider request; pre-send preview built from it on the first send of each content type; cancel on every request |
 | 2.8 | Command Bar actions on the selection: rewrite, shorten, proofread, summarise, translate; Copy, Replace selection, Cancel |
 | 2.9 | English strings; non-English catalogs repeat the English text |
 | 2.10 | Confirm `PRIVACY.md` matches behaviour; add the Command Bar screenshot; release |
@@ -285,9 +306,9 @@ text — change nothing about its behaviour.
 | Slice | Work |
 | --- | --- |
 | 4.1 | Synthetic corpus of at least 200 intents: ambiguous, permission denied, feature uninstalled, destructive attempts, and injection through clipboard text, screenshots, file names and release notes |
-| 4.2 | A `Generable` plan type, and an equivalent JSON schema for HTTP providers, constrained to the derived registry's action IDs and argument kinds |
+| 4.2 | A `Generable` plan type, and an equivalent JSON schema for HTTP providers, constrained to a shortlist of at most 10 candidate actions retrieved locally from the derived registry. The full 74-action list costs 1,761 tokens, 43% of the on-device context, and the on-device model picked wrong actions from it in testing (section 9) |
 | 4.3 | Command Bar "Ask" mode: plan review with per-step toggles, reasons and requirements; the button reads "Run N approved actions" |
-| 4.4 | Executor path from `ValidatedPlan` to `CommandBarEntry.run`; each effect read back; receipt; Stop prevents further steps |
+| 4.4 | Executor path from `ValidatedPlan` to `CommandBarEntry.run`, re-validating against a fresh availability snapshot before each step; each effect read back; `AIRunReceipt`; Stop prevents further steps; a model-turn limit on the agent loop |
 | 4.5 | `readOnly` and `reversible` actions only |
 | 4.6 | First jobs: create a workspace; capture preflight |
 
@@ -643,6 +664,7 @@ ClaudeCodeProvider
 | Plan quality | 200+ intents with full schema, registry and approval compliance per provider; wrong-action rate and latency tracked | M4 |
 | Failure paths | Every action tested with feature uninstalled, permission revoked, screen locked, offline, bad endpoint, cancelled | M4 |
 | Accessibility | Streamed responses announced sensibly; plan review keyboard operable; no icon-only critical state | M2 |
+| Resource budget | The budgets in section 9 hold on this M5 and on a base 8 GB Mac, measured on a release build | M2 |
 
 Evaluation data is synthetic. Never commit captures, clipboard content, keys or
 logs.
@@ -656,6 +678,164 @@ release, covering on-device AI, cloud providers, local model servers and a
 complete connection list. Before each release, confirm it matches behaviour.
 Every new provider, host or outgoing data field updates it in the same pull
 request. Its claim to list every connection must remain literally true.
+
+---
+
+## 9. Performance, resources and where AI runs
+
+### Test conditions
+
+Measured on 2026-09-14 on a MacBook (`Mac17,4`) with an Apple M5 (4 performance
+and 6 efficiency cores) and 24 GB of memory, on macOS 26.5.2 and AC power, using
+`top`, `footprint`, `ioreg` and two throwaway benchmark programs with synthetic
+text.
+
+- Background load was heavy during the model tests (Spotlight indexing peaked
+  at 418% CPU, load average 12–37), so latencies are on the pessimistic side.
+- The running app was the Developer build, which is unoptimised, and panel use
+  was not controlled.
+- **Not measured:** Neural Engine utilisation and energy (both need
+  `powermetrics` with administrator rights), 8 GB Macs, macOS 14 and 15, and
+  any real cloud provider.
+
+### The app today
+
+| State | CPU (one core) | Memory footprint | Wakeups |
+| --- | --- | --- | --- |
+| Idle, panel closed, 60 s | 0.22% average, 0.7% peak | 31 MB, peak 59 MB since launch | 5 per second |
+| Idle after further use, 30 s, same process 15 minutes later | 0.95% average, 1.6% peak | 66 MB, peak 137 MB | 9 per second |
+| Finder extension | 0.0% | 6.7 MB | — |
+| On disk | Release app 50 MB, DMG 15 MB | | |
+
+The app is light, but its idle cost roughly quadruples after activity and it
+keeps the memory. That swing is larger than anything AI adds inside the app.
+Before M2, profile the release build in controlled states — just launched, idle
+with the panel closed, dashboard open, 60 s after closing — so AI changes are
+measured against a stable baseline.
+
+### Apple's on-device model
+
+Two full runs; ranges cover both.
+
+| Request | Input | Output | First words | Total |
+| --- | --- | --- | --- | --- |
+| Rewrite, first request of a process | 45 tokens | 46 tokens | 0.60 s | 1.09 s |
+| Rewrite, warm | 45 | 48–110 | 0.26–0.31 s | 0.68–1.75 s |
+| Rewrite after `prewarm()` | 45 | 46 | 0.32 s | 0.70 s |
+| Summarise 685 words | 792 | 136–138 | 0.74–0.76 s | 2.39–2.43 s |
+| Summarise 3,421 words | 3,936 | 124–138 | 3.65–3.66 s | 5.29–5.66 s |
+| Structured plan from a 74-action list | 1,761 for the list alone | — | — | 1.89–2.07 s |
+| 10 short requests back to back | — | — | — | 9.1–10.7 s, no failures |
+
+What this shows:
+
+- **It barely touches the app.** The calling process starts at 3 MB with
+  `FoundationModels` linked, grows about 9 MB over 20+ requests, and uses 0.02–0.12 s
+  of CPU per request.
+- **The work happens in a system process.** `TGOnDeviceInferenceProviderService`
+  (two processes) used 11–15% of one core while generating. Its memory went from
+  157 MB before the run to about 550 MB at peak, and back to about 280 MB within
+  two minutes. macOS loads and trims it, not PowerTools.
+- **It runs on the Neural Engine.** GPU utilisation averaged 2% during generation
+  against 9% at idle, which points to the Neural Engine, Apple's most
+  power-efficient processor.
+- **Generation speed:** 69–121 tokens per second.
+- **Long prompts are slow to start.** Reading the prompt runs at about 1,000
+  tokens per second, so a 3,936-token prompt waited 3.65 s for its first word.
+- **The context window is 4,096 tokens**, read from `contextSize`. English text
+  measured 1.15 tokens per word, so input tops out around 3,400 words once the
+  answer's room is reserved.
+- **Token counting needs macOS 26.4.** `tokenCount(for:)` is unavailable on
+  26.0–26.3, so those versions must estimate from word count.
+- **No throttling observed.** Ten back-to-back requests from a terminal process
+  hit no rate limit. A menu bar app may be treated differently; that remains an
+  M2 check.
+- **Planning quality is a real risk.** Listing 74 actions used 43% of the
+  context, and in both runs the model chose wrong actions (brightness instead of
+  keep awake). One synthetic test, but a clear signal.
+
+### Cloud providers
+
+- **Cost inside the app is negligible.** A streaming HTTPS request (measured
+  against the GitHub update check) took 0.43 s for the first connection and 0.04 s
+  after, used 0.003–0.024 s of CPU and added about 4 MB.
+- **Not measured:** the provider's own latency, speed and price. Those depend on
+  the provider and model, and get tested with a real key in M2.
+
+### How often AI runs
+
+Model calls happen only when a person asks; nothing runs in the background.
+These are design estimates, not usage data — the app collects none.
+
+| Feature | Trigger | Calls per use | Uses per day, typical | Size, input / output tokens | On-device time per call |
+| --- | --- | --- | --- | --- | --- |
+| Command Bar text actions | Select text, pick an action | 1 | 10–30 | 50–800 / 50–300 | 0.7–2.5 s |
+| Scratchpad and clipboard transforms | Pick an action | 1, or up to 4 chunks for long text | 2–10 | 200–3,900 / 100–300 | 1–6 s |
+| Release-note summaries | Open App updates; cached per version | 1 per updated app | 0–15, in one batch | 300–1,500 / 80 | about 1.5 s each; 15 apps about 25 s in sequence |
+| "Why is my Mac busy?" | Ask | 1 | 0–3 | 500–1,000 / 150 | about 2 s |
+| Screenshot alt text and text cleanup | Ask on a capture | 1 | 0–10 | 200–1,500 / 60–200 | 1–3 s |
+| AI onboarding (macOS 26) | First launch | 1 | once | about 300 plus shortlist / 200 | about 2 s |
+| Ask mode plans (M4) | Describe a task | 1–3 | 2–10 | 600–2,500 / 100 | 2–3 s each |
+| Semantic search index (M6) | New clipboard item or file | Embedding, not a language model | 50–500 | — | milliseconds with NaturalLanguage (to measure) |
+
+A typical day is 30–70 calls, about 1–3 minutes of Neural Engine time; a heavy day
+is about 150 calls and 5 minutes. PowerTools itself spends under 10 s of CPU on
+that. The same typical day on a cloud provider is roughly 20,000 input and 8,000
+output tokens; cost is those counts times the chosen provider's price.
+
+### What changes, and how often it becomes a problem
+
+| Risk | When it happens | How often | What we do |
+| --- | --- | --- | --- |
+| App CPU and memory grow | Always, but small: about +9 MB, no idle CPU | Every install | Create sessions lazily, release them after use, weak-link `FoundationModels` for macOS 14 |
+| Streaming redraws the panel | 70–120 updates per second while text streams | Every streamed answer | Redraw at most 15 times a second; keep work off the main thread |
+| Prompt exceeds 4,096 tokens | Input over about 3,400 words, or a plan that lists every action | Every long summary; every plan without a shortlist | Count tokens (26.4+) or estimate at 1.15 per word; chunk (at most 4 calls) or offer the cloud provider; shortlist at most 10 actions (about 250 tokens) |
+| Long prompts feel slow | Over about 2,000 tokens: 2–4 s before the first word | Long inputs | Show progress, stream, allow cancel; never call the model per keystroke |
+| First request is slower | First use after macOS unloads the model: 0.60 s versus 0.30 s to first words | First AI use of a session | `prewarm()` when an AI surface opens (measured 0.32 s) |
+| System memory pressure | Inference service +100–400 MB while active | Only on smaller Macs already under pressure; unmeasured on 8 GB | Defer optional AI on memory-pressure warnings; test on a base 8 GB Mac |
+| Background throttling | macOS may rate-limit a menu bar app | Unknown | Verify in M2; show the error and retry when the app is frontmost |
+| One request at a time | A session answers one prompt at a time | Batches such as release notes | A single queue; cancel stale requests |
+| Wrong plans | Large candidate lists | Likely frequent without a shortlist | Shortlist, `AIPlanValidator`, evaluation corpus; complex plans go to the cloud provider when configured |
+| Heat and battery | Sustained agent loops or big batches | Rare with user-initiated calls | Capability lease caps turns; skip optional AI in Low Power Mode or at serious thermal pressure, which the app already reads |
+| Cloud failures and cost | Offline, quota, provider latency, price | Whenever a cloud provider is used | Timeouts, clear errors, token limits, a token estimate before large requests, cached summaries |
+
+### On the Mac or behind an API?
+
+| | Apple on-device model | Cloud API with the person's key | Model bundled in the app | Local server (Ollama, LM Studio) |
+| --- | --- | --- | --- | --- |
+| **Pros** | Free; private; no download; +9 MB to the app; fast for short tasks (0.7–2.5 s); Neural Engine efficiency; works offline | Much stronger reasoning; long context; vision; works on macOS 14–15 and any Mac; no memory on the Mac | Works offline on every macOS version | Private; bigger models than Apple's; the person chooses and manages it |
+| **Cons** | macOS 26 and an eligible Mac with Apple Intelligence on; 4,096-token context; small model, weak at large-list planning; guardrail refusals; language limits | Costs money per token; content leaves the Mac; needs a network; rate limits and outages; a key to manage | Gigabytes added to a 50 MB app; gigabytes of memory and GPU load inside PowerTools; a dependency and licences to maintain | The person must install and run it; heavy memory and energy while loaded; model quality varies |
+| **Verdict** | Default where available | Opt-in, for what on-device cannot do | Not now (D10) | Opt-in for people who already run one |
+
+**Recommendation:** no single choice. Route each task to the cheapest option that
+can do it well, and ship no model of our own.
+
+| Task | Default | Why |
+| --- | --- | --- |
+| Text actions under about 1,500 tokens | On device | 0.7–2.5 s, free, private |
+| Classification, extraction, onboarding, "Why is my Mac busy?" | On device | Small inputs |
+| Plans from a shortlist of at most 10 actions | On device, cloud if configured and the plan fails validation | Measured quality risk |
+| Content over about 3,400 words | Chunk on device (at most 4 calls), or cloud with consent | Context limit |
+| Vision beyond text recognition; long multi-step plans | Cloud if configured | Model capability |
+| macOS 14–15, an ineligible Mac, or Apple Intelligence off | Cloud or local server if configured; otherwise the feature says what it needs | Availability |
+| Search ranking, language detection, text recognition, embeddings | No language model: NaturalLanguage and Vision | Instant, no model call |
+
+### Budgets
+
+These become release gates from M2 (section 7).
+
+- **Installed but unused:** no added idle CPU, at most +5 MB of app memory, no
+  inference activity.
+- **During a request:** app memory at most +15 MB, app CPU at most 0.2 s per
+  request, at most 15 redraws per second, and the main thread never blocked.
+- **Speed, on device and warm:** first words of a text action within 0.5 s;
+  cancel within 100 ms.
+- **Fan-out:** at most 4 model calls per user action unless the person approves
+  more.
+- **Deferral:** optional AI work waits in Low Power Mode, at serious thermal
+  pressure, or on a memory-pressure warning.
+- **Re-measure every milestone** on this M5 and on a base 8 GB Mac, with the
+  benchmark kept as a script.
 
 ---
 

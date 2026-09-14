@@ -82,11 +82,16 @@ swift build                     # seconds: type-check only, no bundle or signing
 
 Read [docs/AI-HARNESS.md](docs/AI-HARNESS.md) and
 [docs/AI-PRODUCT-ROADMAP.md](docs/AI-PRODUCT-ROADMAP.md) before any AI work.
+Harness work is specified task by task in
+[docs/ai-harness/](docs/ai-harness/README.md): work the tasks in order and follow
+that README's workflow and stop conditions.
 
-**Actions.** A model may only select registered actions. The registry derives
-from `Services/CommandBar/CommandBarCatalog.swift`; never build a parallel list.
-Model output never becomes an action identifier, shell command, file path, URL,
-AppleScript, setting key or permission that runs directly.
+**Actions.** A model may only select registered actions. `AIActionRegistry` is
+an allow-list of Command Bar rows, checked against
+`Services/CommandBar/CommandBarCatalog.swift`; never copy what the catalog
+already decides, such as whether a row is offered or needs a permission. Model
+output never becomes an action identifier, shell command, file path, URL,
+AppleScript, setting key, permission or approval that runs directly.
 
 **Validation.** Every plan passes `AIPlanValidator` before execution. Add a check
 to `Tests/AIHarnessTests.swift` for every new action class, argument kind,

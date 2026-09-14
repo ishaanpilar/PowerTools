@@ -34,8 +34,6 @@ enum AIActionRisk: String, CaseIterable, Comparable {
 struct AIActionDescriptor: Equatable {
     let id: String
     let risk: AIActionRisk
-    let requiredFeatures: Set<AppFeature>
-    let requiredPermissions: Set<AppPermission>
     let allowsBackgroundExecution: Bool
 }
 
@@ -71,11 +69,22 @@ struct AIApprovalRequest: Equatable {
     let scope: AIApprovalScope
 }
 
+/// The Command Bar's own answer for a row, read from `CommandBarEntry.trouble`.
+enum AIActionAvailability: Equatable {
+    case ready
+    case needsSetup
+    case needsPermission
+}
+
+/// Keyed by Command Bar row id. A missing key means the bar is not offering that row now.
+typealias AIAvailabilitySnapshot = [String: AIActionAvailability]
+
 enum AIPlanViolation: Equatable {
     case emptyPlan
     case duplicateAction(String)
     case unknownAction(String)
-    case unavailableFeature(actionID: String, feature: AppFeature)
-    case missingPermission(actionID: String, permission: AppPermission)
+    case notOffered(catalogID: String)
+    case needsSetup(catalogID: String)
+    case needsPermission(catalogID: String)
     case backgroundExecutionDenied(String)
 }

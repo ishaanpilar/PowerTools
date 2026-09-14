@@ -52,6 +52,10 @@ MUTATIONS = [
      "if !needsStepApproval && approvals.contains(.plan(revision: plan.revision, steps: plan.steps)) { return nil }",
      "if !needsStepApproval && approvals.contains(where: { if case .plan(let revision, _) = $0 { return revision == plan.revision }; return false }) { return nil }",
      "changing a step after approval voids the plan approval"),
+    ("permission-blocked row treated as ready", "ai-harness", "Sources/PowerTools/Services/AI/AIPlanValidator.swift",
+     "case .ready?:",
+     "case .ready?, .needsPermission?:",
+     "an approval cannot substitute for a macOS permission"),
 ]
 
 

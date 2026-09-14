@@ -25,8 +25,7 @@ enum AIPlanValidation: Equatable {
 enum AIPlanValidator {
     static func validate(_ plan: AIActionPlan,
                          registry: [String: AIActionDescriptor],
-                         installedFeatures: Set<AppFeature>,
-                         grantedPermissions: Set<AppPermission>,
+                         availability: AIAvailabilitySnapshot,
                          approvals: Set<AIApproval>) -> AIPlanValidation {
         guard !plan.steps.isEmpty else { return .rejected([.emptyPlan]) }
 
@@ -42,11 +41,20 @@ enum AIPlanValidator {
                 violations.append(.unknownAction(step.actionID))
                 continue
             }
-            for feature in action.requiredFeatures where !installedFeatures.contains(feature) {
-                violations.append(.unavailableFeature(actionID: action.id, feature: feature))
-            }
-            for permission in action.requiredPermissions where !grantedPermissions.contains(permission) {
-                violations.append(.missingPermission(actionID: action.id, permission: permission))
+            let catalogID = action.id
+            switch availability[catalogID] {
+            case .ready?:
+                break
+            case .needsSetup?:
+                violations.append(.needsSetup(catalogID: catalogID))
+                continue
+            case .needsPermission?:
+                // The Command Bar runs such a row to raise the macOS prompt; a plan never does.
+                violations.append(.needsPermission(catalogID: catalogID))
+                continue
+            case nil:
+                violations.append(.notOffered(catalogID: catalogID))
+                continue
             }
             if let request = approvalRequest(for: step, risk: action.risk, in: plan, approvals: approvals) {
                 pending.append(request)

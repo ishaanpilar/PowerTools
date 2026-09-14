@@ -6,50 +6,17 @@ import Foundation
 
 enum AIHarnessTests {
     static func run(_ suite: TestSuite) {
-        let inspect = AIActionDescriptor(
-            id: "system.inspect",
-            risk: .readOnly,
-            requiredFeatures: [.monitorCPU],
-            requiredPermissions: [],
-            allowsBackgroundExecution: false
-        )
-        let arrange = AIActionDescriptor(
-            id: "windows.arrange",
-            risk: .reversible,
-            requiredFeatures: [.windowLayout],
-            requiredPermissions: [.accessibility],
-            allowsBackgroundExecution: false
-        )
-        let center = AIActionDescriptor(
-            id: "windows.center",
-            risk: .reversible,
-            requiredFeatures: [.windowLayout],
-            requiredPermissions: [.accessibility],
-            allowsBackgroundExecution: false
-        )
-        let cleanup = AIActionDescriptor(
-            id: "cleaner.remove",
-            risk: .destructive,
-            requiredFeatures: [.cleaner],
-            requiredPermissions: [.fullDiskAccess],
-            allowsBackgroundExecution: false
-        )
-        let shareLink = AIActionDescriptor(
-            id: "share.link",
-            risk: .external,
-            requiredFeatures: [],
-            requiredPermissions: [],
-            allowsBackgroundExecution: false
-        )
-        let adminToggle = AIActionDescriptor(
-            id: "admin.toggle",
-            risk: .privileged,
-            requiredFeatures: [],
-            requiredPermissions: [],
-            allowsBackgroundExecution: false
-        )
+        let inspect = AIActionDescriptor(id: "system.inspect", risk: .readOnly, allowsBackgroundExecution: false)
+        let arrange = AIActionDescriptor(id: "windows.arrange", risk: .reversible, allowsBackgroundExecution: false)
+        let center = AIActionDescriptor(id: "windows.center", risk: .reversible, allowsBackgroundExecution: false)
+        let cleanup = AIActionDescriptor(id: "cleaner.remove", risk: .destructive, allowsBackgroundExecution: false)
+        let shareLink = AIActionDescriptor(id: "share.link", risk: .external, allowsBackgroundExecution: false)
+        let adminToggle = AIActionDescriptor(id: "admin.toggle", risk: .privileged, allowsBackgroundExecution: false)
         let registry = [inspect, arrange, center, cleanup, shareLink, adminToggle]
             .reduce(into: [String: AIActionDescriptor]()) { $0[$1.id] = $1 }
+
+        let readyAvailability: AIAvailabilitySnapshot = Dictionary(
+            uniqueKeysWithValues: registry.keys.map { ($0, AIActionAvailability.ready) })
 
         func plan(_ ids: [String], revision: Int = 1, background: Bool = false) -> AIActionPlan {
             AIActionPlan(revision: revision, steps: ids.map { AIPlanStep(actionID: $0) },
@@ -57,10 +24,8 @@ enum AIHarnessTests {
         }
 
         func outcome(_ plan: AIActionPlan, approvals: Set<AIApproval> = [],
-                     features: Set<AppFeature> = [.monitorCPU, .windowLayout, .cleaner],
-                     permissions: Set<AppPermission> = [.accessibility, .fullDiskAccess]) -> AIPlanValidation {
-            AIPlanValidator.validate(plan, registry: registry, installedFeatures: features,
-                                     grantedPermissions: permissions, approvals: approvals)
+                     availability: AIAvailabilitySnapshot = readyAvailability) -> AIPlanValidation {
+            AIPlanValidator.validate(plan, registry: registry, availability: availability, approvals: approvals)
         }
 
         func violations(_ result: AIPlanValidation) -> [AIPlanViolation] {
@@ -87,8 +52,8 @@ enum AIHarnessTests {
         }
 
         /// Every step approved individually, and the plan itself approved: a
-        /// caller testing one rule (features, permissions, duplicates,
-        /// background) should never also be blocked on approval.
+        /// caller testing one rule (availability, duplicates, background)
+        /// should never also be blocked on approval.
         func fullyApproved(_ plan: AIActionPlan) -> Set<AIApproval> {
             approvingEachStep(plan).union([approvingPlan(plan)])
         }
@@ -116,6 +81,9 @@ enum AIHarnessTests {
         suite.expect(isValid(outcome(arrangeOnly, approvals: [approvingPlan(arrangeOnly)])),
                      "approving the reviewed plan runs its reversible steps")
 
+        suite.expect(isNeedsApproval(outcome(plan(["windows.arrange"]))),
+                     "a ready row proceeds to approval")
+
         let cleanupOnly = plan(["cleaner.remove"])
         suite.expect(outcome(cleanupOnly, approvals: [approvingPlan(cleanupOnly)]) == .needsApproval([
             AIApprovalRequest(step: AIPlanStep(actionID: "cleaner.remove"), risk: .destructive, scope: .step),
@@ -133,18 +101,27 @@ enum AIHarnessTests {
         suite.expect(isValid(outcome(highRisk, approvals: approvingEachStep(highRisk))),
                      "approving each step runs destructive, external and privileged steps")
 
-        // MARK: - Feature, permission, duplicate and background rules survive approval
+        // MARK: - Availability, duplicate and background rules survive approval
 
-        let arrangeApproved = fullyApproved(plan(["windows.arrange"]))
-        suite.expect(violations(outcome(plan(["windows.arrange"]), approvals: arrangeApproved,
-                                        features: [.monitorCPU, .cleaner]))
-                        .contains(.unavailableFeature(actionID: "windows.arrange", feature: .windowLayout)),
-                     "an installed-feature boundary cannot be bypassed by approval")
+        var noArrangeRow = readyAvailability
+        noArrangeRow["windows.arrange"] = nil
+        suite.expect(outcome(plan(["windows.arrange"]), approvals: fullyApproved(plan(["windows.arrange"])),
+                             availability: noArrangeRow)
+                        == .rejected([.notOffered(catalogID: "windows.arrange")]),
+                     "a row the Command Bar is not offering cannot be planned")
 
-        let cleanupApproved = fullyApproved(plan(["cleaner.remove"]))
-        suite.expect(violations(outcome(plan(["cleaner.remove"]), approvals: cleanupApproved,
-                                        permissions: [.accessibility]))
-                        .contains(.missingPermission(actionID: "cleaner.remove", permission: .fullDiskAccess)),
+        var arrangeNeedsSetup = readyAvailability
+        arrangeNeedsSetup["windows.arrange"] = .needsSetup
+        suite.expect(outcome(plan(["windows.arrange"]), approvals: fullyApproved(plan(["windows.arrange"])),
+                             availability: arrangeNeedsSetup)
+                        == .rejected([.needsSetup(catalogID: "windows.arrange")]),
+                     "a feature that still needs setup cannot run from a plan")
+
+        var cleanupNeedsPermission = readyAvailability
+        cleanupNeedsPermission["cleaner.remove"] = .needsPermission
+        suite.expect(outcome(plan(["cleaner.remove"]), approvals: approvingEachStep(plan(["cleaner.remove"])),
+                             availability: cleanupNeedsPermission)
+                        == .rejected([.needsPermission(catalogID: "cleaner.remove")]),
                      "an approval cannot substitute for a macOS permission")
 
         let duplicateInspect = plan(["system.inspect", "system.inspect"])
@@ -224,6 +201,14 @@ enum AIHarnessTests {
         let planStepBody = AIHarnessSource.body(of: "struct AIPlanStep", in: contractsCode).lowercased()
         suite.expect(!planStepBody.isEmpty && !planStepBody.contains("approv"),
                      "approval is never part of a model-produced step")
+
+        // MARK: - Availability replaces feature/permission rules (task 03)
+
+        let descriptorBody = AIHarnessSource.body(of: "struct AIActionDescriptor", in: contractsCode)
+        suite.expect(!descriptorBody.isEmpty
+                        && !descriptorBody.contains("AppFeature") && !descriptorBody.contains("AppPermission")
+                        && !validatorCode.contains("AppFeature") && !validatorCode.contains("AppPermission"),
+                     "availability comes from the snapshot, not from feature or permission rules")
     }
 }
 

@@ -280,6 +280,10 @@ enum AIHarnessTests {
         let headphonesPlan = plan([headphonesStep], revision: 1)
         suite.expect(isNeedsApproval(outcome(headphonesPlan, approvals: [.step(speakersStep, revision: 1)])),
                      "approving one target does not approve another")
+
+        // MARK: - Production action registry (task 05)
+
+        AIActionRegistryTests.run(suite)
     }
 }
 

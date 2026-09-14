@@ -60,6 +60,18 @@ MUTATIONS = [
      "return range.contains(number) ? id : nil",
      "return id",
      "an out-of-range number is rejected"),
+    ("keep-awake range drifts from its row", "ai-harness", "Sources/PowerTools/Services/AI/AIActionRegistry.swift",
+     'reversible("action.keepAwake", .integer(1...480, optional: true)),',
+     'reversible("action.keepAwake", .integer(1...600, optional: true)),',
+     "registered number ranges match the Command Bar row"),
+    ("confirmed row registered as reversible", "ai-harness", "Sources/PowerTools/Services/AI/AIActionRegistry.swift",
+     '        reversible("action.darkMode"),',
+     '        reversible("action.darkMode"),\n        reversible("action.emptyTrash"),',
+     "an action the Command Bar confirms is never registered below destructive"),
+    ("catalog row left undecided", "ai-harness", "Tests/AIActionRegistryTests.swift",
+     '"action.wifi": interrupts,',
+     '',
+     "every Command Bar row is registered for AI or excluded with a reason"),
 ]
 
 

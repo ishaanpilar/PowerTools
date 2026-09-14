@@ -5,7 +5,9 @@ runs on your Mac when your Mac supports it. Anything that leaves your Mac goes
 only where you send it — never to a PowerTools AI server, because there isn't
 one.
 
-This policy applies to PowerTools AI from its first public release.
+This policy applies to PowerTools AI from its first public release. The AI
+features it describes are not in the current beta yet; until they ship, the app
+makes no AI requests of any kind.
 
 ## The short version
 

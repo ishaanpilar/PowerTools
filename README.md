@@ -18,6 +18,7 @@
   <a href="#what-it-does">Features</a> ·
   <a href="#ai-built-in">AI</a> ·
   <a href="#private-by-default">Privacy</a> ·
+  <a href="#install">Install</a> ·
   <a href="#build-it">Build</a> ·
   <a href="#credits">Credits</a>
 </p>
@@ -63,9 +64,10 @@ More of my tools are on [my GitHub](https://github.com/ishaanpilar).
 
 ## Where it stands
 
-PowerTools AI is in active development and has no packaged release yet.
+PowerTools AI is in active development. The first beta is out.
 
-- **Works today:** every utility below. [Build it](#build-it) to use them.
+- **Works today:** every utility below. [Download the beta](#install) or
+  [build it](#build-it).
 - **Being built:** the AI features. The [roadmap](docs/AI-PRODUCT-ROADMAP.md)
   tracks progress.
 
@@ -208,6 +210,21 @@ Automation access the first time they talk to Finder or Terminal. More in
 - A Mac with Apple Silicon
 - macOS 14 Sonoma or later
 - For on-device AI: macOS 26 with Apple Intelligence switched on
+
+## Install
+
+Download the latest `.dmg` from the
+[releases page](https://github.com/ishaanpilar/PowerTools/releases), open it and
+drag PowerTools to Applications.
+
+Beta builds are not yet signed with an Apple Developer ID or notarized, so macOS
+blocks the first launch:
+
+1. Open PowerTools from Applications. When macOS says it cannot verify the app,
+   click **Done**.
+2. Open **System Settings › Privacy & Security**, scroll to **Security** and
+   click **Open Anyway** next to PowerTools. Confirm, and it opens normally from
+   then on.
 
 ## Build it
 

@@ -39,15 +39,36 @@ struct AIActionDescriptor: Equatable {
     let allowsBackgroundExecution: Bool
 }
 
-struct AIPlanStep: Equatable {
+/// One step a model proposed. It can name an action, never approve it.
+struct AIPlanStep: Hashable {
     let actionID: String
-    /// Approval is per final target/action, never inferred from a broad request.
-    let isExplicitlyApproved: Bool
 }
 
+/// `revision` is assigned by the app, and changes whenever the plan's content does.
 struct AIActionPlan: Equatable {
+    let revision: Int
     let steps: [AIPlanStep]
     let allowsBackgroundExecution: Bool
+}
+
+/// Created only by the plan review interface, never parsed from model output.
+enum AIApproval: Hashable {
+    /// Covers the reversible steps of exactly these steps at this revision.
+    case plan(revision: Int, steps: [AIPlanStep])
+    /// Covers one step at this revision; required above reversible.
+    case step(AIPlanStep, revision: Int)
+}
+
+enum AIApprovalScope: Equatable {
+    case plan
+    case step
+}
+
+/// What the review sheet must ask the person for before a plan can run.
+struct AIApprovalRequest: Equatable {
+    let step: AIPlanStep
+    let risk: AIActionRisk
+    let scope: AIApprovalScope
 }
 
 enum AIPlanViolation: Equatable {
@@ -56,6 +77,5 @@ enum AIPlanViolation: Equatable {
     case unknownAction(String)
     case unavailableFeature(actionID: String, feature: AppFeature)
     case missingPermission(actionID: String, permission: AppPermission)
-    case approvalRequired(String)
     case backgroundExecutionDenied(String)
 }

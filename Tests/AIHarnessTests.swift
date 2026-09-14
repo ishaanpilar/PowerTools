@@ -20,6 +20,13 @@ enum AIHarnessTests {
             requiredPermissions: [.accessibility],
             allowsBackgroundExecution: false
         )
+        let center = AIActionDescriptor(
+            id: "windows.center",
+            risk: .reversible,
+            requiredFeatures: [.windowLayout],
+            requiredPermissions: [.accessibility],
+            allowsBackgroundExecution: false
+        )
         let cleanup = AIActionDescriptor(
             id: "cleaner.remove",
             risk: .destructive,
@@ -27,69 +34,164 @@ enum AIHarnessTests {
             requiredPermissions: [.fullDiskAccess],
             allowsBackgroundExecution: false
         )
-        let registry = [inspect, arrange, cleanup].reduce(into: [String: AIActionDescriptor]()) {
-            $0[$1.id] = $1
+        let shareLink = AIActionDescriptor(
+            id: "share.link",
+            risk: .external,
+            requiredFeatures: [],
+            requiredPermissions: [],
+            allowsBackgroundExecution: false
+        )
+        let adminToggle = AIActionDescriptor(
+            id: "admin.toggle",
+            risk: .privileged,
+            requiredFeatures: [],
+            requiredPermissions: [],
+            allowsBackgroundExecution: false
+        )
+        let registry = [inspect, arrange, center, cleanup, shareLink, adminToggle]
+            .reduce(into: [String: AIActionDescriptor]()) { $0[$1.id] = $1 }
+
+        func plan(_ ids: [String], revision: Int = 1, background: Bool = false) -> AIActionPlan {
+            AIActionPlan(revision: revision, steps: ids.map { AIPlanStep(actionID: $0) },
+                         allowsBackgroundExecution: background)
         }
 
-        func outcome(_ steps: [AIPlanStep], background: Bool = false,
+        func outcome(_ plan: AIActionPlan, approvals: Set<AIApproval> = [],
                      features: Set<AppFeature> = [.monitorCPU, .windowLayout, .cleaner],
                      permissions: Set<AppPermission> = [.accessibility, .fullDiskAccess]) -> AIPlanValidation {
-            AIPlanValidator.validate(
-                AIActionPlan(steps: steps, allowsBackgroundExecution: background),
-                registry: registry,
-                installedFeatures: features,
-                grantedPermissions: permissions
-            )
+            AIPlanValidator.validate(plan, registry: registry, installedFeatures: features,
+                                     grantedPermissions: permissions, approvals: approvals)
         }
 
-        func validate(_ steps: [AIPlanStep], background: Bool = false,
-                      features: Set<AppFeature> = [.monitorCPU, .windowLayout, .cleaner],
-                      permissions: Set<AppPermission> = [.accessibility, .fullDiskAccess]) -> [AIPlanViolation] {
-            if case .rejected(let violations) = outcome(steps, background: background,
-                                                        features: features, permissions: permissions) {
-                return violations
-            }
+        func violations(_ result: AIPlanValidation) -> [AIPlanViolation] {
+            if case .rejected(let found) = result { return found }
             return []
         }
 
-        suite.expect(validate([]) == [.emptyPlan], "an agent cannot execute an empty plan")
-        suite.expect(validate([AIPlanStep(actionID: "model.invented.command", isExplicitlyApproved: true)])
-                        == [.unknownAction("model.invented.command")],
+        func isValid(_ result: AIPlanValidation) -> Bool {
+            if case .valid = result { return true }
+            return false
+        }
+
+        func isNeedsApproval(_ result: AIPlanValidation) -> Bool {
+            if case .needsApproval = result { return true }
+            return false
+        }
+
+        func approvingPlan(_ plan: AIActionPlan) -> AIApproval {
+            .plan(revision: plan.revision, steps: plan.steps)
+        }
+
+        func approvingEachStep(_ plan: AIActionPlan) -> Set<AIApproval> {
+            Set(plan.steps.map { .step($0, revision: plan.revision) })
+        }
+
+        /// Every step approved individually, and the plan itself approved: a
+        /// caller testing one rule (features, permissions, duplicates,
+        /// background) should never also be blocked on approval.
+        func fullyApproved(_ plan: AIActionPlan) -> Set<AIApproval> {
+            approvingEachStep(plan).union([approvingPlan(plan)])
+        }
+
+        // MARK: - Structure
+
+        suite.expect(outcome(plan([])) == .rejected([.emptyPlan]),
+                     "an agent cannot execute an empty plan")
+
+        let invented = plan(["model.invented.command"])
+        suite.expect(outcome(invented, approvals: fullyApproved(invented))
+                        == .rejected([.unknownAction("model.invented.command")]),
                      "a model cannot invent an executable action")
-        suite.expect(validate([AIPlanStep(actionID: "system.inspect", isExplicitlyApproved: false)]).isEmpty,
+
+        suite.expect(isValid(outcome(plan(["system.inspect"]))),
                      "read-only inspection remains available after context approval")
-        suite.expect(validate([AIPlanStep(actionID: "windows.arrange", isExplicitlyApproved: false)])
-                        == [.approvalRequired("windows.arrange")],
-                     "reversible actions require final-plan approval")
-        suite.expect(validate([AIPlanStep(actionID: "cleaner.remove", isExplicitlyApproved: false)])
-                        == [.approvalRequired("cleaner.remove")],
-                     "destructive actions require target-specific approval")
-        suite.expect(validate([AIPlanStep(actionID: "windows.arrange", isExplicitlyApproved: true)],
-                              features: [.monitorCPU, .cleaner]).contains(
-                                .unavailableFeature(actionID: "windows.arrange", feature: .windowLayout)),
+
+        // MARK: - Approval, graduated by risk
+
+        let arrangeOnly = plan(["windows.arrange"])
+        suite.expect(outcome(arrangeOnly) == .needsApproval([
+            AIApprovalRequest(step: AIPlanStep(actionID: "windows.arrange"), risk: .reversible, scope: .plan),
+        ]), "reversible steps wait for approval of the reviewed plan")
+
+        suite.expect(isValid(outcome(arrangeOnly, approvals: [approvingPlan(arrangeOnly)])),
+                     "approving the reviewed plan runs its reversible steps")
+
+        let cleanupOnly = plan(["cleaner.remove"])
+        suite.expect(outcome(cleanupOnly, approvals: [approvingPlan(cleanupOnly)]) == .needsApproval([
+            AIApprovalRequest(step: AIPlanStep(actionID: "cleaner.remove"), risk: .destructive, scope: .step),
+        ]), "a plan approval never satisfies a destructive step")
+
+        let externalAndPrivileged = plan(["share.link", "admin.toggle"])
+        suite.expect(outcome(externalAndPrivileged, approvals: [approvingPlan(externalAndPrivileged)])
+                        == .needsApproval([
+                            AIApprovalRequest(step: AIPlanStep(actionID: "share.link"), risk: .external, scope: .step),
+                            AIApprovalRequest(step: AIPlanStep(actionID: "admin.toggle"), risk: .privileged, scope: .step),
+                        ]),
+                     "external and privileged steps need their own approval")
+
+        let highRisk = plan(["cleaner.remove", "share.link", "admin.toggle"])
+        suite.expect(isValid(outcome(highRisk, approvals: approvingEachStep(highRisk))),
+                     "approving each step runs destructive, external and privileged steps")
+
+        // MARK: - Feature, permission, duplicate and background rules survive approval
+
+        let arrangeApproved = fullyApproved(plan(["windows.arrange"]))
+        suite.expect(violations(outcome(plan(["windows.arrange"]), approvals: arrangeApproved,
+                                        features: [.monitorCPU, .cleaner]))
+                        .contains(.unavailableFeature(actionID: "windows.arrange", feature: .windowLayout)),
                      "an installed-feature boundary cannot be bypassed by approval")
-        suite.expect(validate([AIPlanStep(actionID: "cleaner.remove", isExplicitlyApproved: true)],
-                              permissions: [.accessibility]).contains(
-                                .missingPermission(actionID: "cleaner.remove", permission: .fullDiskAccess)),
+
+        let cleanupApproved = fullyApproved(plan(["cleaner.remove"]))
+        suite.expect(violations(outcome(plan(["cleaner.remove"]), approvals: cleanupApproved,
+                                        permissions: [.accessibility]))
+                        .contains(.missingPermission(actionID: "cleaner.remove", permission: .fullDiskAccess)),
                      "an approval cannot substitute for a macOS permission")
-        suite.expect(validate([AIPlanStep(actionID: "system.inspect", isExplicitlyApproved: true),
-                               AIPlanStep(actionID: "system.inspect", isExplicitlyApproved: true)])
-                        == [.duplicateAction("system.inspect")],
+
+        let duplicateInspect = plan(["system.inspect", "system.inspect"])
+        suite.expect(outcome(duplicateInspect, approvals: fullyApproved(duplicateInspect))
+                        == .rejected([.duplicateAction("system.inspect")]),
                      "duplicate actions are rejected instead of executed twice")
-        suite.expect(validate([AIPlanStep(actionID: "system.inspect", isExplicitlyApproved: true)],
-                              background: true) == [.backgroundExecutionDenied("system.inspect")],
+
+        let backgroundInspect = plan(["system.inspect"], background: true)
+        suite.expect(outcome(backgroundInspect, approvals: fullyApproved(backgroundInspect))
+                        == .rejected([.backgroundExecutionDenied("system.inspect")]),
                      "a model cannot convert a foreground action into background work")
 
-        let inspectOnly = [AIPlanStep(actionID: "system.inspect", isExplicitlyApproved: true)]
+        // MARK: - Approval is bound to exact content, not a counter
+
+        let approvedOriginal = plan(["windows.arrange"], revision: 1)
+        let editedSamePlan = plan(["windows.arrange", "windows.center"], revision: 1)
+        suite.expect(isNeedsApproval(outcome(editedSamePlan, approvals: [approvingPlan(approvedOriginal)])),
+                     "changing a step after approval voids the plan approval")
+
+        let revisionOne = plan(["windows.arrange"], revision: 1)
+        let revisionTwo = plan(["windows.arrange"], revision: 2)
+        suite.expect(isNeedsApproval(outcome(revisionTwo, approvals: [approvingPlan(revisionOne)])),
+                     "a new plan revision voids earlier approvals")
+
+        let cleanupRevisionOne = plan(["cleaner.remove"], revision: 1)
+        let cleanupRevisionTwo = plan(["cleaner.remove"], revision: 2)
+        suite.expect(isNeedsApproval(outcome(cleanupRevisionTwo, approvals: approvingEachStep(cleanupRevisionOne))),
+                     "a step approval from an earlier revision does not carry over")
+
+        // MARK: - Structural violations always win
+
+        let mixedPlan = plan(["model.invented.command", "windows.arrange"])
+        suite.expect(outcome(mixedPlan, approvals: fullyApproved(mixedPlan))
+                        == .rejected([.unknownAction("model.invented.command")]),
+                     "approvals never override a structural violation")
+
+        // MARK: - ValidatedPlan (task 01)
+
+        let inspectOnly = plan(["system.inspect"])
         if case .valid(let validated) = outcome(inspectOnly) {
-            suite.expect(validated.plan == AIActionPlan(steps: inspectOnly, allowsBackgroundExecution: false),
+            suite.expect(validated.plan == inspectOnly,
                          "a valid plan yields a ValidatedPlan carrying exactly the submitted plan")
         } else {
             suite.expect(false, "a valid plan yields a ValidatedPlan carrying exactly the submitted plan")
         }
 
-        let invented = [AIPlanStep(actionID: "model.invented.command", isExplicitlyApproved: true)]
-        if case .valid = outcome(invented) {
+        if case .valid = outcome(invented, approvals: fullyApproved(invented)) {
             suite.expect(false, "a rejected plan never yields a ValidatedPlan")
         } else {
             suite.expect(true, "a rejected plan never yields a ValidatedPlan")
@@ -112,6 +214,16 @@ enum AIHarnessTests {
                             }
                         },
                      "a ValidatedPlan cannot be decoded into existence")
+
+        // MARK: - Approval cannot be model output (task 02)
+
+        let contractsPath = "Sources/PowerTools/Services/AI/AIHarnessContracts.swift"
+        let contractsCode = AIHarnessSource.code(at: contractsPath)
+        suite.expect(!contractsCode.isEmpty, "the harness source checks can read AIHarnessContracts.swift")
+
+        let planStepBody = AIHarnessSource.body(of: "struct AIPlanStep", in: contractsCode).lowercased()
+        suite.expect(!planStepBody.isEmpty && !planStepBody.contains("approv"),
+                     "approval is never part of a model-produced step")
     }
 }
 

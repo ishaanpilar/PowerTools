@@ -44,6 +44,14 @@ MUTATIONS = [
      "guard !plan.steps.isEmpty else { return .rejected([.emptyPlan]) }",
      "guard !plan.steps.isEmpty else { return .valid(ValidatedPlan(plan: plan)) }",
      "an agent cannot execute an empty plan"),
+    ("plan approval covers destructive steps", "ai-harness", "Sources/PowerTools/Services/AI/AIPlanValidator.swift",
+     "let needsStepApproval = risk > .reversible",
+     "let needsStepApproval = risk > .destructive",
+     "a plan approval never satisfies a destructive step"),
+    ("plan approval ignores its steps", "ai-harness", "Sources/PowerTools/Services/AI/AIPlanValidator.swift",
+     "if !needsStepApproval && approvals.contains(.plan(revision: plan.revision, steps: plan.steps)) { return nil }",
+     "if !needsStepApproval && approvals.contains(where: { if case .plan(let revision, _) = $0 { return revision == plan.revision }; return false }) { return nil }",
+     "changing a step after approval voids the plan approval"),
 ]
 
 

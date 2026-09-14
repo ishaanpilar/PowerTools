@@ -16,6 +16,7 @@ struct ValidatedPlan: Equatable {
 
 enum AIPlanValidation: Equatable {
     case valid(ValidatedPlan)
+    case needsApproval([AIApprovalRequest])
     case rejected([AIPlanViolation])
 }
 
@@ -25,10 +26,12 @@ enum AIPlanValidator {
     static func validate(_ plan: AIActionPlan,
                          registry: [String: AIActionDescriptor],
                          installedFeatures: Set<AppFeature>,
-                         grantedPermissions: Set<AppPermission>) -> AIPlanValidation {
+                         grantedPermissions: Set<AppPermission>,
+                         approvals: Set<AIApproval>) -> AIPlanValidation {
         guard !plan.steps.isEmpty else { return .rejected([.emptyPlan]) }
 
         var violations: [AIPlanViolation] = []
+        var pending: [AIApprovalRequest] = []
         var actionIDs = Set<String>()
         for step in plan.steps {
             guard actionIDs.insert(step.actionID).inserted else {
@@ -45,13 +48,27 @@ enum AIPlanValidator {
             for permission in action.requiredPermissions where !grantedPermissions.contains(permission) {
                 violations.append(.missingPermission(actionID: action.id, permission: permission))
             }
-            if action.risk != .readOnly && !step.isExplicitlyApproved {
-                violations.append(.approvalRequired(action.id))
+            if let request = approvalRequest(for: step, risk: action.risk, in: plan, approvals: approvals) {
+                pending.append(request)
             }
             if plan.allowsBackgroundExecution && !action.allowsBackgroundExecution {
                 violations.append(.backgroundExecutionDenied(action.id))
             }
         }
-        return violations.isEmpty ? .valid(ValidatedPlan(plan: plan)) : .rejected(violations)
+
+        if !violations.isEmpty { return .rejected(violations) }
+        if !pending.isEmpty { return .needsApproval(pending) }
+        return .valid(ValidatedPlan(plan: plan))
+    }
+
+    private static func approvalRequest(for step: AIPlanStep,
+                                        risk: AIActionRisk,
+                                        in plan: AIActionPlan,
+                                        approvals: Set<AIApproval>) -> AIApprovalRequest? {
+        guard risk > .readOnly else { return nil }
+        let needsStepApproval = risk > .reversible
+        if approvals.contains(.step(step, revision: plan.revision)) { return nil }
+        if !needsStepApproval && approvals.contains(.plan(revision: plan.revision, steps: plan.steps)) { return nil }
+        return AIApprovalRequest(step: step, risk: risk, scope: needsStepApproval ? .step : .plan)
     }
 }

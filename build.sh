@@ -320,6 +320,7 @@ if (( TEST )); then
         Sources/PowerTools/Core/FinderActionsStrings.swift
         Sources/PowerTools/Services/FinderActions/FinderActionsSupport.swift
         Sources/PowerTools/Core/CommandBarStrings.swift
+        Sources/PowerTools/Core/AITextActionsStrings.swift
         Sources/PowerTools/Core/FeedbackStrings.swift
         Sources/PowerTools/Core/RadialMenuStrings.swift
         Sources/PowerTools/Core/MenuBarAppearanceStrings.swift

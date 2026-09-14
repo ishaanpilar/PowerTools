@@ -66,7 +66,7 @@ extension AppFeature {
              .keyboardDebounce, .superKey, .quitWindowProtection,
              .pastePlain, .finderCutPaste, .finderRename, .diskImageInstaller, .finderActions,
              .soundOutputSwitcher, .micMute, .musicBlock, .bluetoothSleep,
-             .radialMenu, .killProcess:
+             .radialMenu, .killProcess, .aiTextActions:
             return .settings
         }
     }

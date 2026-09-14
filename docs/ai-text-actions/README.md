@@ -1,0 +1,106 @@
+# M2 implementation notes — text actions, on device and in the cloud
+
+This is the working plan for [M2](../AI-PRODUCT-ROADMAP.md#m2--first-ai-feature-text-actions-on-device-and-in-the-cloud):
+one Command Bar feature (rewrite, shorten, proofread, summarise, translate the
+selected text) that proves both provider paths before anything bigger is
+built on top. It is lighter than [`docs/ai-harness/`](../ai-harness/README.md)
+— M1 needed per-guarantee rigor because it was a security boundary; M2 is
+mostly wiring real APIs to real UI, so this is the facts a task needs plus a
+slice breakdown, not a full spec per task.
+
+**M2 does not touch the M1 harness.** Text actions have no side effect beyond
+what the person explicitly clicks (Copy or Replace); they are not a plan and
+never go through `AIPlanValidator`. That machinery is for M4's agent.
+
+## Facts that shape every slice
+
+**CI compiles this code against two SDKs, and one of them has no
+`FoundationModels` at all.** `.github/workflows/ci.yml`: the "Swift 6.0.3
+compatibility" job runs on `macos-15` with `Xcode_16.2.app` pinned
+(`DEVELOPER_DIR`), whose SDK is macOS 15.2 — verified locally, that SDK has no
+`FoundationModels.framework`. The "Build & selftest" job runs on `macos-26`
+with the default Xcode, SDK 26.5, which does. Both jobs run `./build.sh` and
+`./build.sh --test` and both must pass. **Every line that imports or names a
+`FoundationModels` type must be inside `#if canImport(FoundationModels)`**;
+the compatibility job then compiles nothing from that block, and the build job
+compiles the real thing. This is stronger than `@available(macOS 26, *)` alone
+— that guards a call at runtime, not the `import` at compile time.
+
+**The on-device model works today, benchmarked on this Mac (M5, macOS
+26.5.2):** `SystemLanguageModel.default.availability` is `.available` or
+`.unavailable(reason)` with `deviceNotEligible`, `appleIntelligenceNotEnabled`,
+`modelNotReady`. `LanguageModelSession(instructions:)` +
+`session.streamResponse(to:options:)` streams a response; `GenerationOptions`
+takes `maximumResponseTokens`. `LanguageModelSession.GenerationError` covers
+`exceededContextWindowSize`, `assetsUnavailable`, `guardrailViolation`,
+`unsupportedGuide`, `unsupportedLanguageOrLocale`, `decodingFailure`,
+`rateLimited`, `concurrentRequests`. Context window is 4,096 tokens.
+`tokenCount(for:)` needs macOS 26.4+; treat it as unavailable below that and
+estimate from word count (roadmap section 9: ~1.15 tokens/word for English).
+Cold first request: ~0.6s to first token; warm: ~0.3s. `prewarm()` closes most
+of that gap — call it when the AI surface opens, not per request.
+
+**Selected text is already solved.** `CommandBarSelectionReader.readSelectedText()`
+(`Services/CommandBar/CommandBarSelection.swift`) reads it via Accessibility,
+blocking (run off-main), capped at 20,000 characters, empty when nothing
+usable is selected. Text actions read from here; nothing new to build for
+capture.
+
+**Keychain has a house pattern already**, in
+`Services/CommandBar/CommandBarSupport.swift` (`CommandBarQueryHabits`): raw
+`Security` framework calls (`SecItemAdd`/`SecItemCopyMatching`/`SecItemDelete`
+with `kSecClassGenericPassword`), service string built from
+`Bundle.main.bundleIdentifier`, and reads/writes go through a small injectable
+protocol (`CommandBarQueryHabitKeyStore`) so tests never touch the real
+Keychain. Provider keys should follow the same shape: raw `Security` calls, an
+injectable store protocol, no third-party dependency (`CONTRIBUTING.md`
+forbids one without asking).
+
+**A new feature is a real, multi-file change**, not just an enum case. Adding
+one to `AppFeature` (`Core/FeatureCatalog.swift`) means: a case, a
+`FeatureGroup`, `symbolName`, `enabledKeys`, `hubTitle`. Feature-specific
+strings live in their own catalog file (`Core/<Feature>Strings.swift`),
+following the shape of e.g. `Core/CameraPreviewStrings.swift`: a struct, a
+`FeatureStrings.<name>(_:)` dispatcher, and one static instance per
+`AppLanguage` case — the compiler requires all 13 or the build fails. Per
+roadmap D5, only `.enUS` gets real content for now; the other twelve repeat
+the English text verbatim until the translation milestone (M5).
+
+**Settings pages are small SwiftUI files** in `UI/Settings/`; several are
+under 50 lines (e.g. `DisplayBrightnessShortcutControls.swift`). Match that
+scale for the first cut rather than building the full provider-picker UI in
+one slice.
+
+## Slices
+
+Same numbering as the roadmap table, grouped into task-sized units. Update
+status here as they land.
+
+| Task | Roadmap slice(s) | What it is | Status |
+| --- | --- | --- | --- |
+| 01 | 2.1 | `AppFeature` case, Feature Hub copy, energy badge, an empty Settings page. No model code. Proves the feature installs/uninstalls cleanly before anything uses it | Done — see below |
+| 02 | 2.2, part of 2.6 | Provider protocol, capability matrix, the on-device Apple provider (`#if canImport(FoundationModels)`), on-device availability/error states | Not started |
+| 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Not started |
+| 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Not started |
+| 05 | 2.7 | Context manifest, pre-send preview, cancellation | Not started |
+| 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Not started |
+| 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Not started |
+
+Tasks 02 and 03 can happen in either order (both are new providers behind the
+same protocol from task 02); 04 needs both. Task 06 needs 02–05. Verify each
+task the way M1 tasks were verified: `./build.sh --test`, full `./build.sh`,
+and for anything user-visible, actually run it and say what Mac/macOS/Apple
+Intelligence state it was checked on — compiling is not evidence, per
+`AGENTS.md`.
+
+## Task 01 — done
+
+- New `AppFeature.aiTextActions` case, in the `tools` group, alongside
+  `commandBar` and friends (`Core/FeatureCatalog.swift`).
+- `Core/AITextActionsStrings.swift`: hub title/description text, English only
+  for now; the other twelve languages repeat the English strings, matching D5.
+- `UI/Settings/AITextActionsSettings.swift`: the minimal page the hub links
+  to — a title, a one-line explanation, and "Requires macOS 26" /
+  "Not available on this Mac" state text, no provider or model code yet.
+- No `FoundationModels` import anywhere in this task; nothing changes for the
+  Swift 6.0.3 compatibility job.

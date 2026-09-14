@@ -1,4 +1,3 @@
-<img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/e4150ffc-f8d5-4570-98fb-c57957cc34c1" /><p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/logo-dark.svg">
     <img src="docs/assets/readme/logo.svg" width="220" alt="PowerTools AI logo">

@@ -301,6 +301,8 @@ if (( TEST )); then
         Sources/PowerTools/Services/AI/AIHarnessContracts.swift
         Sources/PowerTools/Services/AI/AIPlanValidator.swift
         Sources/PowerTools/Services/AI/AIActionRegistry.swift
+        Sources/PowerTools/Services/AI/AIProviderContracts.swift
+        Sources/PowerTools/Services/AI/AIOnDeviceTextProvider.swift
         Sources/PowerTools/Core/FeaturePresets.swift
         Sources/PowerTools/Core/FeatureHubStrings.swift
         Sources/PowerTools/Core/ShortcutSettingsStrings.swift

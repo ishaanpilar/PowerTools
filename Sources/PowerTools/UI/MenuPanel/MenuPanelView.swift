@@ -17,6 +17,7 @@ struct MenuPanelFocusRequest: Equatable {
 
 enum MenuPanelFocusTarget: Equatable {
     case normal
+    case search
     case section(PanelSectionID)
     case metric(MetricDetailKind)
 }
@@ -27,6 +28,9 @@ final class MenuPanelFocus: ObservableObject {
     @Published private(set) var request: MenuPanelFocusRequest?
     @Published private(set) var activeMetric: MetricDetailKind?
     @Published private(set) var isSwitchingMetricAnchor = false
+    /// A tool the Utilities section should host as soon as it is on screen,
+    /// set by search. Cleared by the section once it has taken it.
+    @Published private(set) var pendingHostedTool: PanelHostedTool?
     private var serial = 0
 
     private init() {}
@@ -41,6 +45,20 @@ final class MenuPanelFocus: ObservableObject {
         serial += 1
         activeMetric = nil
         request = MenuPanelFocusRequest(target: .section(section), serial: serial)
+    }
+
+    func focusSearch() {
+        serial += 1
+        activeMetric = nil
+        request = MenuPanelFocusRequest(target: .search, serial: serial)
+    }
+
+    func host(_ tool: PanelHostedTool) {
+        pendingHostedTool = tool
+    }
+
+    func consumeHostedTool() {
+        pendingHostedTool = nil
     }
 
     func focus(_ metric: MetricDetailKind) {
@@ -88,6 +106,11 @@ struct MenuPanelView: View {
     /// The dashboard card currently expanded in place; owned here (not inside
     /// the dashboard view) so the sampling plan below can see it too.
     @State private var expandedDashboardTile: PanelDashboardTile?
+    /// Feature search replaces the dashboard while this is on.
+    @State private var isSearching = false
+    @State private var searchQuery = ""
+    @State private var searchSelection: AppFeature?
+    @State private var searchFocusToken = 0
 
     /// Cap the panel to the usable screen height so it never overflows the menu
     /// bar; taller content scrolls inside. Measured against the display the
@@ -130,12 +153,17 @@ struct MenuPanelView: View {
         .onChange(of: panelFocus.request) { _, request in
             applyFocus(request)
         }
+        .onChange(of: searchQuery) { _, _ in
+            searchSelection = nil
+        }
     }
 
     private var monitorNeeds: SystemMonitorPanelNeeds {
         if let selectedMetric {
             return selectedMetric.monitorNeeds
         }
+        // Nothing on screen reads the monitor while the results are up.
+        if isSearching { return .none }
         guard let activeSection else {
             var needs = PanelDashboardLayout(sections: visibleSections).monitorNeeds
             if let expandedDashboardTile {
@@ -165,15 +193,27 @@ struct MenuPanelView: View {
             // Opening the panel from the icon always lands on the dashboard.
             selectedMetric = nil
             openedSection = nil
+            closeSearch()
+        case .search:
+            selectedMetric = nil
+            openedSection = nil
+            if !isSearching {
+                searchQuery = ""
+                searchSelection = nil
+            }
+            isSearching = true
+            searchFocusToken += 1
         case .section(let section):
             guard isSectionVisible(section) else { return }
             selectedMetric = nil
             openedSection = section
+            closeSearch()
         case .metric(let metric):
             // A menu bar metric opens its detail over the dashboard, so its
             // back button goes home rather than to a section left open earlier.
             openedSection = nil
             selectedMetric = metric
+            closeSearch()
         }
     }
 
@@ -182,12 +222,122 @@ struct MenuPanelView: View {
         openedSection = id
     }
 
+    // MARK: - Feature search
+
+    private var searchResults: PanelSearchResults {
+        let hub = FeatureStrings.hub(l10n.language)
+        return PanelSearchSupport.results(
+            query: searchQuery,
+            title: { $0.hubTitle(l10n.s, hub: hub) },
+            keywords: { [$0.hubDescription(hub), CommandBarCatalog.groupTitle($0.group, hub: hub)] },
+            isAvailable: { $0.isAvailable })
+    }
+
+    private func closeSearch() {
+        isSearching = false
+        searchQuery = ""
+        searchSelection = nil
+    }
+
+    private func moveSearchSelection(_ delta: Int) {
+        let ordered = searchResults.ordered
+        let current = searchSelection.flatMap { ordered.firstIndex(of: $0) }
+        guard let next = SettingsSearchSupport.moveSelection(index: current, delta: delta,
+                                                            count: ordered.count) else { return }
+        searchSelection = ordered[next]
+    }
+
+    /// Return opens the highlighted row, or the best match when nothing has
+    /// been highlighted yet.
+    private func submitSearch() {
+        let ordered = searchResults.ordered
+        guard let feature = searchSelection.flatMap({ ordered.contains($0) ? $0 : nil })
+                ?? ordered.first else { return }
+        openSearchResult(feature)
+    }
+
+    /// Small features open inside the panel; tools with their own window and
+    /// preferences leave it. A section or tool the person hid from the panel
+    /// falls back to Settings rather than opening something they removed.
+    private func openSearchResult(_ feature: AppFeature) {
+        guard feature.isAvailable else {
+            openSettingsFromSearch(feature)
+            return
+        }
+        switch feature.panelSearchDestination {
+        case .section(let target):
+            let id = target.panelSectionID
+            guard isSectionVisible(id) else { return openSettingsFromSearch(feature) }
+            closeSearch()
+            openSection(id)
+        case .hostedTool(let tool):
+            guard isSectionVisible(.utilities) else { return openSettingsFromSearch(feature) }
+            closeSearch()
+            MenuPanelFocus.shared.host(tool)
+            openSection(.utilities)
+        case .window:
+            launchWindowTool(feature)
+        case .settings:
+            openSettingsFromSearch(feature)
+        }
+    }
+
+    private func launchWindowTool(_ feature: AppFeature) {
+        let launch: () -> Void
+        switch feature {
+        case .screenshot: launch = { ScreenshotService.shared.capture() }
+        case .screenRecorder: launch = { ScreenRecorderService.shared.toggle() }
+        case .screenOCR: launch = { ScreenTextService.shared.capture() }
+        case .colorPicker: launch = { ColorSamplerService.shared.pick() }
+        case .cameraPreview: launch = { CameraPreviewService.shared.show() }
+        case .scratchpad: launch = { ScratchpadService.shared.show() }
+        case .quickLauncher: launch = { QuickLauncherService.shared.show() }
+        case .commandBar: launch = { CommandBarService.shared.show() }
+        case .shelf: launch = { ShelfService.shared.summon() }
+        case .textSnippets: launch = { SnippetLibraryService.shared.show() }
+        case .cleaningMode:
+            closeSearch()
+            startCleaning()
+            return
+        default:
+            openSettingsFromSearch(feature)
+            return
+        }
+        closeSearch()
+        // The same beat the Utilities tiles give the panel to leave the screen
+        // before a capture or a window takes over.
+        appDelegate()?.closePopover()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: launch)
+    }
+
+    /// Opens the feature's own Settings destination, or the Features page with
+    /// its row revealed when it is not installed, through the same routing the
+    /// Settings search and the Command Bar use.
+    private func openSettingsFromSearch(_ feature: AppFeature) {
+        let item = SettingsSearchItem(id: .feature(feature),
+                                      destination: feature.settingsDestination,
+                                      title: feature.hubTitle(l10n.s, hub: FeatureStrings.hub(l10n.language)),
+                                      icon: feature.symbolName,
+                                      feature: feature)
+        let routed = SettingsSearchSupport.route(for: item)
+        closeSearch()
+        SettingsRouter.shared.request(routed.destination, targetFeature: routed.targetFeature)
+        appDelegate()?.closePopover()
+        appDelegate()?.openSettingsWindow()
+    }
+
     private var navigablePanel: some View {
         VStack(alignment: .leading, spacing: 12) {
             UpdateBanner()
                 .reportHeight($updateBannerHeight)
             header
-            if let activeSection {
+            if isSearching {
+                PanelSearchField(query: $searchQuery,
+                                 focusToken: searchFocusToken,
+                                 onMove: moveSearchSelection,
+                                 onSubmit: submitSearch,
+                                 onClose: closeSearch)
+            } else if let activeSection {
                 navigationHeader(title: activeSection.title(l10n.s),
                                  systemImage: activeSection.symbolName) {
                     openedSection = nil
@@ -196,7 +346,12 @@ struct MenuPanelView: View {
 
             OverlayScrollView(measuredHeight: $navigableContentHeight) {
                 VStack(alignment: .leading, spacing: 12) {
-                    if let activeSection {
+                    if isSearching {
+                        PanelSearchResultsList(results: searchResults,
+                                               query: searchQuery,
+                                               selection: searchSelection,
+                                               onOpen: openSearchResult)
+                    } else if let activeSection {
                         section(for: activeSection, collapsible: false)
                             .environment(\.panelSectionShowsTitle, false)
                     } else {
@@ -283,11 +438,13 @@ struct MenuPanelView: View {
         // Padding and the header (now a two-line greeting, no separate
         // footer row since Settings/Quit moved up into it); a section or
         // metric adds its back row.
-        let backRow: CGFloat = (selectedMetric != nil || activeSection != nil) ? 38 : 0
+        let backRow: CGFloat = isSearching ? 42
+            : (selectedMetric != nil || activeSection != nil) ? 38 : 0
         return 90 + backRow + bannerHeight
     }
 
     private var estimatedNavigableContentHeight: CGFloat {
+        if isSearching { return 480 }
         guard let activeSection else { return 560 }
         switch activeSection {
         case .keepAwake: return 250
@@ -396,7 +553,7 @@ struct MenuPanelView: View {
     }
 
     private var header: some View {
-        MenuPanelHeader()
+        MenuPanelHeader(isSearching: isSearching)
     }
 }
 
@@ -404,6 +561,7 @@ struct MenuPanelView: View {
 /// Mac window's identity sits. The panel's own readings live in the
 /// dashboard's cards below, not duplicated up here.
 private struct MenuPanelHeader: View {
+    let isSearching: Bool
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var monitor = SystemMonitor.shared
@@ -457,7 +615,10 @@ private struct MenuPanelHeader: View {
                     .fixedSize()
             }
 
-            settingsButton
+            HStack(spacing: 6) {
+                searchButton
+                settingsButton
+            }
         }
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -485,7 +646,26 @@ private struct MenuPanelHeader: View {
             .accessibilityHidden(true)
     }
 
-    /// The only icon left in the header, so the trailing Spacer carries it
+    /// Opens the feature search in place of the dashboard; lit while it is up.
+    private var searchButton: some View {
+        let strings = FeatureStrings.panelSearch(l10n.language)
+        return Button {
+            MenuPanelFocus.shared.focusSearch()
+        } label: {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 26, height: 26)
+                .contentShape(Circle())
+                .panelGlassControl(in: Circle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isSearching ? Color.accentColor : Color.secondary)
+        .keyboardShortcut("f", modifiers: .command)
+        .help(strings.searchButton)
+        .accessibilityLabel(strings.searchButton)
+    }
+
+    /// The trailing icon of the header, so the Spacer carries it
     /// all the way to the edge. Quit (and everything else — About, Check
     /// for Updates, Uninstall, the Shelf) already lives one right-click on
     /// the status item away; a second, narrower copy of that same menu up
@@ -634,6 +814,7 @@ private enum UtilityPanelItem: String, PanelOrderItem, Identifiable {
 
 struct UtilitiesSection: View {
     @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var panelFocus = MenuPanelFocus.shared
     @ObservedObject private var permissions = Permissions.shared
     @ObservedObject private var features = FeatureRuntime.shared
     @State private var showUninstaller = false
@@ -740,6 +921,24 @@ struct UtilitiesSection: View {
             PanelInteractionState.shared.viewKeepsPopoverOpen = false
             PanelInteractionState.shared.hostedSettingsPage = nil
         }
+        .onAppear(perform: hostRequestedTool)
+        .onChange(of: panelFocus.pendingHostedTool) { _, _ in hostRequestedTool() }
+    }
+
+    /// Opens the tool search asked for, exactly as its tile would, and only
+    /// that one: a tool left open earlier gives way to it.
+    private func hostRequestedTool() {
+        guard let tool = panelFocus.pendingHostedTool else { return }
+        panelFocus.consumeHostedTool()
+        showHomebrewPanel = tool == .homebrew
+        showAppUpdatesPanel = tool == .appUpdates
+        showMediaPanel = tool == .media
+        showClipboardPanel = tool == .clipboard
+        showWindowLayoutPanel = tool == .windowLayout
+        showUninstaller = tool == .uninstaller
+        showCleanerPanel = tool == .cleaner
+        showURLCleaner = tool == .urlCleaner
+        showRecentCapturesPanel = false
     }
 
     /// The Settings page that belongs to whichever tool the section is

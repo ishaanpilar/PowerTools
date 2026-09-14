@@ -325,6 +325,9 @@ if (( TEST )); then
         Sources/PowerTools/Core/BluetoothSleepStrings.swift
         Sources/PowerTools/Core/PermissionGuideStrings.swift
         Sources/PowerTools/Core/FanControlStrings.swift
+        Sources/PowerTools/Core/PanelSearchStrings.swift
+        Sources/PowerTools/Core/PanelEmptyStateStrings.swift
+        Sources/PowerTools/Core/OnboardingStrings.swift
         Sources/PowerTools/Services/FanControl/FanControlSupport.swift
         Sources/PowerTools/Services/Snippets/TextSnippetSupport.swift
         Sources/PowerTools/Services/RadialMenu/RadialMenuSupport.swift
@@ -386,6 +389,7 @@ if (( TEST )); then
         Sources/PowerTools/Services/LaunchAtLoginSupport.swift
         Sources/PowerTools/UI/Settings/SettingsSearchSupport.swift
         Sources/PowerTools/UI/Settings/FeatureVisibilitySupport.swift
+        Sources/PowerTools/UI/MenuPanel/PanelSearchSupport.swift
         Sources/PowerTools/App/MenuBarSpacingSupport.swift
         Sources/PowerTools/App/StatusItemAnchorSupport.swift
         Sources/PowerTools/Services/DockClick/DockClickSupport.swift

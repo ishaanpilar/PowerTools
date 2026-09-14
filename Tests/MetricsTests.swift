@@ -38,6 +38,7 @@ struct MetricsTests {
             ("localization", { LocalizationTests.run(suite) }),
             ("launcher", { QuickLauncherContract.run(suite) }),
             ("finder", { FinderActionsTests.run(suite) }),
+            ("panel-search", { PanelSearchTests.run(suite) }),
         ]
         var selected = Set<String>()
         var listOnly = false
@@ -16005,6 +16006,18 @@ struct MetricsTests {
             expect(AppFeature.allCases.allSatisfy {
                 firstRunDefaults.bool(forKey: $0.availabilityKey)
             }, "an interrupted onboarding keeps the feature selection already applied")
+
+            firstRunDefaults.set(false, forKey: DefaultsKey.hasOnboarded)
+            firstRunDefaults.set(0, forKey: DefaultsKey.onboardingStep)
+            let unappliedAtStart = !OnboardingProgress.selectionWasApplied(in: firstRunDefaults)
+            firstRunDefaults.set(OnboardingProgress.firstStepAfterSelection,
+                                 forKey: DefaultsKey.onboardingStep)
+            let appliedAfterSetup = OnboardingProgress.selectionWasApplied(in: firstRunDefaults)
+            firstRunDefaults.set(0, forKey: DefaultsKey.onboardingStep)
+            firstRunDefaults.set(true, forKey: DefaultsKey.hasOnboarded)
+            let appliedWhenFinished = OnboardingProgress.selectionWasApplied(in: firstRunDefaults)
+            expect(unappliedAtStart && appliedAfterSetup && appliedWhenFinished,
+                   "setup reads back its applied selection on every step after the first")
             firstRunDefaults.removePersistentDomain(forName: firstRunSuiteName)
         } else {
             expect(false, "first-run defaults suite can be created")

@@ -506,6 +506,8 @@ enum DefaultsKey {
     static let scratchpadShortcut = "scratchpadShortcut"
     static let commandBarShortcutEnabled = "commandBarShortcutEnabled"
     static let commandBarShortcut = "commandBarShortcut"
+    static let panelSearchShortcutEnabled = "panelSearchShortcutEnabled"
+    static let panelSearchShortcut = "panelSearchShortcut"
     /// Compact mode: an empty field shows nothing but itself. Off by default
     static let commandBarCompactMode = "commandBarCompactMode"
     static let commandBarUsage = "commandBarUsage"           // per-command run counts, never queries
@@ -1299,6 +1301,8 @@ enum Defaults {
         DefaultsKey.scratchpadShortcutEnabled: false,
         DefaultsKey.scratchpadShortcut: GlobalShortcut.scratchpadDefault.storageValue,
         DefaultsKey.commandBarShortcutEnabled: false,
+        DefaultsKey.panelSearchShortcutEnabled: true,
+        DefaultsKey.panelSearchShortcut: GlobalShortcut.panelSearchDefault.storageValue,
         DefaultsKey.commandBarCompactMode: false,
         DefaultsKey.commandBarDisabledSources: "",
         DefaultsKey.commandBarAliases: "",

@@ -122,10 +122,21 @@ enum AIActionAvailability: Equatable {
 /// Keyed by Command Bar row id. A missing key means the bar is not offering that row now.
 typealias AIAvailabilitySnapshot = [String: AIActionAvailability]
 
+/// The limits of one run, set by the app when a request starts; a plan cannot widen them.
+struct AICapabilityLease: Equatable {
+    /// Registry action ids this run may use.
+    let allowedActionIDs: Set<String>
+    let maxSteps: Int
+    let expiresAt: Date
+}
+
 enum AIPlanViolation: Equatable {
     case emptyPlan
     case duplicateStep(AIPlanStep)
     case unknownAction(String)
+    case leaseExpired
+    case tooManySteps(limit: Int)
+    case outsideLease(actionID: String)
     case invalidArgument(actionID: String)
     case notOffered(catalogID: String)
     case needsSetup(catalogID: String)

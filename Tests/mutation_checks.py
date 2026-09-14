@@ -72,6 +72,14 @@ MUTATIONS = [
      '"action.wifi": interrupts,',
      '',
      "every Command Bar row is registered for AI or excluded with a reason"),
+    ("expired lease still runs", "ai-harness", "Sources/PowerTools/Services/AI/AIPlanValidator.swift",
+     "if now >= lease.expiresAt { violations.append(.leaseExpired) }",
+     "if now > lease.expiresAt.addingTimeInterval(3600) { violations.append(.leaseExpired) }",
+     "a lease stops at its deadline"),
+    ("lease ignored for registered actions", "ai-harness", "Sources/PowerTools/Services/AI/AIPlanValidator.swift",
+     "guard lease.allowedActionIDs.contains(action.id) else {",
+     "guard true else {",
+     "a registered, approved action outside the lease is rejected"),
 ]
 
 

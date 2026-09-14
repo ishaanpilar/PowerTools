@@ -27,6 +27,10 @@ enum AIHarnessTests {
         readyAvailability["audio.output.speakers"] = .ready
         readyAvailability["audio.output.headphones"] = .ready
 
+        let fixedNow = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let openLease = AICapabilityLease(allowedActionIDs: Set(registry.keys), maxSteps: 10,
+                                          expiresAt: fixedNow.addingTimeInterval(60))
+
         func step(_ id: String, _ argument: AIActionArgument = .none) -> AIPlanStep {
             AIPlanStep(actionID: id, argument: argument)
         }
@@ -36,8 +40,10 @@ enum AIHarnessTests {
         }
 
         func outcome(_ plan: AIActionPlan, approvals: Set<AIApproval> = [],
-                     availability: AIAvailabilitySnapshot = readyAvailability) -> AIPlanValidation {
-            AIPlanValidator.validate(plan, registry: registry, availability: availability, approvals: approvals)
+                     availability: AIAvailabilitySnapshot = readyAvailability,
+                     lease: AICapabilityLease = openLease, now: Date = fixedNow) -> AIPlanValidation {
+            AIPlanValidator.validate(plan, registry: registry, availability: availability, approvals: approvals,
+                                     lease: lease, now: now)
         }
 
         func violations(_ result: AIPlanValidation) -> [AIPlanViolation] {
@@ -280,6 +286,43 @@ enum AIHarnessTests {
         let headphonesPlan = plan([headphonesStep], revision: 1)
         suite.expect(isNeedsApproval(outcome(headphonesPlan, approvals: [.step(speakersStep, revision: 1)])),
                      "approving one target does not approve another")
+
+        // MARK: - Capability lease (task 06)
+
+        let leaseCheckPlan = plan([step("windows.arrange")])
+        let leaseCheckApprovals = fullyApproved(leaseCheckPlan)
+
+        suite.expect(violations(outcome(leaseCheckPlan, approvals: leaseCheckApprovals, now: openLease.expiresAt))
+                        .contains(.leaseExpired),
+                     "a lease stops at its deadline")
+
+        suite.expect(isValid(outcome(leaseCheckPlan, approvals: leaseCheckApprovals,
+                                     now: openLease.expiresAt.addingTimeInterval(-1))),
+                     "a lease is usable until its deadline")
+
+        let twoStepPlan = plan([step("windows.arrange"), step("windows.center")])
+        let tightLease = AICapabilityLease(allowedActionIDs: openLease.allowedActionIDs, maxSteps: 1,
+                                           expiresAt: openLease.expiresAt)
+        suite.expect(violations(outcome(twoStepPlan, approvals: fullyApproved(twoStepPlan), lease: tightLease))
+                        .contains(.tooManySteps(limit: 1)),
+                     "a plan cannot run more steps than its lease allows")
+
+        let leaseWithoutArrange = AICapabilityLease(
+            allowedActionIDs: openLease.allowedActionIDs.subtracting(["windows.arrange"]),
+            maxSteps: openLease.maxSteps, expiresAt: openLease.expiresAt)
+        suite.expect(outcome(leaseCheckPlan, approvals: leaseCheckApprovals, lease: leaseWithoutArrange)
+                        == .rejected([.outsideLease(actionID: "windows.arrange")]),
+                     "a registered, approved action outside the lease is rejected")
+
+        let planBody = AIHarnessSource.body(of: "struct AIActionPlan", in: contractsCode).lowercased()
+        suite.expect(!planBody.isEmpty
+                        && !planBody.contains("lease") && !planBody.contains("expire")
+                        && !planBody.contains("deadline") && !planBody.contains("maxsteps"),
+                     "a plan carries no limits of its own")
+
+        suite.expect(!validatorCode.isEmpty
+                        && !validatorCode.contains("Date()") && !validatorCode.contains("Date.now"),
+                     "the validator never reads the clock itself")
 
         // MARK: - Production action registry (task 05)
 

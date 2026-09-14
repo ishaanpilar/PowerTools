@@ -26,10 +26,15 @@ enum AIPlanValidator {
     static func validate(_ plan: AIActionPlan,
                          registry: [String: AIActionDescriptor],
                          availability: AIAvailabilitySnapshot,
-                         approvals: Set<AIApproval>) -> AIPlanValidation {
+                         approvals: Set<AIApproval>,
+                         lease: AICapabilityLease,
+                         now: Date) -> AIPlanValidation {
         guard !plan.steps.isEmpty else { return .rejected([.emptyPlan]) }
 
         var violations: [AIPlanViolation] = []
+        if now >= lease.expiresAt { violations.append(.leaseExpired) }
+        if plan.steps.count > lease.maxSteps { violations.append(.tooManySteps(limit: lease.maxSteps)) }
+
         var pending: [AIApprovalRequest] = []
         var seenSteps = Set<AIPlanStep>()
         for step in plan.steps {
@@ -39,6 +44,10 @@ enum AIPlanValidator {
             }
             guard let action = registry[step.actionID] else {
                 violations.append(.unknownAction(step.actionID))
+                continue
+            }
+            guard lease.allowedActionIDs.contains(action.id) else {
+                violations.append(.outsideLease(actionID: action.id))
                 continue
             }
             guard let catalogID = action.catalogID(for: step.argument) else {

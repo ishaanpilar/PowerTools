@@ -25,6 +25,10 @@ enum AIProviderUnavailableReason: Hashable {
     case appleIntelligenceNotEnabled
     case modelNotReady
     case noProviderConfigured
+    /// The configured endpoint is neither HTTPS nor loopback, so no request
+    /// is ever sent to it - checked at availability time, not request time,
+    /// so a bad address never quietly waits for the person to trigger it.
+    case endpointNotAllowed
 }
 
 enum AIProviderAvailability: Hashable {
@@ -46,12 +50,17 @@ enum AIGenerationError: Error, Equatable {
     case rateLimited
     case tooManyConcurrentRequests
     case cancelled
+    case invalidKey
+    case offline
+    case timeout
+    case httpError(status: Int)
     case other(String)
 }
 
-/// One way to turn text into text. The on-device provider (this milestone)
-/// and an HTTP provider (next) are the first two; nothing above this
-/// protocol may import a provider's own SDK or know its request shape.
+/// One way to turn text into text. The on-device provider and the HTTP
+/// providers (OpenAI-compatible, Anthropic) are the first three; nothing
+/// above this protocol may import a provider's own SDK or know its request
+/// shape.
 protocol AIProvider: Sendable {
     /// Stable, human-readable identity for settings and logs; never used as a
     /// UserDefaults key.

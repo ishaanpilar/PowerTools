@@ -303,6 +303,10 @@ if (( TEST )); then
         Sources/PowerTools/Services/AI/AIActionRegistry.swift
         Sources/PowerTools/Services/AI/AIProviderContracts.swift
         Sources/PowerTools/Services/AI/AIOnDeviceTextProvider.swift
+        Sources/PowerTools/Services/AI/AIProviderKeyStore.swift
+        Sources/PowerTools/Services/AI/AIHTTPProviderSupport.swift
+        Sources/PowerTools/Services/AI/AIOpenAICompatibleProvider.swift
+        Sources/PowerTools/Services/AI/AIAnthropicProvider.swift
         Sources/PowerTools/Core/FeaturePresets.swift
         Sources/PowerTools/Core/FeatureHubStrings.swift
         Sources/PowerTools/Core/ShortcutSettingsStrings.swift

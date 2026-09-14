@@ -31,15 +31,25 @@ enum AIHarnessTests {
             $0[$1.id] = $1
         }
 
-        func validate(_ steps: [AIPlanStep], background: Bool = false,
-                      features: Set<AppFeature> = [.monitorCPU, .windowLayout, .cleaner],
-                      permissions: Set<AppPermission> = [.accessibility, .fullDiskAccess]) -> [AIPlanViolation] {
+        func outcome(_ steps: [AIPlanStep], background: Bool = false,
+                     features: Set<AppFeature> = [.monitorCPU, .windowLayout, .cleaner],
+                     permissions: Set<AppPermission> = [.accessibility, .fullDiskAccess]) -> AIPlanValidation {
             AIPlanValidator.validate(
                 AIActionPlan(steps: steps, allowsBackgroundExecution: background),
                 registry: registry,
                 installedFeatures: features,
                 grantedPermissions: permissions
             )
+        }
+
+        func validate(_ steps: [AIPlanStep], background: Bool = false,
+                      features: Set<AppFeature> = [.monitorCPU, .windowLayout, .cleaner],
+                      permissions: Set<AppPermission> = [.accessibility, .fullDiskAccess]) -> [AIPlanViolation] {
+            if case .rejected(let violations) = outcome(steps, background: background,
+                                                        features: features, permissions: permissions) {
+                return violations
+            }
+            return []
         }
 
         suite.expect(validate([]) == [.emptyPlan], "an agent cannot execute an empty plan")
@@ -69,5 +79,62 @@ enum AIHarnessTests {
         suite.expect(validate([AIPlanStep(actionID: "system.inspect", isExplicitlyApproved: true)],
                               background: true) == [.backgroundExecutionDenied("system.inspect")],
                      "a model cannot convert a foreground action into background work")
+
+        let inspectOnly = [AIPlanStep(actionID: "system.inspect", isExplicitlyApproved: true)]
+        if case .valid(let validated) = outcome(inspectOnly) {
+            suite.expect(validated.plan == AIActionPlan(steps: inspectOnly, allowsBackgroundExecution: false),
+                         "a valid plan yields a ValidatedPlan carrying exactly the submitted plan")
+        } else {
+            suite.expect(false, "a valid plan yields a ValidatedPlan carrying exactly the submitted plan")
+        }
+
+        let invented = [AIPlanStep(actionID: "model.invented.command", isExplicitlyApproved: true)]
+        if case .valid = outcome(invented) {
+            suite.expect(false, "a rejected plan never yields a ValidatedPlan")
+        } else {
+            suite.expect(true, "a rejected plan never yields a ValidatedPlan")
+        }
+
+        let validatorPath = "Sources/PowerTools/Services/AI/AIPlanValidator.swift"
+        let validatorCode = AIHarnessSource.code(at: validatorPath)
+        suite.expect(!validatorCode.isEmpty, "the harness source checks can read AIPlanValidator.swift")
+
+        let sourcesUnderTest = AIHarnessSource.swiftFiles(under: "Sources/PowerTools").filter { $0 != validatorPath }
+        suite.expect(!sourcesUnderTest.isEmpty
+                        && sourcesUnderTest.allSatisfy { !AIHarnessSource.code(at: $0).contains("ValidatedPlan(") },
+                     "only AIPlanValidator constructs a ValidatedPlan")
+
+        let allSources = AIHarnessSource.swiftFiles(under: "Sources/PowerTools")
+        suite.expect(!allSources.isEmpty
+                        && allSources.allSatisfy { path in
+                            AIHarnessSource.code(at: path).split(separator: "\n").allSatisfy { line in
+                                !(line.contains("ValidatedPlan") && (line.contains("Codable") || line.contains("Decodable")))
+                            }
+                        },
+                     "a ValidatedPlan cannot be decoded into existence")
+    }
+}
+
+/// Reads Swift sources for contract checks. Whole-line comments are removed so
+/// prose can neither satisfy nor break a check.
+enum AIHarnessSource {
+    static func code(at path: String) -> String {
+        guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return "" }
+        return text.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+    }
+
+    static func swiftFiles(under directory: String) -> [String] {
+        let relative = FileManager.default.enumerator(atPath: directory)?.allObjects as? [String] ?? []
+        return relative.filter { $0.hasSuffix(".swift") }.map { "\(directory)/\($0)" }.sorted()
+    }
+
+    /// The declaration starting at `marker`, up to the first line that is exactly "}".
+    static func body(of marker: String, in code: String) -> String {
+        guard let start = code.range(of: marker) else { return "" }
+        let rest = code[start.lowerBound...]
+        guard let end = rest.range(of: "\n}") else { return String(rest) }
+        return String(rest[..<end.upperBound])
     }
 }

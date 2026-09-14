@@ -40,6 +40,10 @@ MUTATIONS = [
     ("overwrite unreadable notes", "storage", "Sources/PowerTools/Services/QuickTools/ScratchpadStore.swift",
      "        guard canSave else { return false }", "        // guard canSave else { return false }",
      "damaged scratchpad blocks subsequent saves of empty and nonempty documents"),
+    ("empty plan becomes runnable", "ai-harness", "Sources/PowerTools/Services/AI/AIPlanValidator.swift",
+     "guard !plan.steps.isEmpty else { return .rejected([.emptyPlan]) }",
+     "guard !plan.steps.isEmpty else { return .valid(ValidatedPlan(plan: plan)) }",
+     "an agent cannot execute an empty plan"),
 ]
 
 

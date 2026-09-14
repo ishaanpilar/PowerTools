@@ -299,6 +299,7 @@ if (( TEST )); then
         Sources/PowerTools/Core/Defaults.swift
         Sources/PowerTools/Core/FeatureCatalog.swift
         Sources/PowerTools/Services/AI/AIHarnessContracts.swift
+        Sources/PowerTools/Services/AI/AIPlanValidator.swift
         Sources/PowerTools/Core/FeaturePresets.swift
         Sources/PowerTools/Core/FeatureHubStrings.swift
         Sources/PowerTools/Core/ShortcutSettingsStrings.swift

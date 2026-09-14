@@ -1,4 +1,4 @@
-<p align="center">
+<img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/e4150ffc-f8d5-4570-98fb-c57957cc34c1" /><p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/logo-dark.svg">
     <img src="docs/assets/readme/logo.svg" width="220" alt="PowerTools AI logo">
@@ -11,6 +11,7 @@
   The Mac utilities I wished macOS had, in one menu bar app, with AI built in.<br>
   Free and open source. No account, no registration, no sign-in.
 </p>
+<img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/ef01abab-8d62-43ce-90be-63821066f824" />
 
 <p align="center">
   <a href="#why-i-built-this">Story</a> ·

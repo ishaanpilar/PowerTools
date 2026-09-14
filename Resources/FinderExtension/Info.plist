@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>PowerTools</string>
+	<string>PowerTools AI</string>
 	<key>CFBundleExecutable</key>
 	<string>PowerToolsFinderMenu</string>
 	<key>CFBundleIdentifier</key>
@@ -42,6 +42,6 @@
 	<key>PowerToolsFinderURLScheme</key>
 	<string>powertools-finder</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 PowerTools</string>
+	<string>© 2026 PowerTools AI</string>
 </dict>
 </plist>

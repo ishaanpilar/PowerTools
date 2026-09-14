@@ -239,7 +239,7 @@ extension CommandBarFeatureStrings {
         aliasTakenFormat: "%@ already answers to that",
         sourcesTitle: "What the bar searches",
         sourcesCaption: "Turn off what you never want to see. Your own actions always stay.",
-        sourceActions: "PowerTools actions",
+        sourceActions: "PowerTools AI actions",
         sourceApps: "Apps",
         sourceMenus: "Menu commands of the app in front",
         sourceWindows: "Open windows",

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>PowerTools</string>
+	<string>PowerTools AI</string>
 	<key>CFBundleExecutable</key>
 	<string>PowerTools</string>
 	<key>CFBundleIconFile</key>
@@ -35,7 +35,7 @@
 		<string>zh-HK</string>
 	</array>
 	<key>CFBundleName</key>
-	<string>PowerTools</string>
+	<string>PowerTools AI</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -66,29 +66,29 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>PowerTools uses Automation to move files in Finder, send items to the Trash and open Terminal commands when you ask for Homebrew actions.</string>
+	<string>PowerTools AI uses Automation to move files in Finder, send items to the Trash and open Terminal commands when you ask for Homebrew actions.</string>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>PowerTools uses each app's audio to adjust its volume in the mixer and to include the Mac's sound in the screen recordings you start. Nothing leaves your Mac.</string>
+	<string>PowerTools AI uses each app's audio to adjust its volume in the mixer and to include the Mac's sound in the screen recordings you start. Nothing leaves your Mac.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>PowerTools uses Bluetooth only to read the battery level of connected peripherals. Nothing leaves your Mac.</string>
+	<string>PowerTools AI uses Bluetooth only to read the battery level of connected peripherals. Nothing leaves your Mac.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>PowerTools records your microphone only when you turn it on for a screen recording. The audio stays on your Mac unless you choose to create a temporary link.</string>
+	<string>PowerTools AI records your microphone only when you turn it on for a screen recording. The audio stays on your Mac unless you choose to create a temporary link.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>PowerTools shows your camera only in the preview window you open, so you can check how you look before a call. Nothing is recorded or leaves your Mac.</string>
+	<string>PowerTools AI shows your camera only in the preview window you open, so you can check how you look before a call. Nothing is recorded or leaves your Mac.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>PowerTools checks local metadata in Downloads to review, organize or trash only confirmed WhatsApp files you choose.</string>
+	<string>PowerTools AI checks local metadata in Downloads to review, organize or trash only confirmed WhatsApp files you choose.</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>PowerTools organizes confirmed WhatsApp downloads in a destination folder you explicitly choose.</string>
+	<string>PowerTools AI organizes confirmed WhatsApp downloads in a destination folder you explicitly choose.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>PowerTools organizes confirmed WhatsApp downloads in a destination folder you explicitly choose.</string>
+	<string>PowerTools AI organizes confirmed WhatsApp downloads in a destination folder you explicitly choose.</string>
 	<key>NSNetworkVolumesUsageDescription</key>
-	<string>PowerTools organizes confirmed WhatsApp downloads in a destination folder you explicitly choose.</string>
+	<string>PowerTools AI organizes confirmed WhatsApp downloads in a destination folder you explicitly choose.</string>
 	<key>NSRemovableVolumesUsageDescription</key>
-	<string>PowerTools organizes confirmed WhatsApp downloads in a destination folder you explicitly choose.</string>
+	<string>PowerTools AI organizes confirmed WhatsApp downloads in a destination folder you explicitly choose.</string>
 	<key>NSCameraUseContinuityCameraDeviceType</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 PowerTools</string>
+	<string>© 2026 PowerTools AI</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

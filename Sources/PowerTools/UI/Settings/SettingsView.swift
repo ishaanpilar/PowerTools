@@ -460,6 +460,7 @@ struct GeneralSettings: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            PanelSearchShortcutSection()
             if AppFeature.keepAwake.isAvailable {
                 Section(l10n.s.globalHotkeySection) {
                     Toggle(l10n.s.hotkeyToggle, isOn: $hotkeyEnabled)

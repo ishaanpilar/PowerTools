@@ -61,7 +61,7 @@ extension Strings {
         keepAwakeMouseJiggleCaption: "セッション中、選んだ間隔でポインタを少し動かします。",
         keepAwakeMouseJiggleInterval: "間隔",
         keepAwakeActiveIconLabel: "使用中のアイコン",
-        keepAwakeActiveIconPowerTools: "PowerTools",
+        keepAwakeActiveIconPowerTools: "PowerTools AI",
         keepAwakeActiveIconCoffee: "コーヒー",
         keepAwakeActiveIconEye: "目",
         keepAwakeActiveIconMoon: "月",

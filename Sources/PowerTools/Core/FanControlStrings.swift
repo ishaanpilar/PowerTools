@@ -78,7 +78,7 @@ extension FanControlFeatureStrings {
         fanNameFormat: "Fan %d",
         rpmFormat: "%d RPM",
         allowControl: "Allow fan control",
-        approvalCaption: "Allow PowerTools in Login Items to use the protected fan controller.",
+        approvalCaption: "Allow PowerTools AI in Login Items to use the protected fan controller.",
         openSettings: "Open System Settings",
         noFans: "This Mac has no controllable fan.",
         unsupported: "Fan control is not available on this Mac.",
@@ -112,7 +112,7 @@ extension FanControlFeatureStrings {
         averageCPU: "Average CPU",
         hottestCPU: "Hottest CPU",
         hottestGPU: "Hottest GPU",
-        helperUnavailable: "The protected fan controller is unavailable. Allow PowerTools in Login Items, then try again."
+        helperUnavailable: "The protected fan controller is unavailable. Allow PowerTools AI in Login Items, then try again."
     )
 
     static let ptBR = FanControlFeatureStrings(

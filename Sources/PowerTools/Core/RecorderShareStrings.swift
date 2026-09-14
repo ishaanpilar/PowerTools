@@ -39,7 +39,7 @@ extension FeatureStrings {
 extension RecorderShareStrings {
     static let enUS = RecorderShareStrings(
         caption: "Choose 1 or 6 hours. The final video is compressed on this Mac to fit under 100 MB and deleted automatically.",
-        privacyData: "PowerTools sends only the final video created from this recording, including the audio you kept, and the expiration you choose. It does not send your name, account or device identifier.",
+        privacyData: "PowerTools AI sends only the final video created from this recording, including the audio you kept, and the expiration you choose. It does not send your name, account or device identifier.",
         privacyStorage: "Network providers and the service temporarily process your public IP to prevent abuse. The video and link metadata are permanently deleted when you delete the link or its time ends. The service does not create backups.",
         privacyAccess: "Anyone with the link can view, download, save or redistribute the video. Active links are available to the service operator for abuse moderation. Share only with people you trust.",
         compressing: "Compressing for sharing…",

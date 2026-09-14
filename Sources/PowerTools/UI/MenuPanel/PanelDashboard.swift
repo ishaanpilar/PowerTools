@@ -191,6 +191,11 @@ struct PanelDashboardView: View {
                 sectionsGrid
                     .padding(.top, 4)
             }
+            // Hidden cards still count: the edit button above brings them back.
+            if !layout.showsThermal, !layout.showsKeepAwake, sections.isEmpty,
+               availableTiles(sections: sections).isEmpty {
+                PanelDashboardEmptyState()
+            }
         }
     }
 

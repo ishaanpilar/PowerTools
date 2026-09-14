@@ -1,106 +1,76 @@
 # Changelog
 
-PowerTools is a fork of [Vorssaint](https://github.com/vorssaint/vorssaint-utils).
-Releases made under the PowerTools name are recorded here. Everything that
-shipped as Vorssaint before the fork is preserved verbatim in
-[docs/UPSTREAM-CHANGELOG.md](docs/UPSTREAM-CHANGELOG.md).
+Notable changes to PowerTools AI are recorded here.
 
 ## Unreleased
 
-Forked from Vorssaint 3.3.5 and rebranded. No user-facing feature changes yet.
+PowerTools AI is being prepared for its first release as an independent
+project. No release has shipped yet.
 
 ### Identity
 
-- Renamed the app, Swift module, executable and target to PowerTools.
-- New bundle identifier `com.powertools.utils` (developer build:
-  `com.powertools.utils.dev`), so PowerTools installs alongside Vorssaint
-  rather than over it.
-- New helper identifiers, notification and pasteboard namespaces, UserDefaults
-  suites, launchd labels and Keychain service names under `com.powertools.*`,
+- The public name is PowerTools AI; the Swift module, executable, target and
+  `.app` bundle stay `PowerTools`.
+- The app calls itself PowerTools AI in English: the menu bar and app name,
+  Settings, onboarding, window titles, the Finder menu, permission prompts and
+  the settings export file name. A name shown on its own, such as the Finder
+  menu title, reads PowerTools AI in every language; other languages' sentences
+  follow when translations resume.
+- Developer builds show as PowerTools AI (Developer).
+- Bundle identifier `com.powertools.utils` (developer build:
+  `com.powertools.utils.dev`).
+- Helper identifiers, notification and pasteboard namespaces, UserDefaults
+  suites, launchd labels and Keychain service names use `com.powertools.*`,
   `org.powertools.*` and the short `pwrt.` prefix.
-- New closed-lid sudoers rule at `/etc/sudoers.d/powertools-clamshell`.
-- Signing identity renamed to `PowerTools Signing`.
+- Closed-lid sudoers rule at `/etc/sudoers.d/powertools-clamshell`.
+- Signing identity `PowerTools Signing`.
 
-### Removed
+### The mark
 
-- Vorssaint's pre-2.5 bundle rename migration (`BundleMigration`), which could
-  never fire under a new bundle identifier.
-- Vorssaint's legacy `/Applications` cleanup in `build.sh` and its legacy
-  sudoers rule paths, both of which would have deleted another project's files.
-- A hardcoded path to the upstream author's Desktop in the update showcase
-  loader.
-
-### Changed
-
-- Every outward-facing endpoint (website, repository, update feed, support,
-  chat, social) now lives in one place in `AppInfo` and is a deliberately
-  unresolvable placeholder, so a half-branded build fails closed instead of
-  pointing users at upstream. The updater's repository slug is derived from
-  `AppInfo.repositorySlug` rather than duplicated.
-- The test suite's branding assertions now check the invariant that matters for
-  a fork — that no endpoint points back at upstream — instead of pinning
-  literal URLs.
-
-### Identity: the mark
-
-- Original PowerTools mark: three rounded modules — one tall, two stacked — in
-  volt lime `#A3E635` with a single mint `#00E5A0` module, on a near-black
-  squircle. No Vorssaint artwork remains in the repository.
+- An original mark: three rounded modules — one tall, two stacked — in volt lime
+  `#A3E635` with a single mint `#00E5A0` module, on a near-black squircle.
 - `Tools/MakeBrandAssets.swift` defines the mark's geometry once and renders
   every rendition from it: app icon master, mono master, Icon Composer vector
-  and documentation logos. Upstream kept two hand-made masters that could drift
-  apart silently; these cannot.
-- `Tools/MakeIcon.swift` retuned for a square mark: the menu bar glyph is sized
-  at 15pt rather than 12.5pt (a compact square must stand taller than a wide
-  mark to read as the same size) and the optical drop that compensated for the
-  old planet's ring tails is gone.
-- `Theme` carries the brand palette, and `BrandBadge` now matches the app icon's
-  geometry so the badge in About and onboarding reads as the same object as the
-  Dock icon.
-- `BlackHoleGlyph` renamed to `BrandGlyph`, and the onboarding hint that told
-  people to "look for the black hole in the menu bar" updated in all 13
-  languages.
-- `--selftest` samples the brand colour out of the shipped app icon and compares
-  it with `Theme.brandLime`, so the app's palette and its icon cannot diverge.
+  and documentation logos.
+- `Tools/MakeIcon.swift` sizes the menu bar glyph at 15pt, so the compact square
+  mark reads at the same size as other menu bar icons.
+- `Theme` carries the brand palette, and `BrandBadge` matches the app icon's
+  geometry in About and onboarding.
+- `--selftest` samples the brand colour from the shipped app icon and compares
+  it with `Theme.brandLime`, so the palette and the icon cannot diverge.
 
-### Added: thermal telemetry from MacTelemetry
+### Added
 
 - Thermal pressure in the System panel, read from the kernel's
   `com.apple.system.thermalpressurelevel` notification: five levels where
   `ProcessInfo.thermalState` exposes four, with no root, helper or subprocess.
-  Shown beside the temperatures, because a Mac at full speed and one that is
-  throttling can read the same in degrees.
-- On Intel Macs, the CPU speed limit from `pmset -g therm`, the only real
-  throttle figure macOS gives without root. Apple Silicon has no equivalent, so
-  the reader never spawns anything there.
-- A thermal throttling alert beside the other Monitor alerts: it notifies when
-  pressure enters heavy or critical, and optionally when throttling clears. It
-  fires on a change of level, since the kernel's level is already a governed
-  state rather than a spiky sensor, and the shared cooldown limits repeats.
-- A Sensors list in Monitor settings showing every SMC temperature sensor with
-  live values, read only while the list is expanded. It is browse-only: the CPU
-  temperature keeps its curated per-chip sensor selection, and the list marks
-  which sensors that selection uses.
-- Both are sampled through the existing monitor plan and strides, gated by the
-  CPU monitor feature, and localized in all 13 languages.
-- Ported from [MacTelemetry](https://github.com/ishaanpilar/MacTelemetry)
-  (MIT © 2025 Ishaan Pilar). Only what PowerTools lacked came across: its CPU,
-  memory, fan, storage and battery readers were left behind, since PowerTools
-  already ships them, and its memory reader would have regressed the
-  HOST_VM_INFO64 revision handling in `VMStatisticsCompat`. The `notify_*`
-  bindings now use `import notify` instead of `@_silgen_name`, and `pmset` runs
+- On Intel Macs, the CPU speed limit from `pmset -g therm`. Apple Silicon has no
+  equivalent, so nothing is spawned there.
+- A thermal throttling alert that notifies when pressure reaches heavy or
+  critical, and optionally when throttling clears.
+- A browse-only Sensors list in Monitor settings with every SMC temperature
+  sensor and live values, read only while the list is open.
+- The thermal readings come from
+  [MacTelemetry](https://github.com/ishaanpilar/MacTelemetry) (MIT © 2025
+  Ishaan Pilar). The `notify_*` bindings use `import notify`, and `pmset` runs
   through the bounded `Shell.run`.
 
-### Changed: real repository
+### Changed
 
-- `AppInfo.repositorySlug` is now `ishaanpilar/PowerTools`; the update feed,
-  README badges, issue templates, release workflow and docs follow it.
+- Every outward-facing address (website, repository, update feed, support, chat,
+  social) lives in one place, `AppInfo`. The updater's repository comes from
+  `AppInfo.repositorySlug`, currently `ishaanpilar/PowerTools`.
+- Tests check that no outward-facing address points at another project.
+
+### Removed
+
+- A bundle rename migration, a legacy `/Applications` cleanup in `build.sh` and
+  legacy sudoers rule paths, all of which acted on another app's files.
+- A hardcoded developer Desktop path in the update showcase loader.
 
 ### Known gaps
 
-- The support, chat and social endpoints are still `*.invalid` placeholders.
-- Screenshot sharing, recording sharing and in-app feedback point at a backend
-  upstream operates; PowerTools has no equivalent yet.
-- In-app highlight images and the update showcase clip still show upstream's UI.
-- The Discord mark still ships in `Resources/Images/`, but the community link is
-  a placeholder; drop one or set the other.
+- The support, chat and social links, screenshot and recording links, and
+  in-app feedback point at `*.invalid` placeholders with no service behind them.
+- In-app highlight images, the Discord mark in `Resources/Images/` and the
+  update showcase clip are inherited media still to be replaced or removed.

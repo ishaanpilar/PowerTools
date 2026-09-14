@@ -6,8 +6,8 @@ import Foundation
 
 /// Static identity of the app, shared by UI, notifications and tooling.
 enum AppInfo {
-    static let name = "PowerTools"
-    static let copyright = "© 2026 PowerTools"
+    static let name = "PowerTools AI"
+    static let copyright = "© 2026 PowerTools AI"
 
     // MARK: - Outward-facing endpoints
     //

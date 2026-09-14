@@ -1,12 +1,12 @@
 # Support
 
-PowerTools is a free and open source project, looked after on a best effort basis. There is no support contract and no promised response time, though every issue and question gets read and appreciated.
+PowerTools AI is a free and open source project, looked after on a best effort basis. There is no support contract and no promised response time, though every issue and question gets read and appreciated.
 
 Before you reach out, the [documentation](#documentation) below answers most of what comes up, and the [troubleshooting guide](docs/TROUBLESHOOTING.md) covers the usual fixes.
 
 ## Report a bug
 
-Open the bug report form from the [new issue](https://github.com/ishaanpilar/PowerTools/issues/new/choose) page. Please bring your PowerTools version from Settings under About, your macOS version, and clear steps to reproduce. The notes on [reporting a useful bug](docs/TROUBLESHOOTING.md#reporting-a-useful-bug) spell out what helps.
+Open the bug report form from the [new issue](https://github.com/ishaanpilar/PowerTools/issues/new/choose) page. Please bring your PowerTools AI version from Settings under About, your macOS version, and clear steps to reproduce. The notes on [reporting a useful bug](docs/TROUBLESHOOTING.md#reporting-a-useful-bug) spell out what helps.
 
 ## Request a feature
 
@@ -26,4 +26,4 @@ Please keep security vulnerabilities out of public issues. The [security policy]
 
 ## Supporting the project
 
-PowerTools is free and it will stay that way. If it is useful to you, a ⭐ on the repository helps other people find it. Contributions of code, translations and bug reports are all welcome, and the [contributing guide](CONTRIBUTING.md) shows where to start.
+PowerTools AI is free and it will stay that way. If it is useful to you, a ⭐ on the repository helps other people find it. Contributions of code, translations and bug reports are all welcome, and the [contributing guide](CONTRIBUTING.md) shows where to start.

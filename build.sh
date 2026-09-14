@@ -45,6 +45,7 @@ done
 
 if (( DEV )); then
     APP_NAME="PowerTools (Developer)"
+    DISPLAY_NAME="PowerTools AI (Developer)"
     EXECUTABLE="PowerToolsDeveloper"
     APP_BUNDLE_ID="com.powertools.utils.dev"
     BUILD_VARIANT_FLAGS=(-D POWERTOOLS_DEVELOPMENT)
@@ -52,6 +53,7 @@ if (( DEV )); then
     BUILD_CONFIGURATION="debug"
 else
     APP_NAME="PowerTools"
+    DISPLAY_NAME="PowerTools AI"
     EXECUTABLE="PowerTools"
     APP_BUNDLE_ID="com.powertools.utils"
     BUILD_VARIANT_FLAGS=()
@@ -296,6 +298,7 @@ if (( TEST )); then
         Sources/PowerTools/Core/QuitProtectionStrings.swift
         Sources/PowerTools/Core/Defaults.swift
         Sources/PowerTools/Core/FeatureCatalog.swift
+        Sources/PowerTools/Services/AI/AIHarnessContracts.swift
         Sources/PowerTools/Core/FeaturePresets.swift
         Sources/PowerTools/Core/FeatureHubStrings.swift
         Sources/PowerTools/Core/ShortcutSettingsStrings.swift
@@ -325,6 +328,9 @@ if (( TEST )); then
         Sources/PowerTools/Core/BluetoothSleepStrings.swift
         Sources/PowerTools/Core/PermissionGuideStrings.swift
         Sources/PowerTools/Core/FanControlStrings.swift
+        Sources/PowerTools/Core/PanelSearchStrings.swift
+        Sources/PowerTools/Core/PanelEmptyStateStrings.swift
+        Sources/PowerTools/Core/OnboardingStrings.swift
         Sources/PowerTools/Services/FanControl/FanControlSupport.swift
         Sources/PowerTools/Services/Snippets/TextSnippetSupport.swift
         Sources/PowerTools/Services/RadialMenu/RadialMenuSupport.swift
@@ -386,6 +392,7 @@ if (( TEST )); then
         Sources/PowerTools/Services/LaunchAtLoginSupport.swift
         Sources/PowerTools/UI/Settings/SettingsSearchSupport.swift
         Sources/PowerTools/UI/Settings/FeatureVisibilitySupport.swift
+        Sources/PowerTools/UI/MenuPanel/PanelSearchSupport.swift
         Sources/PowerTools/App/MenuBarSpacingSupport.swift
         Sources/PowerTools/App/StatusItemAnchorSupport.swift
         Sources/PowerTools/Services/DockClick/DockClickSupport.swift
@@ -589,8 +596,8 @@ if (( DEV )); then
     # A distinct identity so the Developer build installs and runs next to the
     # official app, with its own permissions, preferences and login item.
     /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $APP_BUNDLE_ID" "$STAGE/Contents/Info.plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" "$STAGE/Contents/Info.plist"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $APP_NAME" "$STAGE/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName $DISPLAY_NAME" "$STAGE/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $DISPLAY_NAME" "$STAGE/Contents/Info.plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $EXECUTABLE" "$STAGE/Contents/Info.plist"
     FAN_PLIST="$STAGE/Contents/Library/LaunchDaemons/$FAN_HELPER_ID.plist"
     /usr/libexec/PlistBuddy -c "Set :Label $FAN_HELPER_ID" "$FAN_PLIST"
@@ -630,7 +637,7 @@ APP_SHORT_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionStri
 APP_BUILD_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$STAGE/Contents/Info.plist")"
 /usr/libexec/PlistBuddy \
     -c "Set :CFBundleIdentifier $FINDER_EXTENSION_ID" \
-    -c "Set :CFBundleDisplayName $APP_NAME" \
+    -c "Set :CFBundleDisplayName $DISPLAY_NAME" \
     -c "Set :CFBundleShortVersionString $APP_SHORT_VERSION" \
     -c "Set :CFBundleVersion $APP_BUILD_VERSION" \
     -c "Set :PowerToolsHostBundleIdentifier $APP_BUNDLE_ID" \

@@ -1,208 +1,245 @@
-# Contributing to PowerTools
+# Contributing to PowerTools AI
 
-Thanks for the interest. This project aims to stay small, native and readable.
+PowerTools AI is a local-first macOS menu bar app that brings everyday Mac
+utilities together with AI that runs on your Mac, or through a provider you
+choose. This guide covers building it, what belongs in it, and how changes are
+reviewed.
 
-## License for contributions
+Working with a coding agent? Point it at [AGENTS.md](AGENTS.md) and read it
+yourself. It holds the rules you both work under.
 
-Unless it is stated otherwise, contributions to this repository are accepted
-under GPL-3.0-or-later.
+## Licence
 
-## Getting started
+PowerTools AI is licensed under GPL-3.0-or-later, and contributions are
+accepted under the same licence.
 
-```sh
-git clone https://github.com/ishaanpilar/PowerTools.git
-cd powertools
-./build.sh                         # build and assemble the bundle
-./build/PowerTools --selftest       # quick health check (SELFTEST OK)
-./build.sh --install               # install into /Applications and launch
+Keep every existing copyright and licence notice in a file intact; the licence
+requires it. New files begin with:
+
+```swift
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 PowerTools AI contributors
 ```
 
-You need macOS 14 or newer, Apple Silicon and the Xcode Command Line Tools. The
-build is a plain `swiftc` invocation, see `build.sh`, with no Xcode project and
-no external dependencies, reproducible by design. `Package.swift` is there so
-SwiftPM aware editors can index the code.
+## Requirements
 
-Hitting a build or permission snag while developing? See the
-[troubleshooting guide](docs/TROUBLESHOOTING.md).
+| To | You need |
+| --- | --- |
+| Run the app | Apple Silicon Mac, macOS 14 or later |
+| Build | Xcode or the Command Line Tools with the macOS 26 SDK |
+| Test on-device AI | macOS 26, an eligible Mac, Apple Intelligence switched on |
+| Test cloud AI | Your own provider API key, never committed |
+
+The build is a plain `swiftc` invocation in `build.sh`, with no Xcode project
+and no external dependencies. `Package.swift` exists so editors can index the
+code and `swift build` can type-check it quickly.
+
+## Build and test
+
+```sh
+git clone <repository-url>
+cd <repository-folder>
+./build.sh                       # build and assemble the app
+./build/PowerTools --selftest    # health check
+./build.sh --test                # unit and AI harness tests
+./build.sh --install             # install into /Applications and launch
+```
+
+The public name is PowerTools AI; the code, binary and bundle identifiers still
+use `PowerTools`. Leave those identifiers alone — renaming them discards stored
+settings and permission grants.
+
+Two things catch people out:
+
+- `./build.sh --test` builds a hand-written list of files, and most of
+  `Sources/PowerTools/UI/` is not on it. When you change UI, run plain
+  `./build.sh` too.
+- `swift build` answers whether the Swift compiles, and nothing about bundles,
+  entitlements, signing or permissions.
+
+Build or permission trouble? See [troubleshooting](docs/TROUBLESHOOTING.md).
 
 ### Stable signing
 
-By default `build.sh` signs ad hoc, and that code hash changes on every build.
-macOS ties Accessibility and Screen Recording grants to the hash, so each
-rebuild silently orphans them: System Settings keeps showing the app as
-granted, the app is no longer trusted, and no new prompt appears. Builds that
-install (`--dev` or `--install`) therefore create a free, self signed identity
-called `PowerTools Signing` in a dedicated keychain automatically when no
-identity is installed. For a build you do not install, run the same setup once
-yourself:
+`build.sh` signs ad hoc by default, and that signature changes on every build.
+macOS ties Accessibility and Screen Recording grants to the signature, so each
+rebuild silently orphans them: System Settings still shows the app as allowed,
+but macOS no longer trusts it.
+
+Builds that install (`--dev` or `--install`) create a free, self-signed
+`PowerTools Signing` identity in a dedicated keychain when none exists. For
+builds you do not install, run once:
 
 ```sh
 ./Tools/setup-signing.sh
 ```
 
-Either way `build.sh` then signs local builds with it and gives them a
-constant designated requirement, so granted permissions stick across rebuilds.
-If a permission was granted to an earlier ad-hoc build, clear the stale grant
-once (`tccutil reset Accessibility com.powertools.utils.dev`) and grant it
-again. The identity is a local convenience only and never shows up outside
-the keychain.
-
-Official releases work differently. CI signs the app and DMG with an Apple
-**Developer ID**, using credentials isolated in the protected `release-signing`
-environment, then
-**notarizes** and staples them through `Tools/notarize.sh`, with secrets
-`NOTARY_API_KEY_P8`, `NOTARY_KEY_ID` and `NOTARY_ISSUER_ID`, so downloads open
-with no Gatekeeper warning. `build.sh` prefers the Developer ID identity when it
-is present, with the hardened runtime and `Resources/PowerTools.entitlements`,
-and falls back to the self signed identity, then to ad hoc.
+Local builds then keep a constant identity and their permissions. If an earlier
+ad hoc build was granted a permission, clear it once
+(`tccutil reset Accessibility com.powertools.utils.dev`) and grant it again.
 
 ## Project layout
 
 | Folder | Role |
-|---|---|
-| `Sources/PowerTools/App` | App lifecycle and the menu bar status item |
-| `Sources/PowerTools/Core` | Localization, permissions, UserDefaults keys |
-| `Sources/PowerTools/Services` | All behavior, like energy, monitor, scroll and switcher |
-| `Sources/PowerTools/UI` | SwiftUI views only, no business logic |
+| --- | --- |
+| `Sources/PowerTools/App` | App lifecycle and the menu bar item |
+| `Sources/PowerTools/Core` | Strings, feature and permission catalog, defaults keys |
+| `Sources/PowerTools/Services` | All behaviour |
+| `Sources/PowerTools/Services/AI` | AI contracts, providers and planning |
+| `Sources/PowerTools/UI` | SwiftUI views only |
 | `Sources/PowerTools/Support` | `--selftest` and `--sensors` diagnostics |
-| `Tools` | Brand asset and icon generators, DMG packaging |
+| `Tests` | Behaviour, source-shape and AI harness tests |
+| `Tools` | Signing, packaging, notarisation and brand asset generators |
+| `docs` | Privacy, permissions, troubleshooting, AI harness and roadmap |
 
-A few conventions to keep in mind.
+Conventions:
 
-- **UI observes services, and services never import SwiftUI.** Keep that boundary.
-- Singletons are exposed as `Type.shared` and publish state with Combine through
-  `ObservableObject`, with no Observation macros, since the project builds with
-  the Command Line Tools.
-- Comments explain *why*, not *what*. Keep them rare and useful.
-- No new dependencies without talking it over first in an issue.
-- Working with an agent? [Contributing with an
-  agent](docs/AI-CONTRIBUTIONS.md) is the process that gets that work merged
-  here, and it is written to be read by the agent as much as by you.
+- UI observes services, and services never import SwiftUI.
+- Shared services are exposed as `Type.shared` and publish with Combine
+  `ObservableObject`. The project does not use Observation macros.
+- Comments explain why, and are rare.
+- No new dependencies without agreeing it in an issue first.
 
-## Strings and translations
+## What belongs in PowerTools AI
 
-Every user facing string lives in `Core/Localization.swift` as a field of the
-`Strings` struct. Adding a field forces **every** supported language to provide
-it, and the compiler is the completeness check, so a translation can never
-silently fall out of sync.
+A good addition makes a task people already do on a Mac faster, clearer or
+safer, and leaves them in control.
 
-PowerTools ships these locales today: English (US), Português (Brasil),
-Türkçe, Русский, Español, Deutsch, Français, Italiano, 日本語, 한국어, 简体中文,
-繁體中文（台灣） and 繁體中文（香港）. The non-base translations live in
-`Core/Localizations/`. To add a language, add a case to `AppLanguage`, provide
-a complete `Strings` catalog and all feature-specific string catalogs, register
-the locale in `Resources/Info.plist`, add localized permission prompts under
-`Resources/<locale>.lproj/` when needed, and extend the localization coverage
-tests.
+AI belongs here when:
+
+- it works on content the person chose;
+- its result is visible before anything changes;
+- every action it takes runs through a registered, validated action (see
+  [the AI harness](docs/AI-HARNESS.md));
+- it runs on device where the Mac supports it, and through a provider the person
+  chose where it does not;
+- the feature it improves still works without it.
+
+It does not belong here if it:
+
+- watches the screen, keyboard, microphone, camera or clipboard in the
+  background;
+- deletes, moves, installs, shares, sends or changes settings without a specific
+  approval;
+- needs an account, a server run by the project, telemetry or collected prompts;
+- scores productivity, detects emotion or monitors employees;
+- is a chat window disconnected from the app's own features;
+- gives a model unrestricted shell, AppleScript or Accessibility access.
+
+Before proposing a feature, answer four questions in the issue:
+
+1. **What is it built on, and will that still be there?** Public frameworks and
+   documented provider APIs last; private APIs and undocumented behaviour are
+   borrowed. Provider pricing and terms change, so plan for that.
+2. **What does it expose people to?** Data leaving the Mac, charges on their API
+   bill, permissions they must grant.
+3. **What does it drag in?** A dependency, a tool the person must install, a
+   service someone has to run.
+4. **How many people will use it, against the surface it adds?** Every feature
+   adds settings, strings, permissions and provider cases forever.
+
+Anything bigger than a fix starts as an issue. Settling direction there costs
+far less than a rejected branch.
+
+## Adding an AI feature
+
+| Capability | Minimum macOS |
+| --- | --- |
+| App and every utility | 14 |
+| Cloud AI providers | 14 |
+| On-device AI | 26 |
+| AI onboarding | 26 |
+
+An AI pull request is ready when:
+
+1. Actions come only from the registry derived from `CommandBarCatalog`, and
+   every plan passes `AIPlanValidator`.
+2. `Tests/AIHarnessTests.swift` gains a check for each new action class, argument
+   kind, approval path, provider capability or context source.
+3. Every availability state has a message: macOS too old, Mac not eligible,
+   Apple Intelligence off, model not ready, no provider chosen, invalid key,
+   offline.
+4. Every failure is visible — context too long, refusal, rate limit, unsupported
+   language, cancellation, invalid output — and none falls through to an
+   action.
+5. [docs/PRIVACY.md](docs/PRIVACY.md) is updated in the same pull request for
+   any new provider, host or outgoing data. The person sees what will be sent
+   before it is sent. Keys live in Keychain only.
+6. Instructions hidden in the content it reads cannot change what it does, with
+   a test showing so.
+7. The non-AI way of doing the task still works.
+8. It was verified on a real Mac, naming the provider used.
+
+## Strings and languages
+
+English comes first. Every user-facing string lives in `Core/Localization.swift`
+as a field of `Strings`, or in a feature catalog in `Core/`. The compiler
+requires every language catalog to provide each field. Until translation work
+resumes, give non-English catalogs the English text for new fields. Do not mix
+translation changes into feature pull requests; translations get their own
+pass.
 
 ## Sensors on new chips
 
 Temperature mapping lives in `SystemMonitor.prepareSensorsIfNeeded()`. CPU keys
-look like `Tp…` and `Te…`, GPU is `Tg…`, and battery runs from `TB0T` to
-`TB2T`. If a new Apple Silicon generation renames the keys, run this
-
-```sh
-./build/PowerTools --sensors
-```
-
-and open a PR with the dump and the adjusted prefixes.
+look like `Tp…` and `Te…`, GPU keys `Tg…`, battery keys `TB0T` to `TB2T`. If a
+new chip renames them, run `./build/PowerTools --sensors` and open a pull
+request with the dump and the adjusted prefixes.
 
 ## Reporting bugs and requesting features
 
-You do not need to write code to help. Use the issue forms on the
-[new issue](https://github.com/ishaanpilar/PowerTools/issues/new/choose) page.
+Use the issue forms.
 
-- **Bug report.** Include your PowerTools version from Settings under About and
-  your macOS version, plus clear steps to reproduce. The
-  [troubleshooting guide](docs/TROUBLESHOOTING.md) explains what makes a report
-  useful.
-- **Feature request.** Describe the problem you are trying to solve rather than
-  only a specific solution.
+- **Bug report.** Include the version from Settings › About, your macOS version
+  and Mac model, and steps to reproduce. For AI problems, say whether it ran on
+  device or through a provider, and which one. Never paste an API key or private
+  content.
+- **Feature request.** Describe the problem you want solved, not only a
+  solution.
 
-For general help and every support channel, see [support](SUPPORT.md).
+For other help, see [support](SUPPORT.md). Report security problems privately,
+as described in [SECURITY.md](SECURITY.md).
 
 ## Pull requests
 
-1. One topic per PR, with a clear description of the behavior before and after.
-2. `./build.sh` must finish without warnings and `--selftest` must pass.
-3. New user facing text must land in **every** supported language, since the
-   build will not compile until it does.
+1. One topic per pull request. Say what a person would notice before and after.
+2. Keep it small, aiming under about 200 changed lines. Split larger work into
+   pieces that stand on their own.
+3. `./build.sh` finishes without warnings, `--selftest` passes and
+   `./build.sh --test` passes.
 4. Match the style of the file you are editing.
-5. Keep it small. Half of the open pull requests over a thousand added lines
-   have been waiting a week or more; nothing under two hundred is waiting at
-   all. When a change is large, splitting it moves it faster than explaining
-   it does.
-6. Settle the direction before writing the code. Scope is the most common
-   reason a pull request is turned down here, and an issue costs far less
-   than a branch. Four things decide it: what the feature is built on and
-   whether that will still be here, what it exposes the project to, what it
-   drags in as a runtime dependency and who then carries it when that breaks,
-   and how much permanent surface it adds against how many people will ever
-   switch it on. PowerTools reaches for what macOS almost does; it does not
-   grow a subsystem of its own. Intel support, hardcoded integrations with
-   particular third-party apps, a plugin system and video downloading have all
-   been declined already, and [contributing with an
-   agent](docs/AI-CONTRIBUTIONS.md) works the four through with the cases they
-   came from.
-7. Title it `type(scope): lowercase imperative phrase`, and do not add the PR
-   number yourself, since squash merge appends it. Reuse a scope that already
-   shows up in `git log --oneline` rather than inventing one, and leave the
-   version and environment notes for the description.
-8. Leave `CHANGELOG.md` alone. The maintainer writes the entry when merging,
-   in the release notes voice and with your credit, so an entry in your branch
-   is a conflict with every sibling PR and a wording that gets rewritten
-   anyway. Say in the description what a user would notice; the entry is
-   written from that.
-9. **A pull request that has an issue must link it, written exactly as `Refs
-   #123`.** Not `Closes`/`Fixes`, not a bare `#123`, not a sentence about it.
-   That one line is the whole tie between the change and the person who
-   reported it: the fix-status bot reads it on merge, labels the issue,
-   comments again when a release carries the fix, and closes the issue after
-   two weeks of silence. A branch that leaves it out drops that report out of
-   the track entirely, and nobody finds out until the reporter asks months
-   later. `Closes`/`Fixes` fails the other way, closing the report on merge
-   when the fix is not on anyone's Mac yet. Several issues means several
-   references, each on its own line and each starting with its own `Refs`:
-   the bot reads the word and the number as a pair, so `Refs #123, #456`
-   reaches #123 and leaves #456 sitting there. When the branch merges, say on
-   the issue which part of it this covered and which part it did not. An issue
-   here often carries more than one report, and a fix for one of them reads as
-   a fix for all of them until somebody says otherwise. The issue itself stays
-   open until the person who reported it confirms on a real build.
-10. Fix the cause, not the path the report happened to take. A reporter names
-    the symptom they hit; the same mistake usually sits in every sibling call
-    site. Find the other callers of whatever you are about to change before
-    you change it, and name in the description which ones you checked — one
-    guard in the shared function is a smaller diff than a guard in each
-    caller, and it is the difference between a fix and a fix for one person.
-11. Verify on a real Mac, and describe where. Give as much of it as you have:
-    the Mac model, the macOS version and build, the display and Spaces
-    layout, whether it was a release build or one of your own, and the app
-    language if the change touches text. Then say what you could not test.
-    Every pull request is run locally before it is merged, on one
-    maintainer's hardware, so the gap between your machine and that one is
-    the part worth writing down; changes have passed review and then failed
-    on a different Mac. Building with a stable signing identity, see above,
-    keeps granted permissions across rebuilds and makes this cheap.
-12. The pull request template lists the sections a description here usually
-    has. Apart from the issue reference, nothing in it is required, and it is
-    a prompt rather than a form, so delete what does not apply and write
-    prose.
-13. A new feature is not ready the day it compiles. Install your own build,
-    live with it for a few days, and fix what surfaces. The rough edge you
-    only notice on the third day is the one a reviewer cannot find and a user
-    will. A fix or a small change does not need that wait; a feature does.
-14. Even so, an unfinished branch is welcome. Open it as a **draft** and name
-    in the description what is missing or what decision you need. A draft
-    says on its own that it is not asking to be merged yet, and it says so
-    everywhere the pull request appears.
+5. Write commit summaries as a plain imperative sentence, as `git log` shows.
+6. Link issues as `Refs #123`, each on its own line. Not `Closes` or `Fixes`: an
+   issue closes once the reporter confirms the fix on a released build.
+7. Leave `CHANGELOG.md` alone. The maintainer writes entries when merging.
+8. Fix the cause, and name the sibling call sites you checked.
+9. Verify on a real Mac and say where: Mac model, macOS version and build,
+   Apple Intelligence on or off, AI provider, app language, permissions. Then
+   say what you could not test.
+10. A new feature is not ready the day it compiles. Use your own build for a few
+    days first.
+11. Unfinished work is welcome as a **draft**, naming what is missing or which
+    decision you need.
+12. Agent-assisted work follows [AGENTS.md](AGENTS.md). Read what the agent
+    wrote before sending it, mark what you have not confirmed, and answer review
+    yourself.
+
+## Review
+
+The maintainer reviews every pull request, and personally approves every AI,
+agent-assisted, provider, privacy, permission and networking change.
 
 ## Releases (maintainers)
 
 ```sh
-git tag v2.1.0 && git push origin v2.1.0
+git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
-Only an owner-created protected version tag can enter the `release-signing`
-environment. After owner approval, the workflow builds, signs, notarizes and
-publishes the DMG as an immutable GitHub release.
+Only an owner-created, protected version tag can enter the `release-signing`
+environment. After owner approval, the workflow builds, signs with the Developer
+ID identity and `Resources/PowerTools.entitlements`, notarises through
+`Tools/notarize.sh` (secrets `NOTARY_API_KEY_P8`, `NOTARY_KEY_ID`,
+`NOTARY_ISSUER_ID`) and publishes the DMG as a GitHub release.
+
+Before tagging, confirm that [docs/PRIVACY.md](docs/PRIVACY.md) describes
+exactly what the release does.

@@ -44,7 +44,7 @@ extension BluetoothSleepStrings {
         enable: "Turn Bluetooth off when the Mac sleeps",
         enableCaption: "Bluetooth already off before sleep is left alone and stays off on wake.",
         restoreToggle: "Turn Bluetooth back on when the Mac wakes",
-        restoreCaption: "Only when PowerTools was the one that switched it off.",
+        restoreCaption: "Only when PowerTools AI was the one that switched it off.",
         unsupported: "This Mac has no Bluetooth controller."
     )
 

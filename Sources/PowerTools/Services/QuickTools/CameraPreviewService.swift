@@ -287,7 +287,7 @@ final class CameraPreviewService: ObservableObject {
                                         styleMask: [.borderless, .nonactivatingPanel],
                                         backing: .buffered,
                                         defer: false)
-        panel.title = "PowerTools"
+        panel.title = "PowerTools AI"
         panel.isReleasedWhenClosed = false
         // A mirror is something the user drags next to the meeting window.
         panel.isMovableByWindowBackground = true

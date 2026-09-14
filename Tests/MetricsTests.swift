@@ -20,6 +20,7 @@ struct MetricsTests {
         let suite = TestSuite()
         let groups: [(String, () -> Void)] = [
             ("harness", { TestHarnessTests.run(suite) }),
+            ("ai-harness", { AIHarnessTests.run(suite) }),
             ("core", { coreChecks(suite) }),
             ("keyboard", {
                 assistiveKeyboardChecks { suite.expect($0, $1) }
@@ -38,6 +39,7 @@ struct MetricsTests {
             ("localization", { LocalizationTests.run(suite) }),
             ("launcher", { QuickLauncherContract.run(suite) }),
             ("finder", { FinderActionsTests.run(suite) }),
+            ("panel-search", { PanelSearchTests.run(suite) }),
         ]
         var selected = Set<String>()
         var listOnly = false
@@ -14020,7 +14022,7 @@ struct MetricsTests {
         expect(bundleLocalizations.contains("tr"), "Info.plist declares Turkish as a bundle localization")
         expect(bundleLocalizations.contains("ko"), "Info.plist declares Korean as a bundle localization")
         let baseAudioPrompt = infoPlist?["NSAudioCaptureUsageDescription"] as? String ?? ""
-        expect(baseAudioPrompt.contains("PowerTools uses each app's audio"),
+        expect(baseAudioPrompt.contains("PowerTools AI uses each app's audio"),
                "base audio permission prompt is an English fallback")
         let organizerFolderPromptKeys = [
             "NSDesktopFolderUsageDescription", "NSDocumentsFolderUsageDescription",
@@ -16005,6 +16007,18 @@ struct MetricsTests {
             expect(AppFeature.allCases.allSatisfy {
                 firstRunDefaults.bool(forKey: $0.availabilityKey)
             }, "an interrupted onboarding keeps the feature selection already applied")
+
+            firstRunDefaults.set(false, forKey: DefaultsKey.hasOnboarded)
+            firstRunDefaults.set(0, forKey: DefaultsKey.onboardingStep)
+            let unappliedAtStart = !OnboardingProgress.selectionWasApplied(in: firstRunDefaults)
+            firstRunDefaults.set(OnboardingProgress.firstStepAfterSelection,
+                                 forKey: DefaultsKey.onboardingStep)
+            let appliedAfterSetup = OnboardingProgress.selectionWasApplied(in: firstRunDefaults)
+            firstRunDefaults.set(0, forKey: DefaultsKey.onboardingStep)
+            firstRunDefaults.set(true, forKey: DefaultsKey.hasOnboarded)
+            let appliedWhenFinished = OnboardingProgress.selectionWasApplied(in: firstRunDefaults)
+            expect(unappliedAtStart && appliedAfterSetup && appliedWhenFinished,
+                   "setup reads back its applied selection on every step after the first")
             firstRunDefaults.removePersistentDomain(forName: firstRunSuiteName)
         } else {
             expect(false, "first-run defaults suite can be created")

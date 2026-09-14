@@ -1,62 +1,176 @@
 # Privacy
 
-PowerTools is built to be local-first. Core features run on your Mac, and the app has no PowerTools account or cloud dashboard. Its PowerTools-operated services are limited to temporary screenshot links and feedback you explicitly choose to send.
+PowerTools AI is a local-first Mac app. Its utilities run on your Mac. Its AI
+runs on your Mac when your Mac supports it. Anything that leaves your Mac goes
+only where you send it — never to a PowerTools AI server, because there isn't
+one.
+
+This policy applies to PowerTools AI from its first public release.
 
 ## The short version
 
-- **No account.** There is nothing to sign up for and nobody to log in as.
-- **No subscription.** The app is free and stays free, with nothing held back behind a paid tier.
-- **No automatic telemetry.** PowerTools gathers no usage stats, crash reports or device identifiers. Feedback sends technical details only when you select them after seeing the complete list.
-- **No PowerTools analytics or tracking.** There are no analytics kits, no ad networks and no third party tracking anywhere in the app.
-- **No data selling.** PowerTools never sells personal information or shared screenshots and recordings.
-- **Your settings stay put.** Preferences and saved state live in the app's own local storage on your Mac and are never uploaded.
+- **No account.** There is nothing to sign up for.
+- **No servers.** PowerTools AI runs no service that receives your data.
+- **No telemetry.** No usage statistics, crash reports, analytics, advertising,
+  tracking or device identifiers.
+- **No selling or sharing** of anything about you.
+- **AI is off until you turn it on.** On a Mac that supports it, AI runs on
+  device. Cloud AI uses a provider and API key you choose, and you see what will
+  be sent before it is sent.
+- **Your settings stay on your Mac.** Settings exports never include API keys.
 
-## What it reads, and where that stays
+## What stays on your Mac
 
-Everything PowerTools shows you, from the CPU and memory load to the temperatures, the battery details, the network rates, the window list, per app volume and the files on the Shelf, is read locally through native macOS APIs and shown to you right there. None of it is sent anywhere, logged remotely or shared.
+Everything the app shows you — CPU, GPU and memory load, temperatures, battery
+details, network rates, the window list, per-app volume, files on the Shelf — is
+read through macOS and shown on your Mac. None of it is sent anywhere.
 
-Clipboard history, including the images and files you copy, lives in the app's local storage on your Mac and never leaves it. Copy text from screen recognizes the text entirely on device with Apple's Vision framework, and the temporary capture is deleted as soon as the text is read. Automatic clearing, when you switch it on, only empties the system clipboard on this Mac: nothing is sent anywhere, and items already saved to your history are left as they are.
+- **Clipboard history**, including copied images and files, is kept in the
+  app's local storage. Automatic clearing only empties the system clipboard;
+  it does not touch saved history.
+- **Copy text from screen** recognises text on device with Apple's Vision
+  framework. The temporary capture is deleted as soon as the text is read.
+- **Recent captures** keeps up to 12 screenshots, within 256 MB, in a private
+  local cache. Recordings are not copied; only their location and a small
+  thumbnail are kept. A screenshot copied as a file keeps a private PNG briefly
+  so other apps can read it, removed once it is older than 24 hours or when the
+  cache fills.
+- **Scratchpad notes, snippets and Shelf items** are stored locally.
+- **Permissions** such as Accessibility, Screen Recording or Microphone are used
+  only by the feature that asked for them. See [permissions](PERMISSIONS.md).
 
-Recent Captures keeps up to 12 screenshots, within a 256 MB limit, in the app's private local cache so you can reopen them. Recordings are not duplicated: only their existing path and a small thumbnail are kept. Clear removes that history and its cached images. When a screenshot is copied as a file, its private local PNG is kept temporarily so other apps can finish reading it, then cleaned on later copies once it is older than 24 hours or earlier when the bounded cache fills. None of these local caches is uploaded automatically.
+## AI
 
-When a feature needs a macOS permission such as Accessibility, Screen Recording or Microphone, that access is used only for the feature it belongs to. Captured content leaves the Mac only when you explicitly create a temporary link. The [permissions guide](PERMISSIONS.md) breaks down each permission.
+### Off until you turn it on
+
+AI features are installed and switched on by you. Until then they load no
+model, make no connection and use no energy.
+
+### On this Mac
+
+On macOS 26 or later, with Apple Intelligence switched on, PowerTools AI can
+use Apple's on-device model through Apple's Foundation Models framework. These
+requests are processed on your Mac, and PowerTools AI makes no network
+connection for them. macOS, not PowerTools AI, downloads and updates the model
+under Apple's terms.
+
+The optional setup suggestion during onboarding (macOS 26 or later) processes the
+sentence you type on device, uses it only to suggest features, and does not keep
+it after setup.
+
+### With a cloud provider you connect
+
+On macOS 14 or later you can connect a cloud AI provider, such as DeepSeek,
+OpenAI, Anthropic or another compatible service.
+
+- **Your key, your account.** You supply your own API key. It is stored in the
+  macOS Keychain and sent only to that provider, to authenticate your requests.
+  It never appears in settings, exports or logs. The provider bills your account
+  directly.
+- **Direct connection.** Requests go from your Mac to the provider over HTTPS.
+  PowerTools AI has no server in between.
+- **Only what you chose.** A request contains the content you selected for it —
+  such as highlighted text — and the instructions PowerTools AI adds to describe
+  the task. When an AI plan is involved, it also includes the names of the
+  actions it may propose. No account details, device identifiers or other
+  content are added.
+- **You see it first.** Before the first request that sends a kind of content
+  (selected text, a clipboard item, a screenshot, a file), PowerTools AI shows
+  exactly what will be sent and to which provider.
+- **The provider's terms apply.** Retention, logging and model training for your
+  requests are governed by the provider you chose. Settings links to its
+  privacy policy and shows the address requests are sent to.
+
+### With a model server on this Mac
+
+You can use a model server running on your own Mac, such as Ollama or LM Studio.
+PowerTools AI accepts only a local (loopback) address, so these requests do not
+leave your Mac.
+
+### What AI never reads on its own
+
+AI never reads your clipboard history, screen, recordings, microphone, camera,
+files, window titles or contents, browser content, installed apps or usage
+history unless you choose that content for a request.
+
+Content is treated as data, not instructions. Text inside a clipboard item,
+file, screenshot or webpage cannot make AI take an action.
+
+### What AI can do
+
+- **Answers and drafts** are shown to you. Nothing is replaced or sent until you
+  choose to.
+- **Actions**, such as arranging windows or starting a timer, are proposed as a
+  plan. Nothing runs until you approve it.
+- **Anything that deletes, shares, installs or leaves your Mac** asks for your
+  approval of that specific item, separately.
+- AI never grants itself a macOS permission and never works around one.
+
+### AI history
+
+PowerTools AI does not collect your prompts or responses, and does not train any
+model. If you turn on the AI activity log, it is stored only on your Mac, never
+contains API keys, and can be cleared at any time.
 
 ## Network connections
 
-PowerTools opens only a few kinds of connection, and each one belongs to a visible feature.
+This is the complete list. Each connection belongs to a feature you can see.
 
-1. **The update check, automatic and easy to switch off.** So it can tell you when a newer version exists, PowerTools asks GitHub's public releases API at `api.github.com` for this project's latest release. The request carries only a standard user agent with the app name and its version, and no account, identifier or usage data go along with it. It runs a short while after launch and now and then while the app is open. You can turn it off in Settings under About, and once it is off no update requests are made. If you choose to install an offered update, the disk image comes from GitHub.
+1. **Update check — automatic, and you can turn it off.** The app asks GitHub's
+   releases API at `api.github.com` whether a newer PowerTools AI release
+   exists, a short while after launch and occasionally while open. The request
+   carries only the app's name and version. Turn it off in Settings › About. If
+   you install an update, the disk image downloads from GitHub.
 
-2. **The internet speed test, only when you ask.** The optional speed test in the Network section reaches Cloudflare's public speed endpoints at `speed.cloudflare.com` to measure latency and your download and upload throughput. This happens only when you start a test yourself, and never on its own.
+2. **Speed test — only when you start one.** The network speed test measures
+   latency and throughput against `speed.cloudflare.com`.
 
-3. **Homebrew actions, only when you use the Homebrew manager.** Search, install and uninstall actions run the local `brew` command, which may contact Homebrew, GitHub and package vendor hosts to search metadata or download files. Popularity badges use Homebrew's public aggregate analytics JSON from `formulae.brew.sh`. PowerTools does not send its own analytics, capture passwords or run `brew` as root.
+3. **Homebrew manager — only when you use it.** Searching, installing and
+   removing packages runs your local `brew` command, which contacts Homebrew,
+   GitHub and package hosts. Popularity badges use Homebrew's public analytics
+   from `formulae.brew.sh`. The Homebrew install command the app offers
+   downloads Homebrew's official installer from `raw.githubusercontent.com` when
+   run. PowerTools AI never captures passwords or runs `brew` as root.
 
-4. **The app update check, only with App updates switched on.** Finding out which apps are behind uses the sources you leave enabled. The Homebrew source runs the local `brew` command, exactly as above. The App Store source sends store identifiers to `uclient-api.itunes.apple.com`, falling back to bundle identifiers at `itunes.apple.com`, along with your Mac's region, to find the current Mac version.
+4. **App updates — only when switched on.** Checking which apps are out of date
+   uses the sources you leave enabled, each with its own switch:
+   - *Homebrew* runs your local `brew` command, as above.
+   - *App Store* sends store identifiers, or bundle identifiers as a fallback,
+     and your region to `uclient-api.itunes.apple.com` or `itunes.apple.com`.
+   - *Online* requests the update addresses that installed apps declare, on the
+     developer's server or release host such as `github.com`. That server sees
+     your IP address and the address requested, which can reveal which app is
+     being checked. It also downloads Homebrew's public app catalog from
+     `formulae.brew.sh`, which sends nothing about your apps.
 
-The Online source checks supported public update addresses declared inside installed apps. These requests go to the app developer's server or its release hosting service, including `github.com` and redirected download hosts. The server receives your public IP address and the requested URL, which can reveal which app is being checked. PowerTools does not add your app inventory, local paths, account details or device identifiers to these requests, and does not use stored cookies or credentials. The declared URL, including any query parameters it already contains, is sent as provided by the app. These services may process ordinary request data under their own privacy policies.
+   Checks run when you open the list, press Check now, or on a schedule you set.
 
-The Online source also downloads the complete public app catalog from `formulae.brew.sh` as a fallback. That catalog request does not send the names, paths or bundle identifiers of apps on your Mac. Version comparisons happen locally; updates from developer feeds are installed by the app's own updater after you open it.
+5. **Website icons in the Radial Menu — only when you ask.** Fetching the icon
+   for a website link requests that site's `/favicon.ico`, with a small size
+   limit. The site sees your IP address.
 
-The check runs when you open the list or press Check now, and on a schedule only if you set one. The three source switches under App updates control these connections independently. Turning off the App Store source stops its store and bundle identifier lookups. Turning off the Online source stops both developer feed requests and public catalog requests on subsequent checks.
+6. **AI providers — only when you connect one and make a request.** Requests go
+   to the provider address shown in Settings, as described in
+   [With a cloud provider you connect](#with-a-cloud-provider-you-connect).
 
-5. **Temporary screenshot links, only when you choose to create one.** Creating a link sends the rendered PNG and your chosen expiration of 1, 6 or 24 hours to the PowerTools service over HTTPS. It does not send your name, account, device identifier or MAC address. On your Mac, the feature keeps only the link, expiration and private deletion token while the link is active, so you can copy it or delete it early. The service holds your public IP address in memory for no more than 24 hours to prevent abuse, while network providers may process normal HTTPS request data under their own policies.
+Apple's on-device model and model servers on your own Mac make no connection
+beyond your Mac.
 
-The uploaded PNG is decoded and rebuilt without embedded metadata. The image and its link metadata are permanently deleted when the link expires or you delete it, and the service does not create screenshot backups. Private moderation stores the active link, not another uploaded image, and removes that message when the link ends. Anyone with the link can view, download, save or redistribute the image, and active links are available to the service operator for abuse moderation. Share only with people you trust.
+## Sharing and feedback
 
-6. **Temporary recording links, only when you choose to create one.** The finished video is compressed on your Mac and sent over HTTPS with the audio you kept and your chosen expiration of 1 or 6 hours. It does not send your name, account or device identifier. On your Mac, the feature keeps only the link, expiration and private deletion token while the link is active. The service temporarily processes your public IP address to prevent abuse, while network providers may process normal HTTPS request data under their own policies.
+PowerTools AI runs no sharing or feedback service. The app never uploads your
+screenshots, recordings or feedback. When you use the macOS share menu, the app
+or service you pick handles the item under its own terms.
 
-The service validates and rebuilds the MP4 without its original metadata. The video and link metadata are permanently deleted when the link expires or you delete it, and the service does not create backups. Anyone with the link can view, download, save or redistribute the video, and active links are available to the service operator for abuse moderation. Share only with people you trust.
+## Security
 
-7. **Feedback, only when you press Send.** A submission sends the category you choose and the text you type. The optional technical details switch adds only the app version and build, macOS version, Mac model and app language shown in the form. It never includes your name, account, email address, device identifier, logs, screenshots, files or clipboard content. Your public IP address is processed temporarily in memory for rate limiting and is not attached to the feedback.
+To report a security problem privately, see [SECURITY.md](../SECURITY.md).
 
-Feedback is delivered to private support channels visible to the service owner. After delivery, the text and any technical details you selected remain there until the service owner deletes them. The temporary delivery copy is then deleted; if delivery never succeeds, that copy is permanently deleted after 7 days. No contact information is sent, so feedback cannot receive a direct reply.
+## Changes to this policy
 
-That is the entire list. There are no hidden beacons or background uploads.
-
-## Changes to this document
-
-This page describes how the current version of PowerTools behaves. If the app's behavior around privacy ever changes, this page changes with it.
+This page changes in the same update as the behaviour it describes. Its history
+is in the project repository.
 
 ## Questions
 
-If anything here is unclear, open a question in [GitHub issues](https://github.com/ishaanpilar/PowerTools/issues), or have a look at [support](../SUPPORT.md).
+Open an issue in the project repository.

@@ -473,3 +473,19 @@ struct PanelHiddenItemRow: View {
         )
     }
 }
+
+extension PanelSearchSection {
+    var panelSectionID: PanelSectionID {
+        switch self {
+        case .keepAwake: return .keepAwake
+        case .brightness: return .brightness
+        case .mixer: return .mixer
+        case .system: return .system
+        case .network: return .network
+        case .disk: return .disk
+        case .power: return .power
+        case .fanControl: return .fanControl
+        case .toggles: return .toggles
+        }
+    }
+}

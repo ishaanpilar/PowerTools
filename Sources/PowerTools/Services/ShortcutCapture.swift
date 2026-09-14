@@ -42,5 +42,7 @@ enum ShortcutCapture {
         isCapturing = false
         AppSwitcher.shared.setCapturingShortcut(false)
         FeatureRuntime.shared.sync(GlobalShortcutRole.featuresToSilenceWhileRecording)
+        // Not a feature role, so the sync above cannot reach it.
+        PanelSearchHotkey.shared.syncWithPreferences()
     }
 }

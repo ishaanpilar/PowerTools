@@ -225,6 +225,10 @@ struct GlobalShortcut: Equatable, Hashable {
     // narrow space some layouts put on that combination.
     static let commandBarDefault = GlobalShortcut(keyCode: Int64(kVK_Space),
                                                   modifiers: [.option])
+    // F for find, on the free control-option-command layer: opens the panel
+    // with its feature search already focused.
+    static let panelSearchDefault = GlobalShortcut(keyCode: Int64(kVK_ANSI_F),
+                                                   modifiers: [.control, .option, .command])
     // Next to the screenshot's 4, on the same free control-option-command
     // layer, matching how the system numbers its own capture keys.
     static let screenRecorderDefault = GlobalShortcut(keyCode: Int64(kVK_ANSI_5),

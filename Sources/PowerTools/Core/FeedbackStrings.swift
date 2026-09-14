@@ -59,7 +59,7 @@ extension FeatureStrings {
 extension FeedbackStrings {
     static let enUS = FeedbackStrings(
         sectionTitle: "Feedback",
-        sectionCaption: "Send a bug report or feature idea directly to the person who maintains PowerTools.",
+        sectionCaption: "Send a bug report or feature idea directly to the person who maintains PowerTools AI.",
         openButton: "Send feedback",
         windowTitle: "Send feedback",
         bugTitle: "Bug",

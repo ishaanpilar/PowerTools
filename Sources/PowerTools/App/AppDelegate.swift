@@ -106,6 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
 
         HotkeyManager.shared.onActivate = { KeepAwakeManager.shared.toggle() }
         HotkeyManager.shared.syncWithPreferences()
+        PanelSearchHotkey.shared.syncWithPreferences()
 
         KeepAwakeManager.shared.recoverIfNeeded {
             KeepAwakeManager.shared.activateOnLaunchIfNeeded()
@@ -417,6 +418,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             MenuPanelFocus.shared.showNormalPanel()
         }
         togglePopover()
+    }
+
+    /// Opens the panel on its dashboard, as a click on the menu bar icon does.
+    func showMainPanel() {
+        guard !popover.isShown else { return }
+        MenuPanelFocus.shared.showNormalPanel()
+        showPopover(allowRecentClose: true)
+    }
+
+    /// Opens the panel on its feature search, or moves an open panel there.
+    /// Activates the app so typing reaches the field even when another app
+    /// was in front when the shortcut fired.
+    func showPanelSearch() {
+        MenuPanelFocus.shared.focusSearch()
+        if popover.isShown {
+            NSApp.activate(ignoringOtherApps: true)
+            popover.contentViewController?.view.window?.makeKey()
+            return
+        }
+        showPopover(allowRecentClose: true)
     }
 
     private func showMetricPanel(for metric: MenuBarMetric, anchoredTo button: NSStatusBarButton) {
@@ -1614,6 +1635,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         window.standardWindowButton(.closeButton)?.isHidden = isFirstRun
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
+        // Setup is designed dark in every appearance; the window's own
+        // controls (menus, switches, disclosure) have to agree with it.
+        window.appearance = NSAppearance(named: .darkAqua)
         window.isReleasedWhenClosed = false
         window.isRestorable = false
         window.isMovableByWindowBackground = true

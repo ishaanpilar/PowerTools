@@ -67,6 +67,18 @@ enum FeaturePreset: String, CaseIterable, Identifiable {
     }
 }
 
+/// Where a stored setup position stands. The flow applies its feature choice
+/// when leaving its first step, so any later step means the choice is already
+/// installed and must be read back rather than replaced by a preset.
+enum OnboardingProgress {
+    static let firstStepAfterSelection = 1
+
+    static func selectionWasApplied(in defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: DefaultsKey.hasOnboarded)
+            || defaults.integer(forKey: DefaultsKey.onboardingStep) >= firstStepAfterSelection
+    }
+}
+
 /// The honest, curated cost label each feature earns in the hub: what the
 /// feature keeps alive WHILE IT IS ON. Uninstalled features load nothing at
 /// all, which is the hub's own promise. Static by design — pretending to

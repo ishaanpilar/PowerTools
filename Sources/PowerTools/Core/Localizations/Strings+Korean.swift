@@ -61,7 +61,7 @@ extension Strings {
         keepAwakeMouseJiggleCaption: "세션 중 선택한 간격마다 포인터를 살짝 움직입니다.",
         keepAwakeMouseJiggleInterval: "간격",
         keepAwakeActiveIconLabel: "활성 아이콘",
-        keepAwakeActiveIconPowerTools: "PowerTools",
+        keepAwakeActiveIconPowerTools: "PowerTools AI",
         keepAwakeActiveIconCoffee: "커피",
         keepAwakeActiveIconEye: "눈",
         keepAwakeActiveIconMoon: "달",

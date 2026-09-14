@@ -61,7 +61,7 @@ extension WhatsAppOrganizerStrings {
         experimental: "Experimental",
         description: "Moves stable WhatsApp downloads to a dedicated folder and detects exact repeat downloads.",
         enabled: "Organize automatically",
-        enabledCaption: "WhatsApp may download a moved file again. PowerTools cannot prevent the network download, but it can detect and discard an identical extra copy.",
+        enabledCaption: "WhatsApp may download a moved file again. PowerTools AI cannot prevent the network download, but it can detect and discard an identical extra copy.",
         destination: "Destination folder",
         chooseFolder: "Choose…",
         useDefault: "Use Downloads/WhatsApp",

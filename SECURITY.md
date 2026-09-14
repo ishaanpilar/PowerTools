@@ -1,6 +1,6 @@
 # Security Policy
 
-Thanks for helping keep PowerTools and the people who use it safe.
+Thanks for helping keep PowerTools AI and the people who use it safe.
 
 ## Reporting a vulnerability
 
@@ -22,7 +22,7 @@ When you write it up, please include as much as you can.
 
 - A description of the issue and the impact it could have.
 - Steps to reproduce, or a proof of concept.
-- The PowerTools version from Settings under About and your macOS version.
+- The PowerTools AI version from Settings under About and your macOS version.
 
 ## What to expect
 
@@ -36,4 +36,4 @@ Security fixes land on the latest released version. Before you report, please ma
 
 ## Scope
 
-PowerTools runs locally and ships as a signed and notarized macOS app. The reports that matter most are the ones that could affect the integrity of the app or its self update flow, or that could let the app's permissions be misused. Issues in the outside services the app merely talks to, like GitHub's releases API or the speed test endpoint, are best taken to those providers.
+PowerTools AI runs locally and ships as a signed and notarized macOS app. The reports that matter most are the ones that could affect the integrity of the app or its self update flow, or that could let the app's permissions be misused. Issues in the outside services the app merely talks to, like GitHub's releases API or the speed test endpoint, are best taken to those providers.

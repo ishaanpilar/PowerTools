@@ -1,5 +1,5 @@
 name: "🐛 Bug Report"
-description: Report a bug or unexpected behavior in PowerTools
+description: Report a bug or unexpected behavior in PowerTools AI
 labels:
   - bug
 
@@ -21,7 +21,7 @@ body:
       label: Before you file
       description: The [troubleshooting guide](https://github.com/ishaanpilar/PowerTools/blob/main/docs/TROUBLESHOOTING.md) covers both of these.
       options:
-        - label: "If the feature does nothing at all, I checked that PowerTools is listed and switched on for the permission it needs in System Settings, Privacy and Security, and toggled it off and back on."
+        - label: "If the feature does nothing at all, I checked that PowerTools AI is listed and switched on for the permission it needs in System Settings, Privacy and Security, and toggled it off and back on."
           required: true
         - label: "It still happens on the latest version."
           required: true
@@ -41,7 +41,7 @@ body:
       label: Steps to Reproduce
       description: Steps to reproduce the behavior.
       placeholder: |
-        1. Open PowerTools
+        1. Open PowerTools AI
         2. Click on '...'
         3. See error
     validations:
@@ -74,7 +74,7 @@ body:
   - type: input
     id: powertools_version
     attributes:
-      label: PowerTools Version
+      label: PowerTools AI Version
       description: The number shown in Settings, on the About page.
       placeholder: Copy the number from the About page
     validations:
@@ -96,7 +96,7 @@ body:
     id: language
     attributes:
       label: Language
-      description: The language PowerTools is running in, and your macOS language if it differs. Several bugs so far were invisible in English, so this narrows things down fast.
+      description: The language PowerTools AI is running in, and your macOS language if it differs. Several bugs so far were invisible in English, so this narrows things down fast.
       placeholder: "简体中文 · macOS in 简体中文"
     validations:
       required: true

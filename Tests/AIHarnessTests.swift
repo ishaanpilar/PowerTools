@@ -324,6 +324,60 @@ enum AIHarnessTests {
                         && !validatorCode.contains("Date()") && !validatorCode.contains("Date.now"),
                      "the validator never reads the clock itself")
 
+        // MARK: - Contract documentation (task 07)
+
+        let harnessDocPath = "docs/AI-HARNESS.md"
+        let harnessDoc = AIHarnessSource.code(at: harnessDocPath)
+        let testsSource = AIHarnessSource.code(at: "Tests/AIHarnessTests.swift")
+        let registryTestsSource = AIHarnessSource.code(at: "Tests/AIActionRegistryTests.swift")
+        let allTestSource = testsSource + registryTestsSource
+
+        var guaranteeRowCount = 0
+        var missingGuaranteeChecks: [String] = []
+        if let guaranteesStart = harnessDoc.range(of: "## Guarantees") {
+            let afterGuarantees = harnessDoc[guaranteesStart.upperBound...]
+            let guaranteesSection = afterGuarantees.range(of: "\n## ").map { String(afterGuarantees[..<$0.lowerBound]) }
+                ?? String(afterGuarantees)
+            let rows = guaranteesSection.split(separator: "\n").filter { line in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                guard trimmed.hasPrefix("|") else { return false }
+                let afterPipe = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
+                return afterPipe.first?.isNumber == true
+            }
+            guaranteeRowCount = rows.count
+            for row in rows {
+                let columns = row.split(separator: "|", omittingEmptySubsequences: false)
+                guard columns.count > 4 else { continue }
+                let checkColumn = String(columns[4])
+                for message in AIHarnessSource.backtickedSegments(in: checkColumn) {
+                    if !allTestSource.contains("\"\(message)\"") {
+                        missingGuaranteeChecks.append(message)
+                    }
+                }
+            }
+        }
+        suite.expect(!harnessDoc.isEmpty && guaranteeRowCount >= 18 && missingGuaranteeChecks.isEmpty,
+                     "every guarantee in AI-HARNESS.md names a check that exists"
+                        + " (missing: \(missingGuaranteeChecks))")
+
+        let mutationsSource = AIHarnessSource.rawText(at: "Tests/mutation_checks.py")
+        var aiHarnessMutationDiagnostics: [String] = []
+        if let listStart = mutationsSource.range(of: "MUTATIONS = ["),
+           let listEnd = mutationsSource.range(of: "\n]\n", range: listStart.upperBound..<mutationsSource.endIndex) {
+            let block = String(mutationsSource[listStart.upperBound..<listEnd.lowerBound])
+            let chunks = block.components(separatedBy: "\n    (\"")
+            for (index, rawChunk) in chunks.enumerated() {
+                let chunk = index == 0 ? rawChunk : "(\"" + rawChunk
+                let literals = AIHarnessSource.pythonStringLiterals(in: chunk)
+                guard literals.count >= 6, literals[1] == "ai-harness" else { continue }
+                aiHarnessMutationDiagnostics.append(literals[5])
+            }
+        }
+        let missingMutationChecks = aiHarnessMutationDiagnostics.filter { !allTestSource.contains("\"\($0)\"") }
+        suite.expect(aiHarnessMutationDiagnostics.count >= 10 && missingMutationChecks.isEmpty,
+                     "every AI harness mutation names a check that exists"
+                        + " (missing: \(missingMutationChecks))")
+
         // MARK: - Production action registry (task 05)
 
         AIActionRegistryTests.run(suite)
@@ -338,6 +392,54 @@ enum AIHarnessSource {
         return text.split(separator: "\n", omittingEmptySubsequences: false)
             .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
             .joined(separator: "\n")
+    }
+
+    /// Unmodified file contents, for non-Swift sources where stripping "//" lines
+    /// would not be meaningful (or could clip a line that happens to start that way).
+    static func rawText(at path: String) -> String {
+        (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
+    }
+
+    /// Each run of text between a pair of backticks, in order.
+    static func backtickedSegments(in text: String) -> [String] {
+        var results: [String] = []
+        var current = ""
+        var inBackticks = false
+        for character in text {
+            if character == "`" {
+                if inBackticks { results.append(current) }
+                current = ""
+                inBackticks.toggle()
+            } else if inBackticks {
+                current.append(character)
+            }
+        }
+        return results
+    }
+
+    /// Each Python string literal in `text`, honoring whichever quote character
+    /// (`'` or `"`) opens it, so a single-quoted field holding embedded double
+    /// quotes (or the reverse) is not mistaken for a literal boundary.
+    static func pythonStringLiterals(in text: String) -> [String] {
+        var results: [String] = []
+        let characters = Array(text)
+        var index = 0
+        while index < characters.count {
+            let character = characters[index]
+            if character == "\"" || character == "'" {
+                var cursor = index + 1
+                var literal = ""
+                while cursor < characters.count, characters[cursor] != character {
+                    literal.append(characters[cursor])
+                    cursor += 1
+                }
+                results.append(literal)
+                index = cursor + 1
+            } else {
+                index += 1
+            }
+        }
+        return results
     }
 
     static func swiftFiles(under directory: String) -> [String] {

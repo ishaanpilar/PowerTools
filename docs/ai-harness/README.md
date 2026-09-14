@@ -14,13 +14,18 @@ executor.
 
 | Task | Title | Depends on | Status |
 | --- | --- | --- | --- |
-| [01](01-validated-plan.md) | `ValidatedPlan`: the validator is the only way to a runnable plan | — | Not started |
-| [02](02-approvals.md) | Approvals come from the app, bound to the exact plan, graduated by risk | 01 | Not started |
-| [03](03-live-availability.md) | Availability comes from live Command Bar rows, not a second copy of rules | 02 | Not started |
-| [04](04-typed-arguments.md) | Typed arguments that resolve to real Command Bar rows | 03 | Not started |
-| [05](05-action-registry.md) | The production action registry and its agreement with the catalog | 04 | Not started |
-| [06](06-capability-lease.md) | Capability lease: allowed actions, step limit, deadline | 05 | Not started |
-| [07](07-contract-docs.md) | `AI-HARNESS.md` names the check behind every guarantee | 06 | Not started |
+| [01](01-validated-plan.md) | `ValidatedPlan`: the validator is the only way to a runnable plan | — | Done — `59acc32`, `ai-harness/01-validated-plan`, 2026-09-14 |
+| [02](02-approvals.md) | Approvals come from the app, bound to the exact plan, graduated by risk | 01 | Done — `4e0e1ab`, `ai-harness/02-approvals`, 2026-09-14 |
+| [03](03-live-availability.md) | Availability comes from live Command Bar rows, not a second copy of rules | 02 | Done — `a03827a`, `ai-harness/03-live-availability`, 2026-09-14 |
+| [04](04-typed-arguments.md) | Typed arguments that resolve to real Command Bar rows | 03 | Done — `291075c`, `ai-harness/04-typed-arguments`, 2026-09-14 |
+| [05](05-action-registry.md) | The production action registry and its agreement with the catalog | 04 | Done — `d443a17`, `ai-harness/05-action-registry`, 2026-09-14 |
+| [06](06-capability-lease.md) | Capability lease: allowed actions, step limit, deadline | 05 | Done — `68a8f06`, `ai-harness/06-capability-lease`, 2026-09-14 |
+| [07](07-contract-docs.md) | `AI-HARNESS.md` names the check behind every guarantee | 06 | Done — `ai-harness/07-contract-docs`, 2026-09-14 (commit pending final verification) |
+
+**M1 is complete as of 2026-09-14.** All seven tasks landed; the full suite
+passes (32,791 checks) and `mutation_checks.py` proves all 18 guards, 11 of
+them the AI harness's own. See [the roadmap](../AI-PRODUCT-ROADMAP.md), M1's
+findings and section 3, for what closes and what remains for M2.
 
 Work strictly in order. Update this table when a task is done: status, branch
 and the date.

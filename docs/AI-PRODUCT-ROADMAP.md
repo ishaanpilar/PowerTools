@@ -2,9 +2,13 @@
 
 > **Status, 2026-09-14.** No AI feature has shipped. Owner decisions D1–D7 are
 > recorded; D8 and D9 are open. `AGENTS.md` (now tracked), `CONTRIBUTING.md` and
-> `docs/PRIVACY.md` have been rewritten for PowerTools AI. A tested
-> plan-validation contract exists in `Services/AI/AIHarnessContracts.swift` and
-> is not yet called by any executor.
+> `docs/PRIVACY.md` have been rewritten for PowerTools AI. **M1 is complete:**
+> the plan contract — `ValidatedPlan`, graded approval, live availability, typed
+> arguments, the 23-action registry checked against the real Command Bar
+> catalog, and the capability lease — is built, tested (61 `ai-harness` checks,
+> 32,791 total) and proven by 18 mutations, 11 of them the harness's own. It is
+> not yet called by any executor; that is M4. See
+> [docs/ai-harness/](ai-harness/README.md) for how it was built, task by task.
 
 1. [Decisions](#1-decisions)
 2. [Where things stand](#2-where-things-stand)
@@ -78,11 +82,11 @@ Foundation Models facts read from the SDK interface:
 
 | # | Finding | Status |
 | --- | --- | --- |
-| 1 | The harness document promises more than the code enforces | Open → M1 |
-| 2 | A second action registry is forming beside `CommandBarCatalog` | Open → M1.2 |
-| 3 | Plans validate which action runs, not what it acts on | Open → M1.3 |
-| 4 | One Boolean approves every risk class, and is not bound to the approved plan | Open → M1.4, M1.5 |
-| 5 | Nothing forces execution through the validator | Open → M1.1 |
+| 1 | The harness document promises more than the code enforces | Resolved 2026-09-14: `AI-HARNESS.md` rewritten (task 07); every guarantee names its enforcing check |
+| 2 | A second action registry is forming beside `CommandBarCatalog` | Resolved 2026-09-14: `AIActionRegistry` derives its 23 rows from the catalog and is checked against its source (task 05) |
+| 3 | Plans validate which action runs, not what it acts on | Resolved 2026-09-14: typed `AIActionArgument`/`AIArgumentKind`, resolved to real Command Bar row ids (task 04) |
+| 4 | One Boolean approves every risk class, and is not bound to the approved plan | Resolved 2026-09-14: `AIApproval` graded by risk, bound to exact steps and revision (task 02) |
+| 5 | Nothing forces execution through the validator | Resolved 2026-09-14: `ValidatedPlan`'s `fileprivate` initialiser (task 01) |
 | 6 | On-device AI reaches only macOS 26 | Resolved by D1 and D2: cloud providers serve macOS 14 and 15 |
 | 7 | The roadmap conflicted with the project's scope rules | Resolved: `CONTRIBUTING.md` rewritten |
 | 8 | Agent rules were not in the repository | Resolved: `AGENTS.md` tracked |
@@ -238,7 +242,9 @@ task, written on 2026-09-14 after reading the code. Work them in order.
   M4 with the executor and agent loop.
 
 **Exit:** all checks pass, and `python3 Tests/mutation_checks.py` proves each
-guard by making its named check fail.
+guard by making its named check fail. **Reached 2026-09-14:** all seven tasks
+landed on `ai-harness/01` through `ai-harness/07`; `ai-harness` suite at 61
+checks, full suite at 32,791, `mutation_checks.py` at 18/18 (11 `ai-harness`).
 
 ### M2 — First AI feature: text actions, on device and in the cloud
 

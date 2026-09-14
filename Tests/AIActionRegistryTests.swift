@@ -162,7 +162,8 @@ enum AIActionRegistryTests {
             }
         }
         suite.expect(rangeMismatches.isEmpty,
-                     "registered number ranges match the Command Bar row (mismatched: \(rangeMismatches))")
+                     "registered number ranges match the Command Bar row"
+                        + " (mismatched: \(rangeMismatches))")
 
         suite.expect(confirmationBlocksWithoutID == 0, "update the catalog parser")
 

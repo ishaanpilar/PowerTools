@@ -80,6 +80,10 @@ MUTATIONS = [
      "guard lease.allowedActionIDs.contains(action.id) else {",
      "guard true else {",
      "a registered, approved action outside the lease is rejected"),
+    ("contract names a missing check", "ai-harness", "docs/AI-HARNESS.md",
+     "`an agent cannot execute an empty plan`",
+     "`an agent can execute an empty plan`",
+     "every guarantee in AI-HARNESS.md names a check that exists"),
 ]
 
 

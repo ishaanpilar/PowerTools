@@ -5,9 +5,11 @@ runs on your Mac when your Mac supports it. Anything that leaves your Mac goes
 only where you send it — never to a PowerTools AI server, because there isn't
 one.
 
-This policy applies to PowerTools AI from its first public release. The AI
-features it describes are not in the current beta yet; until they ship, the app
-makes no AI requests of any kind.
+This policy applies to PowerTools AI from its first public release. Starting
+in 1.0.0-beta.2 you can install AI text actions and connect a provider, but
+the actions themselves — rewrite, shorten, proofread, summarise, translate —
+are not in the Command Bar yet. Until you install the feature and choose a
+provider, the app makes no AI requests of any kind.
 
 ## The short version
 

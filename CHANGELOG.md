@@ -2,6 +2,36 @@
 
 Notable changes to PowerTools AI are recorded here.
 
+## [1.0.0-beta.2] - 2026-09-16
+
+### Summary
+
+The first piece of PowerTools AI's own AI: connecting a provider. Install the
+AI text actions feature (off by default) and set up on-device Apple
+Intelligence, a cloud provider you bring your own key for, or a local model
+server on this Mac. Test the connection before relying on it. The text
+actions themselves — rewrite, shorten, proofread, summarise, translate — are
+not in the Command Bar yet; this release only gets the provider connection
+right.
+
+### Added
+
+- AI text actions, a new Feature Hub entry (off by default) with its own
+  Settings page.
+- A provider picker: on this Mac with Apple's on-device model (macOS 26,
+  Apple Intelligence on), DeepSeek, OpenAI, Anthropic, a custom
+  OpenAI-compatible endpoint, or a local server such as Ollama or LM Studio.
+- API keys live in the macOS Keychain only, never in Settings, exports or
+  logs.
+- Test connection sends one real request to confirm a provider works, and
+  links to that provider's own privacy policy.
+- HTTPS is required for every cloud address; a local server is accepted only
+  at a loopback address, so a request can never leave the Mac by accident.
+- Underneath, not yet reachable from anywhere in the app: the plan validator
+  that will gate future automated actions (risk levels, approvals, a
+  capability lease), and a context manifest with a one-time pre-send preview
+  for what a request is about to send.
+
 ## [1.0.0-beta.1] - 2026-09-14
 
 ### Summary

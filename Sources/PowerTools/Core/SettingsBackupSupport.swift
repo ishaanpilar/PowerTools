@@ -132,6 +132,11 @@ enum SettingsBackupSupport {
         DefaultsKey.systemShortcutsSuppressed,
         // DDC capability belongs to one physical monitor on one Mac port.
         DefaultsKey.brightnessDDCWriteOnlyPaths,
+        // Whether the one-time pre-send preview has already been shown for a
+        // content type and provider is a courtesy, not a consent record - a
+        // restored Mac shows it again rather than silently skip an
+        // explanation the person never saw on this install.
+        DefaultsKey.aiPreSendPreviewShown,
     ]
 
     /// The file's content: an envelope with the format version, the app

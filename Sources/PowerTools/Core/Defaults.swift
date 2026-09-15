@@ -689,6 +689,9 @@ enum DefaultsKey {
     static let aiTextActionsCustomModel = "aiTextActionsCustomModel"
     static let aiTextActionsLocalEndpoint = "aiTextActionsLocalEndpoint"
     static let aiTextActionsLocalModel = "aiTextActionsLocalModel"
+    /// [String] of "contentType::providerID" pairs the pre-send preview has
+    /// already shown, so it appears once per combination, not every request.
+    static let aiPreSendPreviewShown = "aiPreSendPreviewShown"
 
     /// Features hub availability layer, one key per AppFeature raw value.
     /// Registered true: unavailable features vanish from every surface and
@@ -1449,6 +1452,7 @@ enum Defaults {
         DefaultsKey.aiTextActionsCustomModel: "",
         DefaultsKey.aiTextActionsLocalEndpoint: "http://localhost:11434/v1",
         DefaultsKey.aiTextActionsLocalModel: "",
+        DefaultsKey.aiPreSendPreviewShown: [String](),
     ]
 
     static func register() {

@@ -149,14 +149,7 @@ struct AITextActionsSettings: View {
     }
 
     private func displayName(for kind: AITextActionsProviderKind) -> String {
-        switch kind {
-        case .onDevice: return strings.providerOnDevice
-        case .deepseek: return strings.providerDeepSeek
-        case .openai: return strings.providerOpenAI
-        case .anthropic: return strings.providerAnthropic
-        case .custom: return strings.providerCustom
-        case .localServer: return strings.providerLocalServer
-        }
+        AITextActionsProviderCatalog.displayName(for: kind, strings: strings)
     }
 
     // MARK: - Key management

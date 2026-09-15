@@ -309,6 +309,10 @@ if (( TEST )); then
         Sources/PowerTools/Services/AI/AIAnthropicProvider.swift
         Sources/PowerTools/Services/AI/AITextActionsProviderCatalog.swift
         Sources/PowerTools/Services/AI/AITextActionsProviderFactory.swift
+        Sources/PowerTools/Services/AI/AIContextManifest.swift
+        Sources/PowerTools/Services/AI/AIContextManifestBuilder.swift
+        Sources/PowerTools/Services/AI/AIPreSendPreviewTracker.swift
+        Sources/PowerTools/Services/AI/AICancellableRequest.swift
         Sources/PowerTools/Core/FeaturePresets.swift
         Sources/PowerTools/Core/FeatureHubStrings.swift
         Sources/PowerTools/Core/ShortcutSettingsStrings.swift

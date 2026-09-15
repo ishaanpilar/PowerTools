@@ -41,6 +41,10 @@ struct AITextActionsProviderOption {
     /// project's own AI privacy section instead, since neither names a
     /// single company whose policy applies.
     let privacyURL: URL
+    /// Whether a request to this provider stays on the Mac. `.localServer` is
+    /// `.local` despite being HTTP - a loopback-only address never leaves the
+    /// Mac, matching PRIVACY.md's "With a model server on this Mac" section.
+    let boundary: AIContextManifest.Boundary
 }
 
 enum AITextActionsProviderCatalog {
@@ -55,36 +59,37 @@ enum AITextActionsProviderCatalog {
     static let onDevice = AITextActionsProviderOption(
         kind: .onDevice, providerID: "apple-on-device", defaultEndpoint: nil, defaultModel: nil,
         requiresKey: false, endpointIsEditable: false, modelIsEditable: false,
-        privacyURL: URL(string: "https://www.apple.com/legal/privacy/")!
+        privacyURL: URL(string: "https://www.apple.com/legal/privacy/")!, boundary: .local
     )
     static let deepseek = AITextActionsProviderOption(
         kind: .deepseek, providerID: "deepseek",
         defaultEndpoint: URL(string: "https://api.deepseek.com/v1")!, defaultModel: "deepseek-chat",
         requiresKey: true, endpointIsEditable: false, modelIsEditable: true,
-        privacyURL: URL(string: "https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html")!
+        privacyURL: URL(string: "https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html")!,
+        boundary: .remote
     )
     static let openai = AITextActionsProviderOption(
         kind: .openai, providerID: "openai",
         defaultEndpoint: URL(string: "https://api.openai.com/v1")!, defaultModel: "gpt-4o-mini",
         requiresKey: true, endpointIsEditable: false, modelIsEditable: true,
-        privacyURL: URL(string: "https://openai.com/policies/")!
+        privacyURL: URL(string: "https://openai.com/policies/")!, boundary: .remote
     )
     static let anthropic = AITextActionsProviderOption(
         kind: .anthropic, providerID: "anthropic",
         defaultEndpoint: URL(string: "https://api.anthropic.com")!, defaultModel: "claude-haiku-4-5-20251001",
         requiresKey: true, endpointIsEditable: false, modelIsEditable: true,
-        privacyURL: URL(string: "https://www.anthropic.com/legal/privacy")!
+        privacyURL: URL(string: "https://www.anthropic.com/legal/privacy")!, boundary: .remote
     )
     static let custom = AITextActionsProviderOption(
         kind: .custom, providerID: "custom", defaultEndpoint: nil, defaultModel: nil,
         requiresKey: true, endpointIsEditable: true, modelIsEditable: true,
-        privacyURL: ownPrivacyURL
+        privacyURL: ownPrivacyURL, boundary: .remote
     )
     static let localServer = AITextActionsProviderOption(
         kind: .localServer, providerID: "local-server",
         defaultEndpoint: URL(string: "http://localhost:11434/v1")!, defaultModel: nil,
         requiresKey: false, endpointIsEditable: true, modelIsEditable: true,
-        privacyURL: ownPrivacyURL
+        privacyURL: ownPrivacyURL, boundary: .local
     )
 
     static let all: [AITextActionsProviderOption] = [onDevice, deepseek, openai, anthropic, custom, localServer]
@@ -97,6 +102,20 @@ enum AITextActionsProviderCatalog {
         case .anthropic: return anthropic
         case .custom: return custom
         case .localServer: return localServer
+        }
+    }
+
+    /// The single source of this mapping - the settings picker and the
+    /// context manifest both call this instead of each keeping their own
+    /// switch over `AITextActionsProviderKind`.
+    static func displayName(for kind: AITextActionsProviderKind, strings: AITextActionsFeatureStrings) -> String {
+        switch kind {
+        case .onDevice: return strings.providerOnDevice
+        case .deepseek: return strings.providerDeepSeek
+        case .openai: return strings.providerOpenAI
+        case .anthropic: return strings.providerAnthropic
+        case .custom: return strings.providerCustom
+        case .localServer: return strings.providerLocalServer
         }
     }
 }

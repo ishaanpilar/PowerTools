@@ -82,7 +82,7 @@ status here as they land.
 | 02 | 2.2, part of 2.6 | Provider protocol, capability matrix, the on-device Apple provider (`#if canImport(FoundationModels)`), on-device availability/error states | Done — `af5b1fc` |
 | 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Done — `e3d3dbd` |
 | 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — `3ba226b` |
-| 05 | 2.7 | Context manifest, pre-send preview, cancellation | Not started |
+| 05 | 2.7 | Context manifest, pre-send preview, cancellation | Done — pending commit |
 | 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Not started |
 | 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Not started |
 
@@ -262,3 +262,82 @@ Intelligence state it was checked on — compiling is not evidence, per
   green "Connected" — proving the feature genuinely works end to end on this
   macOS 26 Mac with Apple Intelligence available, not just that it compiles.
   No key was ever saved during verification, so nothing sensitive was written.
+
+## Task 05 — done
+
+- `Services/AI/AIContextManifest.swift`: the pure struct roadmap 2.7 names -
+  content type, item count, size, `Boundary` (`.local`/`.remote`), provider
+  id/display name, a retention note, and a privacy link. Every provider
+  request is meant to carry one (`AI-HARNESS.md`'s "Arrives later" table);
+  nothing yet builds one for a real send, since text actions still have no
+  Command Bar entry point (task 06) - this task lands the infrastructure the
+  way M1 landed `AIPlanValidator` before M4 had an executor to call it.
+- `AITextActionsProviderOption` gained a `boundary` field - `.localServer` is
+  `.local` despite being HTTP, since a loopback-only address never leaves the
+  Mac (PRIVACY.md's "With a model server on this Mac"). Added
+  `AITextActionsProviderCatalog.displayName(for:strings:)` as the one place
+  that maps a kind to its localized name; the settings view's own copy of
+  that switch was replaced with a call to it instead of kept as a duplicate.
+- `Services/AI/AIContextManifestBuilder.swift`: builds the manifest for
+  selected text specifically (`selectedTextContentType`), not a generic
+  constructor - a future content type (clipboard item, screenshot, file, all
+  named in PRIVACY.md) adds its own function here instead of a stringly-typed
+  branch. Retention note follows from `boundary` alone (two fixed strings),
+  not a per-provider copy, since PRIVACY.md itself only distinguishes "stays
+  on this Mac" from "governed by the provider's own policy".
+- `Services/AI/AIPreSendPreviewTracker.swift`: tracks which (content type,
+  provider) pairs have already shown the preview, so it appears once per
+  combination - `DefaultsKey.aiPreSendPreviewShown`, added to
+  `SettingsBackupSupport.machineStateKeys` deliberately: this is a courtesy
+  flag, not a consent record, so a restored Mac shows the preview again
+  rather than silently skip an explanation it never actually showed there.
+- `Services/AI/AICancellableRequest.swift`: wraps one in-flight stream so a
+  Cancel button can stop it without the caller managing its own `Task`
+  handle - roadmap 2.7's "cancel on every request". Deliberately not
+  `@MainActor`: `run`'s internal `Task` inherits whichever actor called
+  `run` (SwiftUI's `.task { }` is already MainActor), so callbacks land
+  there in real use without forcing every caller - including a plain unit
+  test - onto the main actor. An earlier version of the test suite *did*
+  mark the type `@MainActor` and hit a real deadlock doing so: a synchronous
+  `DispatchSemaphore.wait()` called from inside an async MainActor context
+  blocked the only thread able to run the very callback the test was
+  waiting on. The compiler's own warning
+  ("'wait' is unavailable from asynchronous contexts... an error in Swift 6
+  language mode") was the signal that caught it; fixed by bridging with
+  `withCheckedContinuation` instead of blocking, and by not requiring
+  `@MainActor` on the type in the first place.
+- `UI/AI/AIPreSendPreviewSheet.swift`: the reusable preview view - content
+  type, item count, size, destination, retention, a privacy link, Cancel and
+  Send. Feature-agnostic (any future content type can use it); task 06 wires
+  it to a real Command Bar send.
+- `Tests/AIContextManifestTests.swift` (new group `ai-context-manifest`, 70
+  checks): manifest construction for every provider kind, the boundary
+  mapping (on-device and local server `.local`, everything else `.remote`),
+  the preview tracker's persistence and independence per (content type,
+  provider) pair against an isolated `UserDefaults` suite, a source-level
+  check that the tracker's own code never references the Keychain, and
+  `AICancellableRequest`'s four behaviors (normal completion, mid-stream
+  cancellation via `Task.sleep` suspension rather than a thread-blocking
+  wait, a thrown error passing through unchanged, and a second `run` call
+  cancelling the first).
+- Verified: `swift build` clean; the six new/changed AI source files contain
+  no `FoundationModels` reference at all (grepped, not just visually
+  inspected); full `./build.sh --test` green (32,984 checks, `ai-context-manifest`
+  at 70/70 in 0.46s once the actor-isolation deadlock above was fixed - it
+  had been taking 40s, the giveaway that something was actually wrong rather
+  than just slow); `Tests/mutation_checks.py` green (18 of 18); full
+  `./build.sh` produces a signed `PowerTools.app`.
+- `AIPreSendPreviewSheet` itself has no live call site yet (task 06 adds
+  one), so it was not verified visually in this task the way tasks 01, 02
+  and 04 verified their UI live. A first attempt wired a temporary debug
+  button into the installed Developer build to preview it, but the
+  accessibility click landed ambiguously - possibly on Test Connection
+  instead of the debug button - triggering a real request against a
+  DeepSeek key already configured on this Mac from outside this session
+  (confirmed afterwards to be the person's own key, added deliberately
+  because the settings screen happened to be open - not an incident, but
+  investigated and reported as one before that was known). The temporary
+  debug code was reverted rather than pursued further; the sheet's
+  correctness rests on its unit-tested inputs (the manifest) and ordinary
+  SwiftUI composition already used elsewhere in this codebase, not a
+  screenshot.

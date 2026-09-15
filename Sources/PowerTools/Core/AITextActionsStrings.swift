@@ -47,6 +47,20 @@ struct AITextActionsFeatureStrings {
     let errorRateLimited: String
     let errorHTTPFormat: String
     let errorGeneric: String
+
+    let previewContentTypeSelectedText: String
+    let previewRetentionLocal: String
+    let previewRetentionRemote: String
+    let previewTitle: String
+    let previewIntro: String
+    let previewFieldContent: String
+    let previewFieldItemCount: String
+    let previewFieldSize: String
+    let previewFieldDestination: String
+    let previewFieldRetention: String
+    let previewCancelButton: String
+    let previewSendButton: String
+    let previewDontAskAgainNote: String
 }
 
 extension FeatureStrings {
@@ -111,6 +125,20 @@ extension AITextActionsFeatureStrings {
         errorTimeout: "The request timed out",
         errorRateLimited: "Rate limited. Try again shortly.",
         errorHTTPFormat: "The provider returned an error (status %1$d)",
-        errorGeneric: "Something went wrong"
+        errorGeneric: "Something went wrong",
+
+        previewContentTypeSelectedText: "Selected text",
+        previewRetentionLocal: "Processed on this Mac. Not kept anywhere, not sent anywhere.",
+        previewRetentionRemote: "Governed by the provider’s own policy. See the privacy link below.",
+        previewTitle: "Before this is sent",
+        previewIntro: "This is the first time selected text is going to this provider. You’ll see this once per provider; after that it sends right away.",
+        previewFieldContent: "Content",
+        previewFieldItemCount: "Items",
+        previewFieldSize: "Size",
+        previewFieldDestination: "Sent to",
+        previewFieldRetention: "Retention",
+        previewCancelButton: "Cancel",
+        previewSendButton: "Send",
+        previewDontAskAgainNote: "You won’t see this again for this provider"
     )
 }

@@ -1,3 +1,4 @@
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/logo-dark.svg">
     <img src="docs/assets/readme/logo.svg" width="220" alt="PowerTools AI logo">
@@ -68,8 +69,11 @@ PowerTools AI is in active development. The first beta is out.
 
 - **Works today:** every utility below. [Download the beta](#install) or
   [build it](#build-it).
-- **Being built:** the AI features. The [roadmap](docs/AI-PRODUCT-ROADMAP.md)
-  tracks progress.
+- **Being built:** the AI features. You can already install AI text actions
+  and connect a provider — on-device, a cloud provider with your own key, or
+  a local server — and test the connection, but the actions themselves
+  (rewrite, shorten, proofread, summarise, translate) aren't wired into the
+  Command Bar yet. The [roadmap](docs/AI-PRODUCT-ROADMAP.md) tracks progress.
 
 ## What it does
 

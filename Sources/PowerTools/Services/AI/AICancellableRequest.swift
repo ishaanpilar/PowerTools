@@ -16,10 +16,19 @@ import Foundation
 /// streamed, so there is nothing more for a caller to read after cancelling;
 /// `onFinish` is not called for a request this same instance has cancelled.
 ///
-/// Not itself `@MainActor`: `run`'s internal `Task` inherits whichever actor
-/// called `run` (SwiftUI's `.task { }` is already MainActor, so callbacks
-/// land there without this type forcing it), rather than requiring every
-/// caller - including a plain unit test - onto the main actor to use it.
+/// `onUpdate`/`onFinish` always fire on the main actor: `run`'s internal
+/// `Task` explicitly hops there (`Task { @MainActor in ... }`), rather than
+/// relying on whichever context happens to call `run` - a plain method
+/// merely *executing on the main thread* does not make a `Task` created
+/// inside it main-actor-isolated; only an actually-isolated caller (SwiftUI's
+/// `.task { }`, or another `@MainActor` context) would propagate that. A
+/// first version of this type assumed otherwise and called AppKit layout
+/// APIs from a background thread as a result - a real crash
+/// (`_AssertAutoLayoutOnAllowedThreadsOnly`), not a theoretical one, caught
+/// by actually running the feature live rather than by inspection. The type
+/// itself stays a plain class (not `@MainActor`) so a caller - including a
+/// unit test - can still create and cancel it from anywhere; only the
+/// callbacks are pinned.
 final class AICancellableRequest {
     private var task: Task<Void, Never>?
 
@@ -32,7 +41,7 @@ final class AICancellableRequest {
         onFinish: @escaping (Result<Void, Error>) -> Void
     ) {
         cancel()
-        let current = Task {
+        let current = Task { @MainActor in
             do {
                 for try await chunk in stream {
                     try Task.checkCancellation()

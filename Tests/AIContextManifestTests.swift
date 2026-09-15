@@ -175,16 +175,25 @@ enum AIContextManifestTests {
         }
     }
 
-    /// Runs `work` on a plain background `Task` and blocks this (synchronous,
-    /// non-async) test-runner thread until it finishes - the same pattern
-    /// `AIProviderTests`/`AIHTTPProviderTests` already use, safe here because
-    /// neither this thread nor the `Task` needs the other's actor to proceed.
+    /// Runs `work` and waits for it to finish by pumping the main run loop in
+    /// short bursts, not by blocking this (synchronous, non-async) thread on
+    /// a semaphore. `AICancellableRequest`'s callbacks are pinned to the main
+    /// actor, whose default executor is `DispatchQueue.main` - this test
+    /// runner's own `main()` already occupies that exact thread, so a
+    /// blocking `DispatchSemaphore.wait()` here would starve the callback
+    /// being waited for, the same deadlock class fixed once already in this
+    /// file (see `runToCompletion`'s doc comment). Spinning the run loop lets
+    /// main-actor work actually execute while this call still reads as
+    /// synchronous to its caller.
     private static func runAsync(_ work: @escaping () async -> Void) {
-        let expectation = DispatchSemaphore(value: 0)
+        var finished = false
         Task {
             await work()
-            expectation.signal()
+            finished = true
         }
-        _ = expectation.wait(timeout: .now() + 10)
+        let deadline = Date().addingTimeInterval(10)
+        while !finished && Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        }
     }
 }

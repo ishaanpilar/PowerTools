@@ -310,6 +310,7 @@ if (( TEST )); then
         Sources/PowerTools/Services/AI/AITextActionsProviderCatalog.swift
         Sources/PowerTools/Services/AI/AITextActionsProviderFactory.swift
         Sources/PowerTools/Services/AI/AIContextManifest.swift
+        Sources/PowerTools/Services/AI/AITextActionKind.swift
         Sources/PowerTools/Services/AI/AIContextManifestBuilder.swift
         Sources/PowerTools/Services/AI/AIPreSendPreviewTracker.swift
         Sources/PowerTools/Services/AI/AICancellableRequest.swift

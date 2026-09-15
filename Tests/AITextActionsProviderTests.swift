@@ -8,6 +8,110 @@ enum AITextActionsProviderTests {
         catalogChecks(suite)
         factoryChecks(suite)
         testConnectionChecks(suite)
+        actionKindChecks(suite)
+        configurationChecks(suite)
+        describeChecks(suite)
+    }
+
+    private static func actionKindChecks(_ suite: TestSuite) {
+        let strings = AITextActionsFeatureStrings.enUS
+        suite.expect(AITextActionKind.allCases.count == 5, "there are exactly the five actions roadmap 2.8 names")
+
+        let ids = AITextActionKind.allCases.map(\.id)
+        suite.expect(Set(ids).count == ids.count, "every action has a distinct id")
+
+        let titles = AITextActionKind.allCases.map { $0.title(strings: strings) }
+        suite.expect(Set(titles).count == titles.count, "every action has a distinct title")
+
+        let symbols = AITextActionKind.allCases.map(\.symbolName)
+        suite.expect(Set(symbols).count == symbols.count, "every action has a distinct icon")
+
+        for kind in AITextActionKind.allCases {
+            suite.expect(!kind.instructions(targetLanguage: .enUS).isEmpty,
+                         "\(kind)'s instructions are never empty")
+        }
+
+        let englishRewrite = AITextActionKind.rewrite.instructions(targetLanguage: .enUS)
+        let germanRewrite = AITextActionKind.rewrite.instructions(targetLanguage: .de)
+        suite.expect(englishRewrite == germanRewrite,
+                     "only translate's instructions depend on the target language")
+
+        let englishTranslate = AITextActionKind.translate.instructions(targetLanguage: .enUS)
+        let germanTranslate = AITextActionKind.translate.instructions(targetLanguage: .de)
+        suite.expect(englishTranslate != germanTranslate
+                        && englishTranslate.contains(AppLanguage.enUS.displayName)
+                        && germanTranslate.contains(AppLanguage.de.displayName),
+                     "translate's instructions name the actual target language")
+    }
+
+    private static func configurationChecks(_ suite: TestSuite) {
+        let suiteName = "com.powertools.tests.aiTextActionsConfiguration"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        suite.expect(AITextActionsProviderConfiguration.current(defaults).kind == .onDevice,
+                     "with nothing stored yet, current() defaults to on-device")
+
+        defaults.set("garbage", forKey: DefaultsKey.aiTextActionsProvider)
+        suite.expect(AITextActionsProviderConfiguration.current(defaults).kind == .onDevice,
+                     "an unrecognised stored provider value falls back to on-device rather than crashing")
+
+        defaults.set(AITextActionsProviderKind.deepseek.rawValue, forKey: DefaultsKey.aiTextActionsProvider)
+        defaults.set("deepseek-reasoner", forKey: DefaultsKey.aiTextActionsDeepSeekModel)
+        let deepseekConfig = AITextActionsProviderConfiguration.current(defaults)
+        suite.expect(deepseekConfig.kind == .deepseek && deepseekConfig.model == "deepseek-reasoner" && deepseekConfig.endpoint.isEmpty,
+                     "current() reads the model stored for the selected preset provider, and no endpoint (it's fixed)")
+
+        defaults.set(AITextActionsProviderKind.custom.rawValue, forKey: DefaultsKey.aiTextActionsProvider)
+        defaults.set("gpt-4", forKey: DefaultsKey.aiTextActionsCustomModel)
+        defaults.set("https://example.com/v1", forKey: DefaultsKey.aiTextActionsCustomEndpoint)
+        let customConfig = AITextActionsProviderConfiguration.current(defaults)
+        suite.expect(customConfig.kind == .custom && customConfig.model == "gpt-4"
+                        && customConfig.endpoint == "https://example.com/v1",
+                     "current() reads both the model and endpoint stored for custom")
+
+        defaults.set(AITextActionsProviderKind.localServer.rawValue, forKey: DefaultsKey.aiTextActionsProvider)
+        defaults.set("llama3", forKey: DefaultsKey.aiTextActionsLocalModel)
+        defaults.set("http://localhost:11434/v1", forKey: DefaultsKey.aiTextActionsLocalEndpoint)
+        let localConfig = AITextActionsProviderConfiguration.current(defaults)
+        suite.expect(localConfig.kind == .localServer && localConfig.model == "llama3"
+                        && localConfig.endpoint == "http://localhost:11434/v1",
+                     "current() reads both the model and endpoint stored for a local server")
+    }
+
+    private static func describeChecks(_ suite: TestSuite) {
+        let strings = AITextActionsFeatureStrings.enUS
+
+        let reasons: [(AIProviderUnavailableReason, String)] = [
+            (.requiresNewerMacOS, strings.reasonRequiresNewerMacOS),
+            (.deviceNotEligible, strings.reasonDeviceNotEligible),
+            (.appleIntelligenceNotEnabled, strings.reasonAppleIntelligenceNotEnabled),
+            (.modelNotReady, strings.reasonModelNotReady),
+            (.noProviderConfigured, strings.reasonNoProviderConfigured),
+            (.endpointNotAllowed, strings.reasonEndpointNotAllowed),
+        ]
+        for (reason, expected) in reasons {
+            suite.expect(AITextActionsProviderFactory.describe(reason, strings: strings) == expected,
+                         "\(reason) describes as its matching string, not a generic fallback")
+        }
+
+        suite.expect(AITextActionsProviderFactory.describe(.notAvailable(.modelNotReady), strings: strings)
+                        == strings.reasonModelNotReady,
+                     "a notAvailable error delegates to the reason description")
+        suite.expect(AITextActionsProviderFactory.describe(.invalidKey, strings: strings) == strings.errorInvalidKey,
+                     "invalidKey describes as its matching string")
+        suite.expect(AITextActionsProviderFactory.describe(.offline, strings: strings) == strings.errorOffline,
+                     "offline describes as its matching string")
+        suite.expect(AITextActionsProviderFactory.describe(.timeout, strings: strings) == strings.errorTimeout,
+                     "timeout describes as its matching string")
+        suite.expect(AITextActionsProviderFactory.describe(.rateLimited, strings: strings) == strings.errorRateLimited,
+                     "rateLimited describes as its matching string")
+        suite.expect(AITextActionsProviderFactory.describe(.httpError(status: 503), strings: strings)
+                        == String(format: strings.errorHTTPFormat, 503),
+                     "httpError fills its status into the format string")
+        suite.expect(AITextActionsProviderFactory.describe(.contextTooLong, strings: strings) == strings.errorGeneric,
+                     "an error with no specific string falls back to the generic message")
     }
 
     private static func catalogChecks(_ suite: TestSuite) {

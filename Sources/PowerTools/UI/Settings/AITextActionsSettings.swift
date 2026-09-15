@@ -182,7 +182,7 @@ struct AITextActionsSettings: View {
     // MARK: - Test connection
 
     private func configuration() -> AITextActionsProviderConfiguration {
-        AITextActionsProviderConfiguration(kind: kind, model: modelBinding.wrappedValue, endpoint: endpointBinding.wrappedValue)
+        .current()
     }
 
     private func runTest() {
@@ -238,25 +238,10 @@ struct AITextActionsSettings: View {
     }
 
     private func describe(_ reason: AIProviderUnavailableReason) -> String {
-        switch reason {
-        case .requiresNewerMacOS: return strings.reasonRequiresNewerMacOS
-        case .deviceNotEligible: return strings.reasonDeviceNotEligible
-        case .appleIntelligenceNotEnabled: return strings.reasonAppleIntelligenceNotEnabled
-        case .modelNotReady: return strings.reasonModelNotReady
-        case .noProviderConfigured: return strings.reasonNoProviderConfigured
-        case .endpointNotAllowed: return strings.reasonEndpointNotAllowed
-        }
+        AITextActionsProviderFactory.describe(reason, strings: strings)
     }
 
     private func describe(_ error: AIGenerationError) -> String {
-        switch error {
-        case .notAvailable(let reason): return describe(reason)
-        case .invalidKey: return strings.errorInvalidKey
-        case .offline: return strings.errorOffline
-        case .timeout: return strings.errorTimeout
-        case .rateLimited: return strings.errorRateLimited
-        case .httpError(let status): return String(format: strings.errorHTTPFormat, status)
-        default: return strings.errorGeneric
-        }
+        AITextActionsProviderFactory.describe(error, strings: strings)
     }
 }

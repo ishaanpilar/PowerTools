@@ -1445,6 +1445,25 @@ enum CommandBarCatalog {
                 run: { _ in keepOnShelf(text) }))
         }
 
+        // Rewrite, shorten, proofread, summarise, translate: each opens the
+        // same floating result panel, which builds the provider, shows the
+        // one-time pre-send preview if needed, streams the answer and offers
+        // Copy/Replace/Cancel. The bar closes first (no keepsBarOpen) since
+        // the request takes real time; afterBeat matches every other row
+        // whose result needs the bar out of the way before it appears.
+        if AppFeature.aiTextActions.isAvailable {
+            let ai = FeatureStrings.aiTextActions(L10n.shared.language)
+            for actionKind in AITextActionKind.allCases {
+                entries.append(CommandBarEntry(
+                    id: "selection.ai.\(actionKind.rawValue)",
+                    title: actionKind.title(strings: ai),
+                    subtitle: ai.actionRowSubtitle,
+                    icon: .symbol(actionKind.symbolName),
+                    countsUsage: false,
+                    run: { _ in afterBeat { AITextActionPanelController.shared.run(actionKind, text: text) } }))
+            }
+        }
+
         let words = CommandBarText.wordCount(text)
         let characters = CommandBarText.characterCount(text)
         let count = String(format: bar.selectionCountFormat, words, characters)

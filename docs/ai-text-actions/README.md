@@ -83,7 +83,7 @@ status here as they land.
 | 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Done — `e3d3dbd` |
 | 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — `3ba226b` |
 | 05 | 2.7 | Context manifest, pre-send preview, cancellation | Done — `bd8632c` |
-| 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Not started |
+| 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Done — pending commit |
 | 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Not started |
 
 Tasks 02 and 03 can happen in either order (both are new providers behind the
@@ -269,7 +269,7 @@ Intelligence state it was checked on — compiling is not evidence, per
   content type, item count, size, `Boundary` (`.local`/`.remote`), provider
   id/display name, a retention note, and a privacy link. Every provider
   request is meant to carry one (`AI-HARNESS.md`'s "Arrives later" table);
-  nothing yet builds one for a real send, since text actions still have no
+  nothing yet builds one for a real send, since text actions still have nops
   Command Bar entry point (task 06) - this task lands the infrastructure the
   way M1 landed `AIPlanValidator` before M4 had an executor to call it.
 - `AITextActionsProviderOption` gained a `boundary` field - `.localServer` is
@@ -341,3 +341,96 @@ Intelligence state it was checked on — compiling is not evidence, per
   correctness rests on its unit-tested inputs (the manifest) and ordinary
   SwiftUI composition already used elsewhere in this codebase, not a
   screenshot.
+
+## Task 06 — done
+
+- `Services/AI/AITextActionKind.swift`: the five actions - rewrite, shorten,
+  proofread, summarise, translate - each a fixed system prompt sent as
+  `instructions`, with the selection itself as `prompt`, never mixed into one
+  string (PRIVACY.md's "content is treated as data, not instructions").
+  Translate targets the app's own display language (`L10n.shared.language`);
+  a language picker is a real feature, not a one-line addition, so it's out
+  of scope here and nothing forecloses adding one later. Title and SF Symbol
+  per action live on the enum itself, so the Command Bar row and the result
+  panel's header can never name or icon the same action two different ways.
+- `Services/AI/AITextActionsProviderFactory.swift` gained two pieces of
+  shared logic that used to live only inside the Settings view:
+  `AITextActionsProviderConfiguration.current(_:)` (reads the same
+  UserDefaults keys `@AppStorage` already keeps in sync, so a non-View
+  caller uses the exact provider setup the person configured) and
+  `describe(_:strings:)` for both `AIProviderUnavailableReason` and
+  `AIGenerationError`. `AITextActionsSettings.swift` was refactored to call
+  these instead of keeping its own copy, so the settings page and the
+  Command Bar result panel describe the same failure the same way.
+- `Services/QuickTools/AITextActionPanelController.swift`: the floating
+  result panel - borderless, non-activating, positioned near the pointer,
+  dismissed by Escape or an outside click - built on the exact shape of
+  `QRResultController`/`QuickToolHUD`'s scrolling-capture panel (an
+  `ObservableObject` model driving a `NSHostingController` that's resized,
+  not rebuilt, as content changes). Shows `AIPreSendPreviewSheet` first when
+  `AIPreSendPreviewTracker` says this (content type, provider) pair hasn't
+  been previewed yet, then streams into a result view with Copy, Replace and
+  Cancel, driven by `AICancellableRequest`.
+- `Services/CommandBar/CommandBarCatalog.swift`'s `selectionEntries` gained
+  the five rows, gated on `AppFeature.aiTextActions.isAvailable` like every
+  other conditional row in that function. The bar closes before the panel
+  opens (`afterBeat`, no `keepsBarOpen`), matching every other row whose
+  result takes real time (screen OCR, recent captures).
+- **A real crash, caught only by running the feature live, not by
+  inspection or the unit suite.** `AICancellableRequest`'s doc comment
+  (written in task 05) claimed its internal `Task` "inherits whichever actor
+  called `run`" - true only when the caller is itself running inside an
+  actor-isolated context (SwiftUI's `.task { }`, or another `@MainActor`
+  function), not merely *executing on the main thread* at the moment it's
+  called. `AITextActionPanelController` is a plain class calling `run` from
+  a plain synchronous method, so the internal `Task` ran on a background
+  thread from the cooperative pool; its `onUpdate` closure called
+  `relayout()`, which calls into AppKit Auto Layout
+  (`NSHostingController.view.layoutSubtreeIfNeeded()`) - off the main
+  thread, a hard crash (`SIGABRT`, `_AssertAutoLayoutOnAllowedThreadsOnly`).
+  First reproduced live: selecting "Rewrite" in the real Command Bar killed
+  the app outright, confirmed via the resulting `.ips` crash report before
+  any theorising. Fixed by having `AICancellableRequest.run`'s internal
+  `Task` explicitly hop with `Task { @MainActor in ... }`, so its callbacks
+  are always main-actor-delivered regardless of caller. This in turn broke
+  `Tests/AIContextManifestTests.swift`'s own `runAsync` helper, which had
+  been blocking the test runner's thread with a `DispatchSemaphore.wait()` -
+  safe before, because neither side needed the other's actor, and a real
+  main-thread-starvation deadlock afterward, since that thread *is* the main
+  actor's executor thread. Fixed by replacing the blocking wait with a
+  loop that pumps `RunLoop.main` in short bursts, which lets main-actor work
+  actually execute while the call still reads as synchronous - caught by the
+  suite's runtime jumping from 0.46s to 30s+, not a failure message, so it's
+  worth remembering that a suspiciously slow-but-passing suite can be hiding
+  exactly this kind of starvation.
+- `Tests/AIActionRegistryTests.swift`: the five rows share one dynamically
+  generated id prefix (`id: "selection.ai.\(actionKind.rawValue)"`), which
+  the M1 harness's source-scanning registry check parses as the template
+  prefix `"selection.ai"` - added to `excluded` with a reason (an AI text
+  action runs its own AI request; it is not a deterministic tool action for
+  an M4 agent to invoke).
+- `Tests/AITextActionsProviderTests.swift` gained three check groups: every
+  action has a distinct id/title/icon and non-empty instructions (only
+  translate's depend on the target language); `configuration()`'s reads for
+  every provider kind against an isolated `UserDefaults` suite, including an
+  unrecognised stored value falling back to on-device rather than crashing;
+  and `describe(_:strings:)` for every reason and error case.
+- Verified: `swift build` clean; the changed/added files contain no
+  `FoundationModels` reference; full `./build.sh --test` green (33,013
+  checks); `Tests/mutation_checks.py` green (18 of 18); full `./build.sh`
+  produces a signed `PowerTools.app`. Live-verified on this Mac: selected
+  text in a disposable TextEdit document (never a real document), opened
+  the real Command Bar with its default shortcut, confirmed all five rows
+  appear only when text is selected and the feature is installed, ran
+  Rewrite, and watched a genuine on-device rewrite ("hey can u send me the
+  report when u get a sec, no rush" to "Please submit the report.") stream
+  into the result panel with working Copy/Replace buttons shown. The crash
+  above was found and fixed during this same live pass. One verification
+  step was skipped after two false alarms in a row (a Command Bar query
+  field that turned out to hold unrelated leftover personal search text,
+  caught and deleted before being acted on; and an accessibility tree that
+  wouldn't expose this specific panel's buttons to automated clicking) -
+  Copy and Replace were confirmed by re-using already-proven, unchanged
+  functions (`CommandBarCatalog.typeAtCursor`, the same pasteboard-write
+  pattern `copyAnswer` already uses) rather than by clicking them
+  interactively.

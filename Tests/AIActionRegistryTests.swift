@@ -15,6 +15,8 @@ enum AIActionRegistryTests {
     static let fixedCopy = "A fixed-duration copy of action.keepAwake, which plans use with a number."
     static let barMode = "Switches the Command Bar into a browsing mode rather than doing something."
     static let settingsPage = "Opens one Settings page; action.openSettings covers the first release."
+    static let aiTextAction = "Runs its own AI request and shows a result panel; not a deterministic"
+        + " tool action for an agent to invoke (M4 reconsiders if that ever changes)."
 
     /// Command Bar rows deliberately unavailable to AI. A new catalog row fails the
     /// suite until it is registered or listed here.
@@ -70,6 +72,7 @@ enum AIActionRegistryTests {
         "kill.browse": barMode,
         "settings": settingsPage,
         "settings.feature": settingsPage,
+        "selection.ai": aiTextAction,
     ]
 
     static func run(_ suite: TestSuite) {

@@ -61,6 +61,18 @@ struct AITextActionsFeatureStrings {
     let previewCancelButton: String
     let previewSendButton: String
     let previewDontAskAgainNote: String
+
+    let actionRewriteTitle: String
+    let actionShortenTitle: String
+    let actionProofreadTitle: String
+    let actionSummariseTitle: String
+    let actionTranslateTitle: String
+    let actionRowSubtitle: String
+
+    let resultWorkingLabel: String
+    let resultCopyButton: String
+    let resultReplaceButton: String
+    let resultCancelButton: String
 }
 
 extension FeatureStrings {
@@ -139,6 +151,18 @@ extension AITextActionsFeatureStrings {
         previewFieldRetention: "Retention",
         previewCancelButton: "Cancel",
         previewSendButton: "Send",
-        previewDontAskAgainNote: "You won’t see this again for this provider"
+        previewDontAskAgainNote: "You won’t see this again for this provider",
+
+        actionRewriteTitle: "Rewrite",
+        actionShortenTitle: "Shorten",
+        actionProofreadTitle: "Proofread",
+        actionSummariseTitle: "Summarise",
+        actionTranslateTitle: "Translate",
+        actionRowSubtitle: "AI text action",
+
+        resultWorkingLabel: "Working…",
+        resultCopyButton: "Copy",
+        resultReplaceButton: "Replace",
+        resultCancelButton: "Cancel"
     )
 }

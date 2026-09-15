@@ -11,6 +11,39 @@ struct AITextActionsProviderConfiguration {
     var kind: AITextActionsProviderKind
     var model: String = ""
     var endpoint: String = ""
+
+    /// Reads the configuration UserDefaults already holds - the same values
+    /// `AITextActionsSettings`'s `@AppStorage` fields keep in sync - so a
+    /// non-View caller (the Command Bar actions in task 06) uses the exact
+    /// same provider setup the person configured in Settings, from one place
+    /// rather than a second copy of the key-reading logic.
+    static func current(_ defaults: UserDefaults = .standard) -> AITextActionsProviderConfiguration {
+        let kind = AITextActionsProviderKind(rawValue: defaults.string(forKey: DefaultsKey.aiTextActionsProvider) ?? "")
+            ?? .onDevice
+        switch kind {
+        case .onDevice:
+            return AITextActionsProviderConfiguration(kind: kind)
+        case .deepseek:
+            return AITextActionsProviderConfiguration(
+                kind: kind, model: defaults.string(forKey: DefaultsKey.aiTextActionsDeepSeekModel) ?? "")
+        case .openai:
+            return AITextActionsProviderConfiguration(
+                kind: kind, model: defaults.string(forKey: DefaultsKey.aiTextActionsOpenAIModel) ?? "")
+        case .anthropic:
+            return AITextActionsProviderConfiguration(
+                kind: kind, model: defaults.string(forKey: DefaultsKey.aiTextActionsAnthropicModel) ?? "")
+        case .custom:
+            return AITextActionsProviderConfiguration(
+                kind: kind,
+                model: defaults.string(forKey: DefaultsKey.aiTextActionsCustomModel) ?? "",
+                endpoint: defaults.string(forKey: DefaultsKey.aiTextActionsCustomEndpoint) ?? "")
+        case .localServer:
+            return AITextActionsProviderConfiguration(
+                kind: kind,
+                model: defaults.string(forKey: DefaultsKey.aiTextActionsLocalModel) ?? "",
+                endpoint: defaults.string(forKey: DefaultsKey.aiTextActionsLocalEndpoint) ?? "")
+        }
+    }
 }
 
 enum AITextActionsProviderFactory {
@@ -117,6 +150,32 @@ enum AITextActionsProviderFactory {
             return .failure(error)
         } catch {
             return .failure(.other(String(describing: error)))
+        }
+    }
+
+    /// The one place that turns an availability reason into words a person
+    /// reads - shared by the settings page and the Command Bar result panel,
+    /// so the two surfaces never describe the same failure differently.
+    static func describe(_ reason: AIProviderUnavailableReason, strings: AITextActionsFeatureStrings) -> String {
+        switch reason {
+        case .requiresNewerMacOS: return strings.reasonRequiresNewerMacOS
+        case .deviceNotEligible: return strings.reasonDeviceNotEligible
+        case .appleIntelligenceNotEnabled: return strings.reasonAppleIntelligenceNotEnabled
+        case .modelNotReady: return strings.reasonModelNotReady
+        case .noProviderConfigured: return strings.reasonNoProviderConfigured
+        case .endpointNotAllowed: return strings.reasonEndpointNotAllowed
+        }
+    }
+
+    static func describe(_ error: AIGenerationError, strings: AITextActionsFeatureStrings) -> String {
+        switch error {
+        case .notAvailable(let reason): return describe(reason, strings: strings)
+        case .invalidKey: return strings.errorInvalidKey
+        case .offline: return strings.errorOffline
+        case .timeout: return strings.errorTimeout
+        case .rateLimited: return strings.errorRateLimited
+        case .httpError(let status): return String(format: strings.errorHTTPFormat, status)
+        default: return strings.errorGeneric
         }
     }
 }

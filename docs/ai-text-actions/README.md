@@ -83,7 +83,7 @@ status here as they land.
 | 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Done — `e3d3dbd` |
 | 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — `3ba226b` |
 | 05 | 2.7 | Context manifest, pre-send preview, cancellation | Done — `bd8632c` |
-| 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Done — pending commit |
+| 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Done — `1a89d85` |
 | 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Not started |
 
 Tasks 02 and 03 can happen in either order (both are new providers behind the
@@ -342,7 +342,7 @@ Intelligence state it was checked on — compiling is not evidence, per
   SwiftUI composition already used elsewhere in this codebase, not a
   screenshot.
 
-## Task 06 — done
+## Task 06 — done (`1a89d85`)
 
 - `Services/AI/AITextActionKind.swift`: the five actions - rewrite, shorten,
   proofread, summarise, translate - each a fixed system prompt sent as

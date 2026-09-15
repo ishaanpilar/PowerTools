@@ -81,7 +81,7 @@ status here as they land.
 | 01 | 2.1 | `AppFeature` case, Feature Hub copy, energy badge, an empty Settings page. No model code. Proves the feature installs/uninstalls cleanly before anything uses it | Done — `2e6a087` |
 | 02 | 2.2, part of 2.6 | Provider protocol, capability matrix, the on-device Apple provider (`#if canImport(FoundationModels)`), on-device availability/error states | Done — `af5b1fc` |
 | 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Done — `e3d3dbd` |
-| 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Not started |
+| 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — pending commit |
 | 05 | 2.7 | Context manifest, pre-send preview, cancellation | Not started |
 | 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Not started |
 | 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Not started |
@@ -194,3 +194,71 @@ Intelligence state it was checked on — compiling is not evidence, per
   `./build.sh --test` full suite green (32,863 checks); `Tests/mutation_checks.py`
   green (18 of 18 M1 regressions still detected, unaffected by this task);
   full `./build.sh` produces a signed `PowerTools.app`.
+
+## Task 04 — done
+
+- `Services/AI/AITextActionsProviderCatalog.swift`: `AITextActionsProviderKind`
+  (six cases: on-device, DeepSeek, OpenAI, Anthropic, custom, local server) and
+  `AITextActionsProviderOption`, the fixed facts about each — its
+  `AIProvider`/Keychain id, default endpoint/model, whether it needs a key or
+  an editable endpoint/model, and its privacy policy link. The three
+  third-party privacy URLs (Apple, DeepSeek, Anthropic) were fetched and
+  confirmed live before being hardcoded; OpenAI's blocked the fetcher
+  (bot-protected, not evidence of an invalid link) but was cross-confirmed by
+  independent search results, matching `AppInfo.swift`'s own discipline of
+  never shipping a guessed external URL. Custom and local server point at this
+  project's own `PRIVACY.md` AI section instead, since no single company's
+  policy applies to an address the person typed in themselves.
+- `Services/AI/AITextActionsProviderFactory.swift`: turns an
+  `AITextActionsProviderConfiguration` (kind + whatever the person typed for
+  model/endpoint) into a real `AIProvider`, or `nil` when there's nothing to
+  build yet (on-device without `FoundationModels`; custom/local with an empty
+  or structurally incomplete endpoint or model). `structuredURL(_:)` requires
+  both a scheme and a host, not just a URL that parses — `URL(string:)` alone
+  accepts a plain typo like "not a url" as a relative-path URL, which a first
+  version of this check let through; caught by a test asserting that specific
+  string builds nothing, not by inspection. Also holds `testConnection(_:)`:
+  sends one real, minimal request only when explicitly invoked, matching
+  `PRIVACY.md`'s "nothing is sent until you choose to".
+- `UI/Settings/AITextActionsSettings.swift`: the real settings page — a
+  provider picker; the endpoint (editable for custom/local, read-only text for
+  the fixed cloud presets, satisfying roadmap 2.5's "shows the endpoint" for
+  every provider, not just the configurable ones); an editable model field
+  everywhere but on-device, prefilled by placeholder with each preset's
+  default rather than a hardcoded stored value, so a stale default model id
+  can't silently break the feature; a `SecureField` for the key that never
+  redisplays a stored key's value, only whether one is saved; Test connection
+  wired to the factory and `testConnection(_:)`; and the provider's privacy
+  policy link. All user-facing text goes through
+  `AITextActionsFeatureStrings`, extended with the new fields.
+- `Core/Defaults.swift`: eight new `DefaultsKey` entries (selected provider
+  kind, one model override per cloud preset, custom endpoint/model, local
+  endpoint/model) and their registered defaults. Not Keychain-adjacent, so all
+  eight are ordinary registered preferences and travel in a settings backup
+  like any other — only the key itself stays Keychain-only.
+- `Tests/AITextActionsProviderTests.swift` (new group
+  `ai-text-actions-provider`, 38 checks): catalog completeness (one option per
+  kind, HTTPS-only privacy links, correct requiresKey/editable flags per
+  kind), the factory's nil-vs-built behavior including the `structuredURL`
+  fix, and `testConnection(_:)` against a mock provider (success, an
+  already-unavailable provider short-circuiting before it ever streams, a
+  thrown error passing through unchanged, and an all-empty-chunks stream
+  correctly counting as a failed test rather than a silent success).
+- Real, non-mocked verification on this Mac, done carefully after two earlier
+  incidents this session (a full-screen capture that exposed unrelated
+  personal content, and a coordinate-math click that hit the wrong window):
+  installed the Developer build via `./build.sh --dev --install` (which stops
+  the previous instance itself), then drove it entirely through the
+  Accessibility API — `System Events` clicking elements *by reference*
+  (the app's own "Settings…" menu item, the sidebar row found by its label,
+  the provider picker's actual menu items, a button located by scanning the
+  accessibility tree rather than computed screen coordinates) — with every
+  screenshot taken by `CGWindowID` (`screencapture -l<id>`), never
+  full-screen. Confirmed: the sidebar entry and page render; switching to
+  Custom reveals endpoint/model/key fields with the right placeholders and a
+  correctly-disabled Save key button; switching back to On this Mac and
+  tapping Test connection produces a real on-device generation through the
+  whole factory → provider → `testConnection` → UI pipeline, ending in a
+  green "Connected" — proving the feature genuinely works end to end on this
+  macOS 26 Mac with Apple Intelligence available, not just that it compiles.
+  No key was ever saved during verification, so nothing sensitive was written.

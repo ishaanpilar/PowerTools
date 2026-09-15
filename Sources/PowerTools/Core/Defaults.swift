@@ -678,6 +678,18 @@ enum DefaultsKey {
     static let simulateUpdate = "simulateUpdate"
     static let simulateBetaUI = "simulateBetaUI"
 
+    // AI text actions (M2): AITextActionsProviderKind.rawValue, and each
+    // provider's editable model/endpoint. The API key itself is never here -
+    // Keychain only, via AIProviderCredentials.
+    static let aiTextActionsProvider = "aiTextActionsProvider"
+    static let aiTextActionsDeepSeekModel = "aiTextActionsDeepSeekModel"
+    static let aiTextActionsOpenAIModel = "aiTextActionsOpenAIModel"
+    static let aiTextActionsAnthropicModel = "aiTextActionsAnthropicModel"
+    static let aiTextActionsCustomEndpoint = "aiTextActionsCustomEndpoint"
+    static let aiTextActionsCustomModel = "aiTextActionsCustomModel"
+    static let aiTextActionsLocalEndpoint = "aiTextActionsLocalEndpoint"
+    static let aiTextActionsLocalModel = "aiTextActionsLocalModel"
+
     /// Features hub availability layer, one key per AppFeature raw value.
     /// Registered true: unavailable features vanish from every surface and
     /// hold no resources, without ever touching their own enable keys.
@@ -1428,6 +1440,15 @@ enum Defaults {
         DefaultsKey.windowLayoutShortcutBottomCenterSixth: WindowLayoutAction.clearedShortcutStorageValue,
         DefaultsKey.windowLayoutShortcutBottomRightSixth: WindowLayoutAction.clearedShortcutStorageValue,
         DefaultsKey.windowLayoutShortcutFullScreen: WindowLayoutAction.clearedShortcutStorageValue,
+
+        DefaultsKey.aiTextActionsProvider: AITextActionsProviderKind.onDevice.rawValue,
+        DefaultsKey.aiTextActionsDeepSeekModel: "",
+        DefaultsKey.aiTextActionsOpenAIModel: "",
+        DefaultsKey.aiTextActionsAnthropicModel: "",
+        DefaultsKey.aiTextActionsCustomEndpoint: "",
+        DefaultsKey.aiTextActionsCustomModel: "",
+        DefaultsKey.aiTextActionsLocalEndpoint: "http://localhost:11434/v1",
+        DefaultsKey.aiTextActionsLocalModel: "",
     ]
 
     static func register() {

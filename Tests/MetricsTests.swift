@@ -23,6 +23,7 @@ struct MetricsTests {
             ("ai-harness", { AIHarnessTests.run(suite) }),
             ("ai-provider", { AIProviderTests.run(suite) }),
             ("ai-http-provider", { AIHTTPProviderTests.run(suite) }),
+            ("ai-text-actions-provider", { AITextActionsProviderTests.run(suite) }),
             ("core", { coreChecks(suite) }),
             ("keyboard", {
                 assistiveKeyboardChecks { suite.expect($0, $1) }

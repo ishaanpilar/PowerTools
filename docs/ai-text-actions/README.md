@@ -81,7 +81,7 @@ status here as they land.
 | 01 | 2.1 | `AppFeature` case, Feature Hub copy, energy badge, an empty Settings page. No model code. Proves the feature installs/uninstalls cleanly before anything uses it | Done — `2e6a087` |
 | 02 | 2.2, part of 2.6 | Provider protocol, capability matrix, the on-device Apple provider (`#if canImport(FoundationModels)`), on-device availability/error states | Done — `af5b1fc` |
 | 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Done — `e3d3dbd` |
-| 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — pending commit |
+| 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — `3ba226b` |
 | 05 | 2.7 | Context manifest, pre-send preview, cancellation | Not started |
 | 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Not started |
 | 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Not started |
@@ -195,7 +195,7 @@ Intelligence state it was checked on — compiling is not evidence, per
   green (18 of 18 M1 regressions still detected, unaffected by this task);
   full `./build.sh` produces a signed `PowerTools.app`.
 
-## Task 04 — done
+## Task 04 — done (`3ba226b`)
 
 - `Services/AI/AITextActionsProviderCatalog.swift`: `AITextActionsProviderKind`
   (six cases: on-device, DeepSeek, OpenAI, Anthropic, custom, local server) and

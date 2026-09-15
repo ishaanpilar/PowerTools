@@ -82,7 +82,7 @@ status here as they land.
 | 02 | 2.2, part of 2.6 | Provider protocol, capability matrix, the on-device Apple provider (`#if canImport(FoundationModels)`), on-device availability/error states | Done — `af5b1fc` |
 | 03 | 2.3, 2.4 | HTTP provider (OpenAI-compatible: DeepSeek/OpenAI/loopback; Anthropic adapter), Keychain key storage | Done — `e3d3dbd` |
 | 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — `3ba226b` |
-| 05 | 2.7 | Context manifest, pre-send preview, cancellation | Done — pending commit |
+| 05 | 2.7 | Context manifest, pre-send preview, cancellation | Done — `bd8632c` |
 | 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Not started |
 | 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Not started |
 
@@ -263,7 +263,7 @@ Intelligence state it was checked on — compiling is not evidence, per
   macOS 26 Mac with Apple Intelligence available, not just that it compiles.
   No key was ever saved during verification, so nothing sensitive was written.
 
-## Task 05 — done
+## Task 05 — done (`bd8632c`)
 
 - `Services/AI/AIContextManifest.swift`: the pure struct roadmap 2.7 names -
   content type, item count, size, `Boundary` (`.local`/`.remote`), provider

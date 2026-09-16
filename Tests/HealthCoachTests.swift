@@ -9,6 +9,10 @@ enum HealthCoachTests {
         knownActivityChecks(suite)
         sightingChecks(suite)
         processSourceChecks(suite)
+        thresholdChecks(suite)
+        detectorChecks(suite)
+        orderingChecks(suite)
+        adapterChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -115,5 +119,233 @@ enum HealthCoachTests {
                      "process usage never reads command-line arguments")
         suite.expect(code.contains("members: row.members"),
                      "reconciled CPU rows keep the helper names they were grouped from")
+    }
+
+    private static func thresholdChecks(_ suite: TestSuite) {
+        suite.expect(Defaults.registeredDefaults[DefaultsKey.healthCoachMemoryHogPercent] as? Int == 30,
+                     "the memory-hog threshold registers a default so Settings never reads an unset key")
+
+        let defaults = UserDefaults.standard
+        let keys = [DefaultsKey.monitorAlertCPUThreshold, DefaultsKey.healthCoachMemoryHogPercent,
+                   DefaultsKey.monitorAlertDiskFreePercent, DefaultsKey.monitorAlertBatteryPercent]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer {
+            for (key, value) in zip(keys, saved) {
+                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+            }
+        }
+
+        for key in keys { defaults.removeObject(forKey: key) }
+        let fallbacks = HealthFindingThresholds.sanitized(defaults: defaults)
+        suite.expect(fallbacks == HealthFindingThresholds(cpuPercent: 90, memoryHogPercent: 30,
+                                                           diskFreePercent: 10, batteryPercent: 15),
+                     "an unset threshold falls back to the same numbers Monitor Alerts uses")
+
+        defaults.set(999, forKey: DefaultsKey.monitorAlertCPUThreshold)
+        suite.expect(HealthFindingThresholds.sanitized(defaults: defaults).cpuPercent == 90,
+                     "an out-of-range CPU threshold falls back rather than detecting on a nonsense number")
+
+        defaults.set(70, forKey: DefaultsKey.monitorAlertCPUThreshold)
+        defaults.set(50, forKey: DefaultsKey.healthCoachMemoryHogPercent)
+        defaults.set(20, forKey: DefaultsKey.monitorAlertDiskFreePercent)
+        defaults.set(30, forKey: DefaultsKey.monitorAlertBatteryPercent)
+        suite.expect(HealthFindingThresholds.sanitized(defaults: defaults)
+                        == HealthFindingThresholds(cpuPercent: 70, memoryHogPercent: 50,
+                                                   diskFreePercent: 20, batteryPercent: 30),
+                     "a threshold Settings -> Monitor -> Alerts writes is read back exactly, the same key both use")
+    }
+
+    private static func detectorChecks(_ suite: TestSuite) {
+        let thresholds = HealthFindingThresholds()
+
+        // Battery
+        var battery = HealthSignalSnapshot()
+        battery.hasInternalBattery = true
+        battery.batteryChargePercent = 10
+        var noGates = HealthFindingGates()
+        suite.expect(HealthFindingDetector.findings(for: battery, previous: nil, gates: &noGates, thresholds: thresholds)
+                        .contains(.batteryLow(chargePercent: 10, thresholdPercent: 15)),
+                     "a low, unplugged battery is a finding")
+        battery.batteryIsCharging = true
+        suite.expect(!HealthFindingDetector.findings(for: battery, previous: nil, gates: &noGates, thresholds: thresholds)
+                        .contains(where: { if case .batteryLow = $0 { return true }; return false }),
+                     "a low battery that is charging is not a finding")
+
+        // Thermal
+        var thermal = HealthSignalSnapshot()
+        thermal.thermalPressure = .moderate
+        suite.expect(HealthFindingDetector.findings(for: thermal, previous: nil, gates: &noGates, thresholds: thresholds).isEmpty,
+                     "moderate thermal pressure, which is not yet throttling, is not a finding")
+        thermal.thermalPressure = .heavy
+        let heavyFindings = HealthFindingDetector.findings(for: thermal, previous: nil, gates: &noGates, thresholds: thresholds)
+        suite.expect(heavyFindings.count == 1 && heavyFindings.first?.severity == .notable,
+                     "throttling below critical is a notable finding, not a critical one")
+        thermal.thermalPressure = .critical
+        suite.expect(HealthFindingDetector.findings(for: thermal, previous: nil, gates: &noGates, thresholds: thresholds)
+                        .first?.severity == .critical,
+                     "critical thermal pressure is a critical finding")
+
+        // Memory pressure needs to hold for the sustained window
+        var memory = HealthSignalSnapshot()
+        memory.memoryPressure = .critical
+        memory.memoryUsedBytes = 12_000_000_000
+        memory.memoryTotalBytes = 16_000_000_000
+        memory.swapUsedBytes = 2_000_000_000
+        memory.topMemory = [ProcessUsage(pid: 1, name: "Heavy", value: 8_000_000_000)]
+        var memoryGates = HealthFindingGates()
+        memory.capturedAt = 0
+        suite.expect(!HealthFindingDetector.findings(for: memory, previous: nil, gates: &memoryGates, thresholds: thresholds)
+                        .contains(where: { if case .memoryPressureCritical = $0 { return true }; return false }),
+                     "a single critical memory reading does not fire before it has held")
+        memory.capturedAt = 6
+        _ = HealthFindingDetector.findings(for: memory, previous: nil, gates: &memoryGates, thresholds: thresholds)
+        memory.capturedAt = 13
+        let sustainedMemory = HealthFindingDetector.findings(for: memory, previous: nil, gates: &memoryGates, thresholds: thresholds)
+        suite.expect(sustainedMemory.contains { finding in
+            if case .memoryPressureCritical(let used, let total, let swap, let topApps) = finding {
+                return used == memory.memoryUsedBytes && total == memory.memoryTotalBytes
+                    && swap == memory.swapUsedBytes && topApps == memory.topMemory
+            }
+            return false
+        }, "critical memory pressure held for the sustained window fires with the readings that proved it")
+        memory.memoryPressure = .normal
+        memory.capturedAt = 14
+        suite.expect(!HealthFindingDetector.findings(for: memory, previous: nil, gates: &memoryGates, thresholds: thresholds)
+                        .contains(where: { if case .memoryPressureCritical = $0 { return true }; return false }),
+                     "memory pressure returning to normal clears the sustained gate immediately")
+
+        // Disk: the device closest to its threshold is named, not just "some disk"
+        let full = HealthDiskEvidence(name: "Data", freeBytes: 1_000_000_000, totalBytes: 500_000_000_000)
+        // Also below the threshold (8% free), so a wrong pick between two
+        // qualifying devices is what this test actually exercises.
+        let almostFull = HealthDiskEvidence(name: "Almost", freeBytes: 40_000_000_000, totalBytes: 500_000_000_000)
+        let roomy = HealthDiskEvidence(name: "Backup", freeBytes: 400_000_000_000, totalBytes: 500_000_000_000)
+        let tiny = HealthDiskEvidence(name: "Recovery", freeBytes: 100_000_000, totalBytes: 4_000_000_000)
+        var disk = HealthSignalSnapshot()
+        disk.diskDevices = [roomy, almostFull, full, tiny]
+        let diskFindings = HealthFindingDetector.findings(for: disk, previous: nil, gates: &noGates, thresholds: thresholds)
+        suite.expect(diskFindings.contains(.diskLow(device: full, thresholdPercent: 10)),
+                     "the disk-low finding names the specific device nearest its threshold")
+        suite.expect(!diskFindings.contains(where: { if case .diskLow(let device, _) = $0 { return device.name == "Almost" }; return false }),
+                     "a qualifying but less urgent device is not the one named")
+        suite.expect(!diskFindings.contains(where: { if case .diskLow(let device, _) = $0 { return device.name == "Recovery" }; return false }),
+                     "a device under the 10 GB floor is never a disk-low finding")
+
+        // Memory hog
+        var hog = HealthSignalSnapshot()
+        hog.memoryTotalBytes = 16_000_000_000
+        hog.topMemory = [ProcessUsage(pid: 2, name: "Chrome", value: 4_000_000_000)]
+        suite.expect(HealthFindingDetector.findings(for: hog, previous: nil, gates: &noGates, thresholds: thresholds)
+                        .contains(.memoryHog(app: hog.topMemory[0], percentOfTotal: 25, thresholdPercent: 30)) == false,
+                     "an app under the memory-hog threshold is not a finding")
+        hog.topMemory = [ProcessUsage(pid: 2, name: "Chrome", value: 6_000_000_000)]
+        suite.expect(HealthFindingDetector.findings(for: hog, previous: nil, gates: &noGates, thresholds: thresholds)
+                        .contains(.memoryHog(app: hog.topMemory[0], percentOfTotal: 37.5, thresholdPercent: 30)),
+                     "an app over the memory-hog threshold of total RAM is a finding")
+
+        // Swap growth needs both real growth and a genuine time gap
+        var swapBefore = HealthSignalSnapshot()
+        swapBefore.swapUsedBytes = 500_000_000
+        swapBefore.capturedAt = 0
+        var swapAfter = swapBefore
+        swapAfter.swapUsedBytes = 3_000_000_000
+        swapAfter.capturedAt = 601
+        suite.expect(HealthFindingDetector.findings(for: swapAfter, previous: swapBefore, gates: &noGates, thresholds: thresholds)
+                        .contains(.swapGrowth(beforeBytes: 500_000_000, afterBytes: 3_000_000_000, windowSeconds: 601)),
+                     "swap growing past the threshold over the full window is a finding")
+        var tooSoon = swapBefore
+        tooSoon.capturedAt = 0
+        var afterTooSoon = swapAfter
+        afterTooSoon.capturedAt = 60
+        suite.expect(!HealthFindingDetector.findings(for: afterTooSoon, previous: tooSoon, gates: &noGates, thresholds: thresholds)
+                        .contains(where: { if case .swapGrowth = $0 { return true }; return false }),
+                     "the same growth over too short a gap is not evaluated as a finding")
+        var smallGrowth = swapBefore
+        smallGrowth.swapUsedBytes = 1_200_000_000
+        smallGrowth.capturedAt = 700
+        suite.expect(!HealthFindingDetector.findings(for: smallGrowth, previous: swapBefore, gates: &noGates, thresholds: thresholds)
+                        .contains(where: { if case .swapGrowth = $0 { return true }; return false }),
+                     "swap growth under 2 GB across the window is not a finding")
+
+        // CPU needs to hold for the sustained window, exactly like Monitor Alerts' own gate
+        var cpu = HealthSignalSnapshot()
+        cpu.cpuUsage = 0.95
+        cpu.topCPU = [ProcessUsage(pid: 3, name: "Xcode", value: 95)]
+        var cpuGates = HealthFindingGates()
+        cpu.cpuUsageReadAt = 0
+        suite.expect(!HealthFindingDetector.findings(for: cpu, previous: nil, gates: &cpuGates, thresholds: thresholds)
+                        .contains(where: { if case .cpuSustained = $0 { return true }; return false }),
+                     "a single high CPU reading does not fire before it has held")
+        cpu.cpuUsageReadAt = 13
+        suite.expect(HealthFindingDetector.findings(for: cpu, previous: nil, gates: &cpuGates, thresholds: thresholds)
+                        .contains(.cpuSustained(usage: 0.95, thresholdPercent: 90, topApps: cpu.topCPU)),
+                     "CPU usage held over the threshold for the sustained window fires")
+
+        // Known activity and update availability pass straight through
+        var activity = HealthSignalSnapshot()
+        activity.topCPU = [ProcessUsage(pid: 4, name: "Code", value: 50,
+                                        members: [ProcessMember(name: "swift-frontend", count: 3)])]
+        suite.expect(HealthFindingDetector.findings(for: activity, previous: nil, gates: &noGates, thresholds: thresholds)
+                        .contains(.knownActivity(activity.activitySightings[0])),
+                     "a recognised activity in the top rows is a finding with no gate to hold")
+        var update = HealthSignalSnapshot()
+        update.updateAvailable = true
+        suite.expect(HealthFindingDetector.findings(for: update, previous: nil, gates: &noGates, thresholds: thresholds)
+                        .contains(.updateAvailable),
+                     "an available update is a finding")
+    }
+
+    private static func orderingChecks(_ suite: TestSuite) {
+        let findings: [HealthFinding] = [.updateAvailable, .knownActivity(HealthActivitySighting(
+            appPID: 1, appName: "Code", activity: .compiling, processCount: 2, appValue: 1)),
+            .batteryLow(chargePercent: 5, thresholdPercent: 15),
+            .thermal(level: .critical, topCPUApp: nil)]
+        suite.expect(findings.orderedByUrgency.map(\.severity) == [.critical, .critical, .info, .info],
+                     "findings are ordered most urgent first regardless of the order they were detected in")
+        suite.expect(findings.orderedByUrgency.first == .batteryLow(chargePercent: 5, thresholdPercent: 15),
+                     "battery low outranks even a critical thermal finding, matching the header's original priority")
+
+        let tiedPriority: [HealthFinding] = [
+            .knownActivity(HealthActivitySighting(appPID: 1, appName: "A", activity: .compiling,
+                                                  processCount: 1, appValue: 1)),
+            .knownActivity(HealthActivitySighting(appPID: 2, appName: "B", activity: .rustBuild,
+                                                  processCount: 1, appValue: 1)),
+        ]
+        suite.expect(tiedPriority.orderedByUrgency == tiedPriority,
+                     "findings of equal priority keep the order the detector produced them in")
+    }
+
+    private static func adapterChecks(_ suite: TestSuite) {
+        let defaults = UserDefaults.standard
+        let featureKeys = [AppFeature.monitorPower.availabilityKey, AppFeature.monitorCPU.availabilityKey,
+                           AppFeature.monitorMemory.availabilityKey, AppFeature.monitorDisk.availabilityKey]
+        let savedFeatures = featureKeys.map { defaults.object(forKey: $0) }
+        let savedThreshold = defaults.object(forKey: DefaultsKey.monitorAlertBatteryPercent)
+        defer {
+            for (key, value) in zip(featureKeys, savedFeatures) {
+                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+            }
+            if let savedThreshold { defaults.set(savedThreshold, forKey: DefaultsKey.monitorAlertBatteryPercent) }
+            else { defaults.removeObject(forKey: DefaultsKey.monitorAlertBatteryPercent) }
+        }
+        for key in featureKeys { defaults.set(true, forKey: key) }
+
+        var snapshot = SystemSnapshot()
+        snapshot.power = PowerReading(chargePercent: 12, isCharging: false, hasBattery: true)
+
+        defaults.set(15, forKey: DefaultsKey.monitorAlertBatteryPercent)
+        let before = SystemHealthSummary.conditions(for: snapshot, updateAvailable: false,
+                                                     defaults: defaults, hasInternalBattery: true)
+        defaults.set(5, forKey: DefaultsKey.monitorAlertBatteryPercent)
+        let after = SystemHealthSummary.conditions(for: snapshot, updateAvailable: false,
+                                                    defaults: defaults, hasInternalBattery: true)
+        suite.expect(before.contains(.batteryCriticallyLow) && !after.contains(.batteryCriticallyLow),
+                     "the header's battery condition reads the same threshold Health Coach's battery finding does, live")
+    }
+}
+
+extension SystemHealthCondition: Equatable {
+    static func == (lhs: SystemHealthCondition, rhs: SystemHealthCondition) -> Bool {
+        String(describing: lhs) == String(describing: rhs)
     }
 }

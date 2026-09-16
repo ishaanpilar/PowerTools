@@ -294,8 +294,8 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 
 | Task | Work | Model? | Status |
 | --- | --- | --- | --- |
-| 01 | `HealthSignalSnapshot`; `ProcessUsageService` returns helper names with grouped rows; `HealthKnownActivity` table + tests | No | Done — `health-coach/01-signal-snapshot`, 2026-09-16 (uncommitted) |
-| 02 | `HealthFindingDetector` with sustained gates; `SystemHealthSummary` becomes an adapter over it; tests including "no flicker" | No | Not started |
+| 01 | `HealthSignalSnapshot`; `ProcessUsageService` returns helper names with grouped rows; `HealthKnownActivity` table + tests | No | Done — merged `96c8ca62`, 2026-09-16 |
+| 02 | `HealthFindingDetector` with sustained gates; `SystemHealthSummary` becomes an adapter over it; tests including "no flicker" | No | Done — `health-coach/02-finding-detector`, 2026-09-16 (uncommitted) |
 | 03 | `HealthNarrationTemplate`; header shows attributed findings ("VS Code is compiling — 9.2 GB") with the existing roll | No | Not started |
 | 04 | `AppFeature.healthCoach` registration (catalog, strings, destination, energy profile, panel search, availability default off) + Settings page skeleton | No | Not started |
 | 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Not started |

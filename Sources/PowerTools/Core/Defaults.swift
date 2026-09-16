@@ -396,6 +396,7 @@ enum DefaultsKey {
     static let monitorAlertDiskFreePercent = "monitorAlertDiskFreePercent"
     static let monitorAlertBatteryPercent = "monitorAlertBatteryPercent"
     static let monitorAlertCooldownMinutes = "monitorAlertCooldownMinutes"
+    static let healthCoachMemoryHogPercent = "healthCoachMemoryHogPercent"
     static let monitorAlertThermal = "monitorAlertThermal"
     static let monitorAlertThermalRecovery = "monitorAlertThermalRecovery"
     // Menu panel layout — the order the major sections appear in and which are
@@ -1240,6 +1241,7 @@ enum Defaults {
         DefaultsKey.monitorAlertBatteryTemperatureThreshold: 40,
         DefaultsKey.monitorAlertDiskFreePercent: 10,
         DefaultsKey.monitorAlertBatteryPercent: 15,
+        DefaultsKey.healthCoachMemoryHogPercent: 30,
         DefaultsKey.monitorAlertCooldownMinutes: 15,
         DefaultsKey.mediaLastTool: MediaTool.videoCompressor.rawValue,
         DefaultsKey.mediaVideoStart: 0.0,

@@ -3,6 +3,15 @@
 
 import Foundation
 
+/// The disk-low rule's own minimal view of one volume, kept as plain fields
+/// rather than the whole `DiskDeviceReading` so this stays a value only
+/// Health Coach owns.
+struct HealthDiskEvidence: Equatable {
+    let name: String
+    let freeBytes: UInt64
+    let totalBytes: UInt64
+}
+
 /// A recognised activity running inside one app's row.
 struct HealthActivitySighting: Equatable {
     let appPID: pid_t
@@ -35,6 +44,13 @@ struct HealthSignalSnapshot: Equatable {
     var keepAwakeActive = false
     var recordingActive = false
     var updateAvailable = false
+    var hasInternalBattery = false
+    var batteryIsCharging = false
+    var batteryChargePercent: Int?
+    var diskDevices: [HealthDiskEvidence] = []
+    /// System uptime when this snapshot was assembled, so the swap-growth
+    /// rule can tell how much time actually passed since `previous`.
+    var capturedAt: TimeInterval?
 
     /// Recognised activities across the top rows, one per app and activity,
     /// memory rows first since they carry the size worth quoting.

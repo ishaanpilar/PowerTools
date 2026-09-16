@@ -60,7 +60,7 @@ extension AppFeature {
         case .screenshot, .screenRecorder, .screenOCR, .colorPicker, .cameraPreview, .scratchpad,
              .quickLauncher, .commandBar, .cleaningMode, .shelf, .textSnippets:
             return .window
-        case .switcher, .dockPreview, .dockClick, .windowMaximizer, .autoQuit,
+        case .switcher, .dockPreview, .dockClick, .windowMaximizer, .autoQuit, .alwaysOnTop,
              .scrollInverter, .focusFollowsMouse, .smoothScroll, .mouseAcceleration,
              .mouseNavigation, .mouseButtonShortcuts, .middleClick, .mouseClickDebounce,
              .keyboardDebounce, .superKey, .quitWindowProtection,

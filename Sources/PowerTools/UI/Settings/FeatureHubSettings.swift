@@ -704,6 +704,7 @@ extension AppFeature {
         case .windowMaximizer: return s.windowMaximizeName
         case .windowLayout: return FeatureStrings.windowLayout(L10n.shared.language).title
         case .autoQuit: return s.autoQuitName
+        case .alwaysOnTop: return FeatureStrings.alwaysOnTop(L10n.shared.language).title
         case .quitWindowProtection: return FeatureStrings.quitProtection(L10n.shared.language).name
         case .scrollInverter: return s.invertMouseScroll
         case .focusFollowsMouse: return s.focusFollowsMouseName
@@ -770,6 +771,7 @@ extension AppFeature {
         case .windowMaximizer: return hub.descWindowMaximizer
         case .windowLayout: return hub.descWindowLayout
         case .autoQuit: return hub.descAutoQuit
+        case .alwaysOnTop: return FeatureStrings.alwaysOnTop(L10n.shared.language).caption
         case .quitWindowProtection: return FeatureStrings.quitProtection(L10n.shared.language).description
         case .scrollInverter: return hub.descScrollInverter
         case .focusFollowsMouse: return L10n.shared.s.focusFollowsMouseCaption

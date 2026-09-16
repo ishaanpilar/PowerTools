@@ -399,6 +399,7 @@ if (( TEST )); then
         Sources/PowerTools/Services/Clipboard/ClipboardHistorySupport.swift
         Sources/PowerTools/Services/Clipboard/ClipboardAutoClearSupport.swift
         Sources/PowerTools/Services/AutoQuit/AutoQuitSupport.swift
+        Sources/PowerTools/Services/AlwaysOnTop/AlwaysOnTopSupport.swift
         Sources/PowerTools/Services/Shelf/ShelfSupport.swift
         Sources/PowerTools/Services/Finder/FinderRenameSupport.swift
         Sources/PowerTools/Services/Update/UpdateInstallerSupport.swift
@@ -424,6 +425,7 @@ if (( TEST )); then
         Sources/PowerTools/Services/WindowServerSupport.swift
         Sources/PowerTools/Core/MouseButtonStrings.swift
         Sources/PowerTools/Core/MouseClickDebounceStrings.swift
+        Sources/PowerTools/Core/AlwaysOnTopStrings.swift
         Sources/PowerTools/Core/MouseExceptionStrings.swift
         Sources/PowerTools/Core/ClipboardIgnoredAppsStrings.swift
         Sources/PowerTools/Core/WindowPreviewExclusionStrings.swift

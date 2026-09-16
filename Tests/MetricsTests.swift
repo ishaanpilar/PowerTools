@@ -1188,6 +1188,31 @@ struct MetricsTests {
             ".mouseClickDebounce: { MouseClickDebounceService.shared.syncWithPreferences() }"
         ), "the Features hub owns the click debounce runtime lifecycle")
 
+        // MARK: Always on top
+
+        expect(AlwaysOnTopSupport.appKitFrame(fromAXOrigin: CGPoint(x: 50, y: 100),
+                                              size: CGSize(width: 400, height: 300),
+                                              screenTopY: 1200)
+                == CGRect(x: 50, y: 800, width: 400, height: 300),
+               "an Accessibility frame flips to AppKit's bottom-left origin against the menu-bar screen's top edge")
+        expect(AlwaysOnTopSupport.appKitFrame(fromAXOrigin: .zero, size: .zero, screenTopY: 900)
+                == CGRect(x: 0, y: 900, width: 0, height: 0),
+               "a zero-size Accessibility frame still converts without dividing by anything")
+
+        expect(AlwaysOnTopWindowKey(pid: 1, windowID: 5) == AlwaysOnTopWindowKey(pid: 1, windowID: 5)
+                && AlwaysOnTopWindowKey(pid: 1, windowID: 5) != AlwaysOnTopWindowKey(pid: 2, windowID: 5)
+                && AlwaysOnTopWindowKey(pid: 1, windowID: 5) != AlwaysOnTopWindowKey(pid: 1, windowID: 6),
+               "a pinned window's identity requires both its owning pid and its window id to match")
+
+        expect(featureRuntimeSource.contains(
+            ".alwaysOnTop: { AlwaysOnTopService.shared.syncWithPreferences() }"
+        ), "the Features hub owns the always-on-top runtime lifecycle")
+        let alwaysOnTopAppDelegateSource = (try? String(
+            contentsOfFile: "Sources/PowerTools/App/AppDelegate.swift",
+            encoding: .utf8)) ?? ""
+        expect(alwaysOnTopAppDelegateSource.contains("AlwaysOnTopService.shared.suspend()"),
+               "quitting releases every pinned window's level before the process that changed it exits")
+
         expect(ScrollWheelSupport.isMouseWheel(
             ScrollWheelEventTraits(isContinuous: false, momentumPhase: 0, scrollPhase: 0, scrollCount: 0),
             secondsSinceLastGesturePhase: nil
@@ -14897,11 +14922,11 @@ struct MetricsTests {
 
         // MARK: Features hub catalog
 
-        expect(AppFeature.allCases.count == 59, "feature catalog has 59 features")
+        expect(AppFeature.allCases.count == 60, "feature catalog has 60 features")
         expect(Set(AppFeature.allCases.map(\.rawValue)).count == AppFeature.allCases.count,
                "feature ids are unique")
         expect(AppFeature.allCases.map(\.rawValue) == [
-            "switcher", "dockPreview", "dockClick", "windowMaximizer", "windowLayout", "autoQuit",
+            "switcher", "dockPreview", "dockClick", "windowMaximizer", "windowLayout", "autoQuit", "alwaysOnTop",
             "scrollInverter", "focusFollowsMouse", "smoothScroll", "mouseAcceleration", "mouseNavigation", "mouseButtonShortcuts", "middleClick",
             "mouseClickDebounce", "keyboardDebounce", "textSnippets", "superKey", "quitWindowProtection",
             "clipboardHistory", "pastePlain", "finderCutPaste", "finderRename", "shelf", "urlCleaner",
@@ -15036,9 +15061,10 @@ struct MetricsTests {
                 && (AppFeature.availabilityDefaults[AppFeature.focusFollowsMouse.availabilityKey] as? Bool) == false
                 && (AppFeature.availabilityDefaults[AppFeature.killProcess.availabilityKey] as? Bool) == false
                 && (AppFeature.availabilityDefaults[AppFeature.aiTextActions.availabilityKey] as? Bool) == false
+                && (AppFeature.availabilityDefaults[AppFeature.alwaysOnTop.availabilityKey] as? Bool) == false
                 && AppFeature.allCases.filter {
                     $0 != .focusFollowsMouse && $0 != .fanControl && $0 != .diskImageInstaller
-                        && $0 != .killProcess && $0 != .aiTextActions
+                        && $0 != .killProcess && $0 != .aiTextActions && $0 != .alwaysOnTop
                 }.allSatisfy {
                     (AppFeature.availabilityDefaults[$0.availabilityKey] as? Bool) == true
                 },

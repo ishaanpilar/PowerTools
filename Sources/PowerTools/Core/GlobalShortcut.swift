@@ -188,6 +188,9 @@ struct GlobalShortcut: Equatable, Hashable {
                                                  modifiers: [.control, .option, .command])
     static let micMuteDefault = GlobalShortcut(keyCode: Int64(kVK_ANSI_M),
                                                modifiers: [.control, .option, .command])
+    // A for Always On Top, on the same free control-option-command layer.
+    static let alwaysOnTopDefault = GlobalShortcut(keyCode: Int64(kVK_ANSI_A),
+                                                   modifiers: [.control, .option, .command])
     // W for webcam, on the same free control-option-command layer.
     static let cameraPreviewDefault = GlobalShortcut(keyCode: Int64(kVK_ANSI_W),
                                                      modifiers: [.control, .option, .command])
@@ -701,6 +704,7 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
     case colorPicker
     case screenOCR
     case micMute
+    case alwaysOnTop
     case quickLauncher
     case screenshot
     case screenshotFullScreen
@@ -733,6 +737,7 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
         case .colorPicker: return DefaultsKey.colorPickerShortcut
         case .screenOCR: return DefaultsKey.screenOCRShortcut
         case .micMute: return DefaultsKey.micMuteShortcut
+        case .alwaysOnTop: return DefaultsKey.alwaysOnTopShortcut
         case .quickLauncher: return DefaultsKey.quickLauncherShortcut
         case .screenshot: return DefaultsKey.screenshotShortcut
         case .screenshotFullScreen: return DefaultsKey.screenshotFullScreenShortcut
@@ -765,6 +770,7 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
         case .colorPicker: return .colorPickerDefault
         case .screenOCR: return .screenOCRDefault
         case .micMute: return .micMuteDefault
+        case .alwaysOnTop: return .alwaysOnTopDefault
         case .quickLauncher: return .quickLauncherDefault
         case .screenshot: return .screenshotDefault
         case .screenshotFullScreen: return .screenshotFullScreenDefault
@@ -816,6 +822,7 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
         case .colorPicker: return strings.colorPickerName
         case .screenOCR: return strings.ocrName
         case .micMute: return strings.micMuteName
+        case .alwaysOnTop: return FeatureStrings.alwaysOnTop(L10n.shared.language).title
         case .quickLauncher: return strings.launcherName
         case .screenshot:
             return FeatureStrings.screenshot(L10n.shared.language).pageTitle
@@ -874,6 +881,7 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
         case .colorPicker: return [DefaultsKey.colorPickerShortcutEnabled]
         case .screenOCR: return [DefaultsKey.screenOCRShortcutEnabled]
         case .micMute: return [DefaultsKey.micMuteShortcutEnabled]
+        case .alwaysOnTop: return [DefaultsKey.alwaysOnTopShortcutEnabled]
         case .quickLauncher: return [DefaultsKey.quickLauncherShortcutEnabled]
         case .screenshot: return [DefaultsKey.screenshotShortcutEnabled]
         case .screenshotFullScreen: return [DefaultsKey.screenshotFullScreenShortcutEnabled]
@@ -908,6 +916,7 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
         case .colorPicker: return .colorPicker
         case .screenOCR: return .screenOCR
         case .micMute: return .micMute
+        case .alwaysOnTop: return .alwaysOnTop
         case .quickLauncher: return .quickLauncher
         case .screenshot, .screenshotFullScreen, .screenshotLastCapture, .recentCaptures,
              .screenshotClipboard:

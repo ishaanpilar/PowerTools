@@ -142,7 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
                     .dockPreview, .finderCutPaste, .finderRename, .autoQuit, .dockClick,
                     .middleClick, .windowMaximizer, .keyboardDebounce, .windowLayout,
                     .textSnippets, .brightness, .radialMenu, .mouseButtonShortcuts,
-                    .mouseClickDebounce, .superKey, .quitWindowProtection, .mixer,
+                    .mouseClickDebounce, .superKey, .quitWindowProtection, .mixer, .alwaysOnTop,
                 ])
             }
             .store(in: &cancellables)
@@ -261,6 +261,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         FocusFollowsMouseService.shared.stop()
         WindowMaximizer.shared.stop()
         WindowLayoutService.shared.suspend()
+        // Every pinned window belongs to another app: its level change
+        // outlives this process unless it is put back before quit.
+        AlwaysOnTopService.shared.suspend()
         KeyboardDebounceService.shared.suspend()
         MouseClickDebounceService.shared.suspend()
         TextSnippetService.shared.suspend()

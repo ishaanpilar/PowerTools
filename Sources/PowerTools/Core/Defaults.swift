@@ -500,6 +500,8 @@ enum DefaultsKey {
     static let screenOCRDetectQRCodes = "screenOCRDetectQRCodes" // QR content wins over OCR text
     static let micMuteShortcutEnabled = "micMuteShortcutEnabled"
     static let micMuteShortcut = "micMuteShortcut"
+    static let alwaysOnTopShortcutEnabled = "alwaysOnTopShortcutEnabled"
+    static let alwaysOnTopShortcut = "alwaysOnTopShortcut"
     static let cameraPreviewShortcutEnabled = "cameraPreviewShortcutEnabled"
     static let cameraPreviewShortcut = "cameraPreviewShortcut"
     static let scratchpadShortcutEnabled = "scratchpadShortcutEnabled"
@@ -1311,6 +1313,8 @@ enum Defaults {
         DefaultsKey.screenOCRDetectQRCodes: true,
         DefaultsKey.micMuteShortcutEnabled: false,
         DefaultsKey.micMuteShortcut: GlobalShortcut.micMuteDefault.storageValue,
+        DefaultsKey.alwaysOnTopShortcutEnabled: false,
+        DefaultsKey.alwaysOnTopShortcut: GlobalShortcut.alwaysOnTopDefault.storageValue,
         DefaultsKey.cameraPreviewShortcutEnabled: false,
         DefaultsKey.cameraPreviewShortcut: GlobalShortcut.cameraPreviewDefault.storageValue,
         DefaultsKey.scratchpadShortcutEnabled: false,

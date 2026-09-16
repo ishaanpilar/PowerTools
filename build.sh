@@ -490,6 +490,12 @@ if (( TEST )); then
         Sources/PowerTools/Services/SystemMonitor/ProcessUsageGrouping.swift
         Sources/PowerTools/Services/HealthCoach/HealthKnownActivity.swift
         Sources/PowerTools/Services/HealthCoach/HealthSignalSnapshot.swift
+        Sources/PowerTools/Services/HealthCoach/HealthFinding.swift
+        Sources/PowerTools/Services/HealthCoach/HealthFindingDetector.swift
+        Sources/PowerTools/Services/SystemMonitor/SMCClient.swift
+        Sources/PowerTools/Services/Metrics/PowerSampler.swift
+        Sources/PowerTools/Services/SystemMonitor/SystemSnapshot.swift
+        Sources/PowerTools/Services/SystemMonitor/SystemHealthSummary.swift
         Sources/PowerTools/Services/WindowLayout/WindowLayoutSupport.swift
         Sources/PowerTools/Services/WindowLayout/WindowGestureSupport.swift
         Sources/PowerTools/Core/WindowDirectionalStrings.swift

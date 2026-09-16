@@ -30,6 +30,16 @@ enum SystemHealthCondition: CaseIterable {
     }
 }
 
+/// A thin adapter over `HealthFindingDetector` (`docs/ai-health-coach/`): the
+/// header's own immediate, ungated glance text stays exactly as before —
+/// thermal and memory pressure are kernel-state comparisons with no
+/// threshold, so there is nothing for a second copy to drift on — but every
+/// actual *number* here, the battery and disk percentages and the 10 GB disk
+/// floor, now comes from `HealthFindingThresholds` and
+/// `HealthFindingDetector.lowestDisk`, the same values Health Coach's fuller,
+/// gated findings use. Threading the detector's `SustainedAlertGate`s into
+/// this stateless, every-render header call is deliberately left to the task
+/// that changes what the header shows.
 enum SystemHealthSummary {
     /// Every condition currently true, most urgent first (case order above).
     /// Reuses the exact threshold values Settings -> Monitor -> Alerts
@@ -42,14 +52,12 @@ enum SystemHealthSummary {
                            updateAvailable: Bool,
                            defaults: UserDefaults = .standard) -> [SystemHealthCondition] {
         var result: [SystemHealthCondition] = []
+        let thresholds = HealthFindingThresholds.sanitized(defaults: defaults)
 
         if AppFeature.monitorPower.isAvailable, PowerSampler.hasInternalBattery,
            let power = snapshot.power, power.hasBattery, !power.isCharging,
-           let charge = power.chargePercent {
-            let threshold = Defaults.sanitizedPercent(
-                defaults.integer(forKey: DefaultsKey.monitorAlertBatteryPercent),
-                fallback: 15, range: 5...50)
-            if charge <= threshold { result.append(.batteryCriticallyLow) }
+           let charge = power.chargePercent, charge <= thresholds.batteryPercent {
+            result.append(.batteryCriticallyLow)
         }
 
         if AppFeature.monitorCPU.isAvailable, snapshot.thermalPressure == .critical {
@@ -61,16 +69,14 @@ enum SystemHealthSummary {
         }
 
         if AppFeature.monitorDisk.isAvailable, let devices = snapshot.disk?.devices {
-            let threshold = Defaults.sanitizedPercent(
-                defaults.integer(forKey: DefaultsKey.monitorAlertDiskFreePercent),
-                fallback: 10, range: 5...30)
-            // Same 10 GB sanity floor lowDisk() uses: a nearly-full 4 GB
-            // recovery partition is not a condition worth naming.
-            let low = devices.contains { device in
-                guard device.totalBytes >= 10_000_000_000 else { return false }
-                return Double(device.freeBytes) / Double(device.totalBytes) * 100 < Double(threshold)
+            let evidence = devices.map {
+                HealthDiskEvidence(name: $0.name, freeBytes: $0.freeBytes, totalBytes: $0.totalBytes)
             }
-            if low { result.append(.diskCriticallyLow) }
+            if HealthFindingDetector.lowestDisk(among: evidence,
+                                               floor: HealthFindingThresholds.diskDeviceFloorBytes,
+                                               belowPercent: thresholds.diskFreePercent) != nil {
+                result.append(.diskCriticallyLow)
+            }
         }
 
         if updateAvailable {

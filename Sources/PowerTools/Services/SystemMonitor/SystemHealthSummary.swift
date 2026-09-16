@@ -50,11 +50,12 @@ enum SystemHealthSummary {
     /// proactive interruption, so it owes nothing to the opt-in alert flags.
     static func conditions(for snapshot: SystemSnapshot,
                            updateAvailable: Bool,
-                           defaults: UserDefaults = .standard) -> [SystemHealthCondition] {
+                           defaults: UserDefaults = .standard,
+                           hasInternalBattery: Bool = PowerSampler.hasInternalBattery) -> [SystemHealthCondition] {
         var result: [SystemHealthCondition] = []
         let thresholds = HealthFindingThresholds.sanitized(defaults: defaults)
 
-        if AppFeature.monitorPower.isAvailable, PowerSampler.hasInternalBattery,
+        if AppFeature.monitorPower.isAvailable, hasInternalBattery,
            let power = snapshot.power, power.hasBattery, !power.isCharging,
            let charge = power.chargePercent, charge <= thresholds.batteryPercent {
             result.append(.batteryCriticallyLow)

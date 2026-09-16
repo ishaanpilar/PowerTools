@@ -334,9 +334,11 @@ enum HealthCoachTests {
         snapshot.power = PowerReading(chargePercent: 12, isCharging: false, hasBattery: true)
 
         defaults.set(15, forKey: DefaultsKey.monitorAlertBatteryPercent)
-        let before = SystemHealthSummary.conditions(for: snapshot, updateAvailable: false, defaults: defaults)
+        let before = SystemHealthSummary.conditions(for: snapshot, updateAvailable: false,
+                                                     defaults: defaults, hasInternalBattery: true)
         defaults.set(5, forKey: DefaultsKey.monitorAlertBatteryPercent)
-        let after = SystemHealthSummary.conditions(for: snapshot, updateAvailable: false, defaults: defaults)
+        let after = SystemHealthSummary.conditions(for: snapshot, updateAvailable: false,
+                                                    defaults: defaults, hasInternalBattery: true)
         suite.expect(before.contains(.batteryCriticallyLow) && !after.contains(.batteryCriticallyLow),
                      "the header's battery condition reads the same threshold Health Coach's battery finding does, live")
     }

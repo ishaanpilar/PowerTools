@@ -2,6 +2,29 @@
 
 Notable changes to PowerTools AI are recorded here.
 
+## [1.0.0-beta.4] - 2026-09-16
+
+### Summary
+
+Always On Top, borrowed from PowerToys: pin the focused window above every
+other window with a shortcut. A small visual fix to the menu panel's Liquid
+Glass rides along.
+
+### Added
+
+- Always On Top (off by default): `⌃⌥⌘A` pins the focused window above
+  every other window; press it again to unpin. Several windows can be
+  pinned independently, each outlined with a border that tracks it as it
+  moves or resizes. Unpins itself if the window closes. Requires
+  Accessibility.
+
+### Fixed
+
+- The menu panel's search and settings buttons now share one Liquid Glass
+  sampling region instead of each blurring the desktop independently.
+- The panel's Liquid Glass surface no longer has a flat-color tint fighting
+  the real material's own contrast and transparency handling.
+
 ## [1.0.0-beta.3] - 2026-09-16
 
 ### Summary

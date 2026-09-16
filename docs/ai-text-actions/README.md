@@ -84,7 +84,7 @@ status here as they land.
 | 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — `3ba226b` |
 | 05 | 2.7 | Context manifest, pre-send preview, cancellation | Done — `bd8632c` |
 | 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Done — `1a89d85` |
-| 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Done — pending commit |
+| 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Done — `5d4a732` |
 
 Tasks 02 and 03 can happen in either order (both are new providers behind the
 same protocol from task 02); 04 needs both. Task 06 needs 02–05. Verify each
@@ -435,7 +435,7 @@ Intelligence state it was checked on — compiling is not evidence, per
   pattern `copyAnswer` already uses) rather than by clicking them
   interactively.
 
-## Task 07 — done
+## Task 07 — done (`5d4a732`)
 
 M2's closing task, not a new feature: confirm what's already shipped is
 described accurately, confirm the localization bar is actually met, and

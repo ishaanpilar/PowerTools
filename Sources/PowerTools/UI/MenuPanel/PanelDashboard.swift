@@ -1048,6 +1048,25 @@ extension View {
     func panelGlassControl<S: InsettableShape>(in shape: S) -> some View {
         modifier(PanelGlassControlModifier(shape: shape))
     }
+
+    /// Groups two or more adjacent `panelGlassControl` views (the search and
+    /// settings buttons sitting side by side, say) under one shared Liquid
+    /// Glass sampling region. Apple's guidance is explicit that glass cannot
+    /// sample glass: without this, each control blurs the desktop behind the
+    /// whole popover independently instead of reading its neighbor's edge the
+    /// way one real pane of glass would. Below macOS 26 this is a pass-through.
+    @ViewBuilder
+    func panelGlassGroup() -> some View {
+#if compiler(>=6.2)
+        if #available(macOS 26.0, *) {
+            GlassEffectContainer(spacing: 6) { self }
+        } else {
+            self
+        }
+#else
+        self
+#endif
+    }
 }
 
 private struct PanelGlassControlModifier<S: InsettableShape>: ViewModifier {

@@ -619,6 +619,7 @@ private struct MenuPanelHeader: View {
                 searchButton
                 settingsButton
             }
+            .panelGlassGroup()
         }
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)

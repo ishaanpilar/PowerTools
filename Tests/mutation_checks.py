@@ -84,6 +84,20 @@ MUTATIONS = [
      "`an agent cannot execute an empty plan`",
      "`an agent can execute an empty plan`",
      "every guarantee in AI-HARNESS.md names a check that exists"),
+    ("activity matched by substring", "health-coach",
+     "Sources/PowerTools/Services/HealthCoach/HealthKnownActivity.swift",
+     "if let activity = exactNames[name] { return activity }",
+     "if let activity = exactNames.first(where: { name.contains($0.key) })?.value { return activity }",
+     "known activity never matches a name that only contains a tool's name"),
+    ("helper count lost", "health-coach",
+     "Sources/PowerTools/Services/SystemMonitor/ProcessUsageGrouping.swift",
+     "entry.count += 1", "entry.count = 1",
+     "a grouped process row counts helpers that share an executable name"),
+    ("reconciled rows drop helpers", "health-coach",
+     "Sources/PowerTools/Services/SystemMonitor/ProcessUsageService.swift",
+     "value: MetricFormat.boundedPercentage(row.value * scale),\n                         members: row.members)",
+     "value: MetricFormat.boundedPercentage(row.value * scale))",
+     "reconciled CPU rows keep the helper names they were grouped from"),
 ]
 
 

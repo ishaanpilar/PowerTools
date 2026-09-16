@@ -167,14 +167,18 @@ private struct PanelGlassSurface: View {
     @ViewBuilder
     private var surface: some View {
 #if compiler(>=6.2)
+        // Real Liquid Glass already carries its own frosting, light-bending
+        // and specular response, and already answers Increase Contrast and
+        // Reduce Transparency on its own — Apple's guidance is explicit that
+        // a flat color laid across a glass surface flattens the material
+        // into a tinted pane instead of real glass. Every card drawn on top
+        // already has its own background fill for text contrast
+        // (`PanelCardModifier`), and raised contrast is the outlines'
+        // job (`PanelSurface.border`), so the surface itself stays plain glass.
         if #available(macOS 26.0, *), liquidGlassEnabled, !reduceTransparency {
             Rectangle()
                 .fill(Color.clear)
                 .glassEffect(.regular, in: Rectangle())
-                .overlay(
-                    Rectangle()
-                        .fill(PanelSurface.baseFill(for: colorScheme).opacity(colorScheme == .light ? 0.35 : 0.45))
-                )
         } else {
             standardSurface
         }

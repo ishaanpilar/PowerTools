@@ -6,30 +6,6 @@ import AppKit
 import Foundation
 import IOKit
 
-/// One row of the per-app breakdown shown when a System stat is expanded.
-struct ProcessUsage: Identifiable, Equatable {
-    let pid: pid_t
-    let name: String
-    /// CPU/GPU/energy: percentage (0–100). Memory: bytes. Network: total bytes/s.
-    let value: Double
-    let networkDownBytesPerSec: Double?
-    let networkUpBytesPerSec: Double?
-
-    var id: pid_t { pid }
-
-    init(pid: pid_t,
-         name: String,
-         value: Double,
-         networkDownBytesPerSec: Double? = nil,
-         networkUpBytesPerSec: Double? = nil) {
-        self.pid = pid
-        self.name = name
-        self.value = value
-        self.networkDownBytesPerSec = networkDownBytesPerSec
-        self.networkUpBytesPerSec = networkUpBytesPerSec
-    }
-}
-
 /// Answers "which apps are eating this resource?" for the panel's System
 /// section. CPU and GPU come from cumulative per-process counters sampled as
 /// deltas; memory uses `ps` to rank candidates before reading kernel footprint.
@@ -501,29 +477,10 @@ final class ProcessUsageService {
 
     // MARK: - Consolidation
 
-    /// Sums per-process values under each process's responsible app and keeps
-    /// the heaviest `limit` rows. The row's pid becomes the responsible pid,
-    /// so the app's proper name and icon are shown.
     private func groupedByApp(_ rows: [ProcessUsage]) -> [ProcessUsage] {
-        var totals: [pid_t: Double] = [:]
-        var fallbackNames: [pid_t: String] = [:]
-
-        for row in rows {
-            let owner = ResponsibleProcess.owner(of: row.pid)
-            totals[owner, default: 0] += row.value
-            if fallbackNames[owner] == nil {
-                fallbackNames[owner] = row.name
-            }
-        }
-
-        return totals
-            .sorted { $0.value > $1.value }
-            .map { owner, value in
-                ProcessUsage(pid: owner,
-                             name: ResponsibleProcess.displayName(pid: owner,
-                                                                  fallback: fallbackNames[owner] ?? "pid \(owner)"),
-                             value: value)
-            }
+        ProcessUsageGrouping.grouped(rows,
+                                     owner: { ResponsibleProcess.owner(of: $0) },
+                                     displayName: { ResponsibleProcess.displayName(pid: $0, fallback: $1) })
     }
 
     private func reconciledUsageRows(_ rows: [ProcessUsage],
@@ -534,7 +491,8 @@ final class ProcessUsageService {
         return rows.map { row in
             ProcessUsage(pid: row.pid,
                          name: row.name,
-                         value: MetricFormat.boundedPercentage(row.value * scale))
+                         value: MetricFormat.boundedPercentage(row.value * scale),
+                         members: row.members)
         }
     }
 

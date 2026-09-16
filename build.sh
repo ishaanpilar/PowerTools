@@ -486,6 +486,10 @@ if (( TEST )); then
         Sources/PowerTools/Services/Metrics/MaxCapacityProbe.swift
         Sources/PowerTools/Services/Metrics/TemperatureSensorSelector.swift
         Sources/PowerTools/Services/Metrics/SustainedAlertGate.swift
+        Sources/PowerTools/Services/Metrics/MemoryPressure.swift
+        Sources/PowerTools/Services/SystemMonitor/ProcessUsageGrouping.swift
+        Sources/PowerTools/Services/HealthCoach/HealthKnownActivity.swift
+        Sources/PowerTools/Services/HealthCoach/HealthSignalSnapshot.swift
         Sources/PowerTools/Services/WindowLayout/WindowLayoutSupport.swift
         Sources/PowerTools/Services/WindowLayout/WindowGestureSupport.swift
         Sources/PowerTools/Core/WindowDirectionalStrings.swift

@@ -8,21 +8,6 @@ import Foundation
 import IOKit
 import IOKit.ps
 
-/// Memory pressure as reported by the kernel, mapped to the traffic-light
-/// indicator shown in the panel.
-enum MemoryPressure {
-    case normal, warning, critical, unknown
-
-    init(kernelLevel: Int32) {
-        switch kernelLevel {
-        case 1: self = .normal
-        case 2: self = .warning
-        case 4: self = .critical
-        default: self = .unknown
-        }
-    }
-}
-
 /// One refresh tick of the system monitor. Optionals stay nil when a reading
 /// is unavailable on the current hardware, and the UI hides those rows.
 struct SystemSnapshot {

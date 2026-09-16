@@ -2,6 +2,32 @@
 
 Notable changes to PowerTools AI are recorded here.
 
+## [1.0.0-beta.3] - 2026-09-16
+
+### Summary
+
+AI text actions now actually do something: select text anywhere and rewrite,
+shorten, proofread, summarise or translate it from the Command Bar, on
+whatever provider you connected in 1.0.0-beta.2. This is the feature the
+last two releases were building toward.
+
+### Added
+
+- Five Command Bar actions on your selection: Rewrite, Shorten, Proofread,
+  Summarise, Translate. Each opens a small panel that streams the answer
+  in, with Copy and Replace - nothing is copied or replaces your selection
+  until you press one of those buttons, and pressing Escape or clicking
+  away does nothing else.
+- The first time selected text goes to a given provider, a preview shows
+  exactly what's about to be sent, its size, whether it stays on this Mac
+  or leaves it, and that provider's privacy policy, before anything sends.
+- Translate targets the language PowerTools AI's own interface is set to.
+
+### Changed
+
+- `PRIVACY.md` updated to match: the Command Bar actions described above
+  are real now, not upcoming.
+
 ## [1.0.0-beta.2] - 2026-09-16
 
 ### Summary

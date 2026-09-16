@@ -84,7 +84,7 @@ status here as they land.
 | 04 | 2.5 | AI settings UI: provider picker, endpoint, privacy link, test connection | Done — `3ba226b` |
 | 05 | 2.7 | Context manifest, pre-send preview, cancellation | Done — `bd8632c` |
 | 06 | 2.8 | Command Bar actions: rewrite/shorten/proofread/summarise/translate; Copy, Replace, Cancel | Done — `1a89d85` |
-| 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Not started |
+| 07 | 2.9, 2.10 | Localization completeness check, `PRIVACY.md` matches shipped behaviour, screenshot, release | Done — pending commit |
 
 Tasks 02 and 03 can happen in either order (both are new providers behind the
 same protocol from task 02); 04 needs both. Task 06 needs 02–05. Verify each
@@ -434,3 +434,77 @@ Intelligence state it was checked on — compiling is not evidence, per
   functions (`CommandBarCatalog.typeAtCursor`, the same pasteboard-write
   pattern `copyAnswer` already uses) rather than by clicking them
   interactively.
+
+## Task 07 — done
+
+M2's closing task, not a new feature: confirm what's already shipped is
+described accurately, confirm the localization bar is actually met, and
+release.
+
+- **2.9, localization completeness — already satisfied, nothing to build.**
+  `Tests/generate_sources.py` auto-discovers every `extension FeatureStrings`
+  dispatcher, including `aiTextActions`, into the factories list
+  `LocalizationTests.swift` checks; that check requires every field present
+  and non-empty across all 13 `AppLanguage` cases. Every string this
+  milestone added (tasks 01, 04, 05, 06) has been passing that check since
+  the commit that added it - confirmed by re-reading the generated
+  `LocalizationCatalog.swift` and by `./build.sh --test`'s `localization: OK`
+  having been green on every run this milestone, not just now. Roadmap D5's
+  decision (only `.enUS` has real content until M5) means "complete" here
+  means "present and non-empty in all 13," not "translated" - and that's
+  what's verified.
+- **2.10, `PRIVACY.md` matches behaviour.** Two real gaps, both from
+  Command Bar actions actually shipping in task 06:
+  - The intro still said "the actions themselves... are not in the Command
+    Bar yet" - written for beta.2, now false. Rewritten to state current
+    behaviour without a version number pinned into the prose, so the next
+    release doesn't leave this stale again the same way.
+  - "What AI can do" had no line about the Command Bar result panel
+    specifically. Added one naming exactly what task 06 built: Copy and
+    Replace both require an explicit press, and dismissing the panel
+    (Escape or an outside click) does nothing else - the same behaviour
+    confirmed live in task 06.
+- **The M2 "Exit" checklist's broader verification bar** (macOS 26.5.2 with
+  Apple Intelligence on and off; a macOS 14 Mac or VM with a cloud provider;
+  on-device makes no connection, confirmed with a network monitor; a cloud
+  request contains exactly the previewed content, via a local HTTPS proxy)
+  is broader than this task's own two slices, and only partly achievable
+  from this one Mac:
+  - On-device network isolation was checked structurally instead of with a
+    live network monitor: `AIOnDeviceTextProvider.swift` imports only
+    `FoundationModels` and `Foundation` - no networking framework is even
+    available to that code path, which is a stronger guarantee than
+    observing no traffic during one run.
+  - Cloud request contents were already verified exactly, in task 03, via
+    `AIHTTPProviderTests.swift`'s mock-session request-body assertions - not
+    repeated here with a live HTTPS proxy.
+  - **Not verified, and said so rather than skipped silently:** a real
+    macOS 14 Mac or VM, and a live end-to-end cloud-provider request. This
+    Mac runs a single, current macOS version; that half of the M2 exit bar
+    needs either another machine or the person's own account credentials,
+    neither available here.
+  - Keys-absent-from-exports and non-loopback-refused were not re-checked
+    live; both already have direct unit coverage (`AIProviderKeyStore`'s
+    source-level Keychain-only check, `AIHTTPProviderSupport`'s endpoint
+    policy tests) that this task's changes don't touch.
+- **The screenshot is a maintainer task, by the roadmap's own words**
+  ("Seven images, captured by the maintainer... M2 adds an eighth shot: a
+  Command Bar text action"), with explicit curation requirements (English,
+  light appearance, 2x, plain wallpaper, no personal names, window titles,
+  clipboard contents or file names visible) that a screen on this exact Mac
+  - in daily personal use, and the source of two of this session's earlier
+  privacy incidents - cannot safely guarantee through automation. Not
+  attempted; flagged for the maintainer to capture (`docs/assets/readme/`,
+  slot `Command Bar` per the shot list) whenever convenient, matching that
+  none of the other seven shots exist yet either and neither beta release
+  waited on them.
+- Verified: full `./build.sh --test` green (33,013 checks) after the
+  `PRIVACY.md` edits; no test pins `PRIVACY.md`'s prose, so nothing else to
+  re-run for that change specifically.
+
+M2 is functionally complete: a person can install AI text actions, connect
+on-device, a cloud provider or a local server, test the connection, and run
+rewrite, shorten, proofread, summarise or translate from the Command Bar on
+whatever text they've selected - off by default, previewed before the first
+real send per provider, nothing sent or replaced without an explicit
+action.

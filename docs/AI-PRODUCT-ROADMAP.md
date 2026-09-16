@@ -1,14 +1,24 @@
 # PowerTools AI product roadmap
 
-> **Status, 2026-09-14.** No AI feature has shipped. Owner decisions D1–D7 are
-> recorded; D8 and D9 are open. `AGENTS.md` (now tracked), `CONTRIBUTING.md` and
-> `docs/PRIVACY.md` have been rewritten for PowerTools AI. **M1 is complete:**
-> the plan contract — `ValidatedPlan`, graded approval, live availability, typed
+> **Status, 2026-09-16.** Owner decisions D1–D7 are recorded; D8 and D9 are
+> open. `AGENTS.md` (now tracked), `CONTRIBUTING.md` and `docs/PRIVACY.md`
+> have been rewritten for PowerTools AI. **M1 is complete:** the plan
+> contract — `ValidatedPlan`, graded approval, live availability, typed
 > arguments, the 23-action registry checked against the real Command Bar
-> catalog, and the capability lease — is built, tested (61 `ai-harness` checks,
-> 32,791 total) and proven by 18 mutations, 11 of them the harness's own. It is
-> not yet called by any executor; that is M4. See
-> [docs/ai-harness/](ai-harness/README.md) for how it was built, task by task.
+> catalog, and the capability lease — is built, tested (61 `ai-harness`
+> checks) and proven by 18 mutations, 11 of them the harness's own. It is not
+> yet called by any executor; that is M4. See
+> [docs/ai-harness/](ai-harness/README.md) for how it was built, task by
+> task. **M2 is functionally complete:** AI text actions (rewrite, shorten,
+> proofread, summarise, translate) run from the Command Bar against the
+> on-device model, a cloud provider the person connects with their own key,
+> or a local server — off by default, previewed before the first real send
+> per provider, nothing sent or replaced without an explicit action (33,013
+> total checks). Not verified: a macOS 14 Mac or VM with a live cloud
+> provider (this Mac only runs one current macOS version); the milestone's
+> eighth screenshot is a maintainer task, not yet captured. See
+> [docs/ai-text-actions/](ai-text-actions/README.md) for how it was built,
+> task by task.
 
 1. [Decisions](#1-decisions)
 2. [Where things stand](#2-where-things-stand)
@@ -279,6 +289,22 @@ makes no connection, confirmed with a network monitor; a cloud request contains
 exactly the previewed content, confirmed with a local HTTPS proxy; non-loopback
 addresses are refused for local servers; keys absent from defaults, exports and
 logs; an uninstalled feature loads nothing.
+
+**Reached 2026-09-16:** all seven tasks landed on `ai-text-actions/01` through
+`07`; full suite at 33,013 checks, `mutation_checks.py` still 18/18. Verified
+live on this Mac (macOS 26+, Apple Intelligence on): the feature installs and
+uninstalls cleanly; the settings page connects and tests on-device, DeepSeek,
+OpenAI, Anthropic, a custom endpoint and a local server; all five Command Bar
+actions appear only with a selection and the feature installed and run a real
+on-device generation end to end, previewed once per provider, into a panel
+whose Copy and Replace both require an explicit press. On-device network
+isolation and cloud request contents were confirmed structurally and by
+mocked-request tests respectively, not by a live network monitor or HTTPS
+proxy (see `docs/ai-text-actions/README.md`'s task 07 notes for why). Not
+verified: a macOS 14 Mac or VM with a live cloud provider - only one machine,
+running one current macOS version, was available. The milestone's eighth
+screenshot is a maintainer task per this document's own M0 shot list and
+was not attempted.
 
 **Not in M2:** plans, actions beyond Replace, clipboard or capture context,
 onboarding.

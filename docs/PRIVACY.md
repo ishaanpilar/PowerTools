@@ -5,11 +5,11 @@ runs on your Mac when your Mac supports it. Anything that leaves your Mac goes
 only where you send it — never to a PowerTools AI server, because there isn't
 one.
 
-This policy applies to PowerTools AI from its first public release. Starting
-in 1.0.0-beta.2 you can install AI text actions and connect a provider, but
-the actions themselves — rewrite, shorten, proofread, summarise, translate —
-are not in the Command Bar yet. Until you install the feature and choose a
-provider, the app makes no AI requests of any kind.
+This policy applies to PowerTools AI from its first public release. AI text
+actions — rewrite, shorten, proofread, summarise, translate — are in the
+Command Bar, working with a provider you install and connect yourself. Until
+you install the feature and choose a provider, the app makes no AI requests
+of any kind.
 
 ## The short version
 
@@ -104,6 +104,11 @@ file, screenshot or webpage cannot make AI take an action.
 
 - **Answers and drafts** are shown to you. Nothing is replaced or sent until you
   choose to.
+- **Command Bar text actions** (rewrite, shorten, proofread, summarise,
+  translate) show their answer in a small panel with Copy and Replace.
+  Nothing is copied or replaces your selection until you press one of those
+  buttons; pressing Escape or clicking away closes the panel and does nothing
+  else.
 - **Actions**, such as arranging windows or starting a timer, are proposed as a
   plan. Nothing runs until you approve it.
 - **Anything that deletes, shares, installs or leaves your Mac** asks for your

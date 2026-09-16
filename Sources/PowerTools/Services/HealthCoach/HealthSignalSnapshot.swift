@@ -21,6 +21,9 @@ struct HealthActivitySighting: Equatable {
     let processCount: Int
     /// The app row's value: bytes for memory rows, percent for CPU rows.
     let appValue: Double
+    /// Whether `appValue` is memory (bytes) rather than CPU (percent), so a
+    /// caller can format it without guessing from the magnitude.
+    let valueIsMemoryBytes: Bool
 }
 
 /// Everything Health Coach may reason about at one moment, built only from
@@ -57,7 +60,7 @@ struct HealthSignalSnapshot: Equatable {
     var activitySightings: [HealthActivitySighting] {
         var seen = Set<String>()
         var result: [HealthActivitySighting] = []
-        for row in topMemory + topCPU {
+        for (row, isMemoryRow) in topMemory.map({ ($0, true) }) + topCPU.map({ ($0, false) }) {
             var counts: [HealthActivity: Int] = [:]
             var order: [HealthActivity] = []
             for member in row.members {
@@ -72,7 +75,8 @@ struct HealthSignalSnapshot: Equatable {
                                                      appName: row.name,
                                                      activity: activity,
                                                      processCount: counts[activity] ?? 0,
-                                                     appValue: row.value))
+                                                     appValue: row.value,
+                                                     valueIsMemoryBytes: isMemoryRow))
             }
         }
         return result

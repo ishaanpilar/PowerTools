@@ -113,11 +113,17 @@ MUTATIONS = [
      ".min { Double($0.freeBytes) / Double($0.totalBytes) < Double($1.freeBytes) / Double($1.totalBytes) }",
      ".max { Double($0.freeBytes) / Double($0.totalBytes) < Double($1.freeBytes) / Double($1.totalBytes) }",
      "the disk-low finding names the specific device nearest its threshold"),
-    ("header and Health Coach battery thresholds can drift", "health-coach",
-     "Sources/PowerTools/Services/SystemMonitor/SystemHealthSummary.swift",
-     "let thresholds = HealthFindingThresholds.sanitized(defaults: defaults)",
-     "let thresholds = HealthFindingThresholds(cpuPercent: 90, memoryHogPercent: 30, diskFreePercent: 10, batteryPercent: 15)",
-     "the header's battery condition reads the same threshold Health Coach's battery finding does, live"),
+    ("header narrates without the shared template", "health-coach",
+     "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift",
+     "return HealthNarrationTemplate.headline(for: finding, strings: l10n.s,\n"
+     "                                                healthCoach: FeatureStrings.healthCoach(l10n.language))",
+     "return l10n.s.healthEverythingGood",
+     "the header's status line is worded by the shared template, not its own copy of the sentences"),
+    ("sustained gate skips the hold", "health-coach",
+     "Sources/PowerTools/Services/Metrics/SustainedAlertGate.swift",
+     "return readAt - since >= Self.sustainedSeconds",
+     "return true",
+     "critical memory pressure short of the sustained window still does not fire"),
 ]
 
 

@@ -21,6 +21,9 @@ Section 9 lists the decisions only the maintainer can make.
 
 ## 1. What exists today
 
+As found when this plan was drafted (`68d6bdfe`); see section 7 for what
+tasks 01–03 have since changed, including replacing `SystemHealthSummary`.
+
 | Piece | Where | What it does |
 | --- | --- | --- |
 | Header view | `UI/MenuPanel/MenuPanelView.swift`, `MenuPanelHeader` (~line 560) | Random greeting word + first name from `NSFullUserName()`; a two-line status that rolls through conditions every 3.4 s |
@@ -126,9 +129,14 @@ does not list it without root. Most of the "VS Code is compiling"
 value comes from this table with **no model call at all** — instant, free,
 private and testable.
 
-The existing `SystemHealthSummary` becomes a thin adapter over the detector so
-the non-AI header and the new feature can never disagree (AGENTS.md: two places
-answering the same question).
+Task 02 turned the existing `SystemHealthSummary` into a thin adapter over the
+detector, sharing its thresholds, so the header and the new feature could
+never disagree while task 03 still had not touched the header itself
+(AGENTS.md: two places answering the same question). Task 03 is the one that
+changes what the header shows: once it calls the detector directly,
+`SystemHealthSummary`/`SystemHealthCondition` have no caller left and are
+deleted rather than kept as unused code (AGENTS.md: "Delete code nothing
+calls").
 
 ### 3.3 Activity journal
 
@@ -168,7 +176,8 @@ never adding a monitor.
    absent from the evidence, cites a number not in the evidence (±5%), or
    contains a URL or a command. Rejection falls back to the template.
 5. **Template fallback** — `HealthNarrationTemplate` turns findings into a
-   sentence without a model ("Visual Studio Code is compiling — 9.2 GB").
+   sentence without a model ("Code is running a build, using 9.2 GB" — no
+   em-dash: the shared localization check rejects one in any language).
    This is what shows whenever AI is off, unavailable, declined, deferred,
    rate-limited or wrong. The header is never blank and never waits.
 
@@ -295,8 +304,8 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 | Task | Work | Model? | Status |
 | --- | --- | --- | --- |
 | 01 | `HealthSignalSnapshot`; `ProcessUsageService` returns helper names with grouped rows; `HealthKnownActivity` table + tests | No | Done — merged `96c8ca62`, 2026-09-16 |
-| 02 | `HealthFindingDetector` with sustained gates; `SystemHealthSummary` becomes an adapter over it; tests including "no flicker" | No | Done — `health-coach/02-finding-detector`, 2026-09-16 (uncommitted) |
-| 03 | `HealthNarrationTemplate`; header shows attributed findings ("VS Code is compiling — 9.2 GB") with the existing roll | No | Not started |
+| 02 | `HealthFindingDetector` with sustained gates; `SystemHealthSummary` becomes an adapter over it; tests including "no flicker" | No | Done — merged `652f8878`, 2026-09-16 |
+| 03 | `HealthNarrationTemplate`; header shows attributed findings ("Code is running a build, using 9.2 GB") with the existing roll | No | Done — `health-coach/03-narration-template`, 2026-09-16 (uncommitted) |
 | 04 | `AppFeature.healthCoach` registration (catalog, strings, destination, energy profile, panel search, availability default off) + Settings page skeleton | No | Not started |
 | 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Not started |
 | 06 | `HealthCoachTriggerPolicy` + usage ledger (pure) + Settings controls | No | Not started |
@@ -320,7 +329,12 @@ grows past about 250 lines.
   are matched exactly, not by substring (`nodemon` is not `node`).
 - Detector: each rule fires only after the sustained window; a single spike
   never fires; findings clear with hysteresis; ordering by severity.
-- `SystemHealthSummary` adapter returns what it returned before (regression).
+- Template: every finding kind produces the right sentence from its own
+  evidence, nothing invented; the five kinds `SystemHealthCondition` used to
+  cover keep reusing its exact translated sentences.
+- Header wiring: a source-shape check that the status line still calls the
+  detector and the template, and threads a persistent gate — the tests that
+  would most cheaply catch someone quietly reintroducing a second copy.
 - Journal: capacity and age limits; clear; no event carries clipboard content
   (source-shape check on the event type).
 - Trigger policy: every mode × cap × cooldown × deferral combination named in

@@ -12,7 +12,8 @@ enum HealthCoachTests {
         thresholdChecks(suite)
         detectorChecks(suite)
         orderingChecks(suite)
-        adapterChecks(suite)
+        templateChecks(suite)
+        headerWiringChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -198,7 +199,9 @@ enum HealthCoachTests {
                         .contains(where: { if case .memoryPressureCritical = $0 { return true }; return false }),
                      "a single critical memory reading does not fire before it has held")
         memory.capturedAt = 6
-        _ = HealthFindingDetector.findings(for: memory, previous: nil, gates: &memoryGates, thresholds: thresholds)
+        suite.expect(!HealthFindingDetector.findings(for: memory, previous: nil, gates: &memoryGates, thresholds: thresholds)
+                        .contains(where: { if case .memoryPressureCritical = $0 { return true }; return false }),
+                     "critical memory pressure short of the sustained window still does not fire")
         memory.capturedAt = 13
         let sustainedMemory = HealthFindingDetector.findings(for: memory, previous: nil, gates: &memoryGates, thresholds: thresholds)
         suite.expect(sustainedMemory.contains { finding in
@@ -297,7 +300,8 @@ enum HealthCoachTests {
 
     private static func orderingChecks(_ suite: TestSuite) {
         let findings: [HealthFinding] = [.updateAvailable, .knownActivity(HealthActivitySighting(
-            appPID: 1, appName: "Code", activity: .compiling, processCount: 2, appValue: 1)),
+            appPID: 1, appName: "Code", activity: .compiling, processCount: 2, appValue: 1,
+            valueIsMemoryBytes: true)),
             .batteryLow(chargePercent: 5, thresholdPercent: 15),
             .thermal(level: .critical, topCPUApp: nil)]
         suite.expect(findings.orderedByUrgency.map(\.severity) == [.critical, .critical, .info, .info],
@@ -307,45 +311,81 @@ enum HealthCoachTests {
 
         let tiedPriority: [HealthFinding] = [
             .knownActivity(HealthActivitySighting(appPID: 1, appName: "A", activity: .compiling,
-                                                  processCount: 1, appValue: 1)),
+                                                  processCount: 1, appValue: 1, valueIsMemoryBytes: true)),
             .knownActivity(HealthActivitySighting(appPID: 2, appName: "B", activity: .rustBuild,
-                                                  processCount: 1, appValue: 1)),
+                                                  processCount: 1, appValue: 1, valueIsMemoryBytes: true)),
         ]
         suite.expect(tiedPriority.orderedByUrgency == tiedPriority,
                      "findings of equal priority keep the order the detector produced them in")
     }
 
-    private static func adapterChecks(_ suite: TestSuite) {
-        let defaults = UserDefaults.standard
-        let featureKeys = [AppFeature.monitorPower.availabilityKey, AppFeature.monitorCPU.availabilityKey,
-                           AppFeature.monitorMemory.availabilityKey, AppFeature.monitorDisk.availabilityKey]
-        let savedFeatures = featureKeys.map { defaults.object(forKey: $0) }
-        let savedThreshold = defaults.object(forKey: DefaultsKey.monitorAlertBatteryPercent)
-        defer {
-            for (key, value) in zip(featureKeys, savedFeatures) {
-                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
-            }
-            if let savedThreshold { defaults.set(savedThreshold, forKey: DefaultsKey.monitorAlertBatteryPercent) }
-            else { defaults.removeObject(forKey: DefaultsKey.monitorAlertBatteryPercent) }
+    private static func templateChecks(_ suite: TestSuite) {
+        let s = Strings.enUS
+        let hc = HealthCoachStrings.enUS
+
+        func headline(_ finding: HealthFinding) -> String {
+            HealthNarrationTemplate.headline(for: finding, strings: s, healthCoach: hc)
         }
-        for key in featureKeys { defaults.set(true, forKey: key) }
 
-        var snapshot = SystemSnapshot()
-        snapshot.power = PowerReading(chargePercent: 12, isCharging: false, hasBattery: true)
+        suite.expect(headline(.batteryLow(chargePercent: 5, thresholdPercent: 15)) == s.healthBatteryCriticallyLow,
+                     "the battery-low headline reuses the header's existing, translated sentence")
+        suite.expect(headline(.thermal(level: .critical, topCPUApp: nil)) == s.healthThermalCritical,
+                     "critical thermal keeps the header's existing sentence")
+        suite.expect(headline(.thermal(level: .heavy, topCPUApp: nil)) == hc.thermalThrottling,
+                     "throttling below critical gets its own, less alarming sentence")
+        suite.expect(headline(.memoryPressureCritical(usedBytes: 0, totalBytes: nil, swapBytes: nil, topApps: []))
+                        == s.healthMemoryCritical,
+                     "critical memory pressure keeps the header's existing sentence")
+        suite.expect(headline(.memoryPressureWarning(usedBytes: 0, totalBytes: nil, swapBytes: nil, topApps: []))
+                        == hc.memoryPressureWarning,
+                     "memory pressure below critical gets its own sentence, distinct from the critical one")
+        suite.expect(headline(.diskLow(device: HealthDiskEvidence(name: "Data", freeBytes: 0, totalBytes: 0),
+                                       thresholdPercent: 10)) == s.healthDiskCriticallyLow,
+                     "disk-low keeps the header's existing sentence")
+        suite.expect(headline(.updateAvailable) == s.updateBannerTitle,
+                     "update-available keeps the header's existing sentence")
 
-        defaults.set(15, forKey: DefaultsKey.monitorAlertBatteryPercent)
-        let before = SystemHealthSummary.conditions(for: snapshot, updateAvailable: false,
-                                                     defaults: defaults, hasInternalBattery: true)
-        defaults.set(5, forKey: DefaultsKey.monitorAlertBatteryPercent)
-        let after = SystemHealthSummary.conditions(for: snapshot, updateAvailable: false,
-                                                    defaults: defaults, hasInternalBattery: true)
-        suite.expect(before.contains(.batteryCriticallyLow) && !after.contains(.batteryCriticallyLow),
-                     "the header's battery condition reads the same threshold Health Coach's battery finding does, live")
+        let hog = ProcessUsage(pid: 1, name: "Chrome", value: 6_000_000_000)
+        suite.expect(headline(.memoryHog(app: hog, percentOfTotal: 37.5, thresholdPercent: 30))
+                        == String(format: hc.memoryHogFormat, "Chrome", 38),
+                     "the memory-hog headline names the app and its rounded share of RAM, nothing invented")
+
+        suite.expect(headline(.swapGrowth(beforeBytes: 500_000_000, afterBytes: 3_000_000_000, windowSeconds: 600))
+                        == String(format: hc.swapGrowthFormat, MetricFormat.bytes(3_000_000_000), MetricFormat.bytes(500_000_000)),
+                     "the swap-growth headline quotes both the before and after figures from its own evidence")
+
+        let heavyApp = ProcessUsage(pid: 2, name: "Xcode", value: 95)
+        suite.expect(headline(.cpuSustained(usage: 0.95, thresholdPercent: 90, topApps: [heavyApp]))
+                        == String(format: hc.cpuSustainedFormat, "Xcode", 95),
+                     "the sustained-CPU headline names the heaviest app from its own evidence")
+
+        let memorySighting = HealthActivitySighting(appPID: 3, appName: "Code", activity: .compiling,
+                                                    processCount: 6, appValue: 9_000_000_000, valueIsMemoryBytes: true)
+        suite.expect(headline(.knownActivity(memorySighting))
+                        == String(format: hc.activityWithMemoryFormat, "Code", hc.activityCompiling,
+                                  MetricFormat.bytes(9_000_000_000)),
+                     "a memory-based activity sighting quotes its footprint, matching PowerToys-style attribution")
+
+        let cpuSighting = HealthActivitySighting(appPID: 4, appName: "node", activity: .javaScriptTooling,
+                                                 processCount: 1, appValue: 42, valueIsMemoryBytes: false)
+        suite.expect(headline(.knownActivity(cpuSighting))
+                        == String(format: hc.activityWithCPUFormat, "node", hc.activityJavaScriptTooling, 42),
+                     "a CPU-only activity sighting quotes CPU percent, never mistaking it for a memory figure")
+
+        for activity in HealthActivity.allCases {
+            suite.expect(!hc.phrase(for: activity).isEmpty, "every health activity has a template phrase: \(activity)")
+        }
     }
-}
 
-extension SystemHealthCondition: Equatable {
-    static func == (lhs: SystemHealthCondition, rhs: SystemHealthCondition) -> Bool {
-        String(describing: lhs) == String(describing: rhs)
+    private static func headerWiringChecks(_ suite: TestSuite) {
+        let path = "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift"
+        let source = (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
+        suite.expect(!source.isEmpty, "the menu panel source is readable for its wiring checks")
+        suite.expect(source.contains("HealthFindingDetector.findings("),
+                     "the header's status line is driven by the Health Coach detector, not a second copy of its rules")
+        suite.expect(source.contains("HealthNarrationTemplate.headline("),
+                     "the header's status line is worded by the shared template, not its own copy of the sentences")
+        suite.expect(source.contains("gates: &healthGates"),
+                     "the header threads a persistent gate across renders so a reading has to hold before it is shown")
     }
 }

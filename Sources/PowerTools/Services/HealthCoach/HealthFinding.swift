@@ -37,6 +37,34 @@ enum HealthFinding: Equatable {
         }
     }
 
+    /// A finding's identity with its evidence stripped, so the activity
+    /// journal can tell "the same condition, still true" apart from "a new
+    /// one" without holding onto (and comparing) full evidence, and without
+    /// two different apps compiling being counted as one finding.
+    enum Kind: Hashable {
+        case batteryLow, thermal, memoryPressureCritical, diskLow, memoryPressureWarning
+        case memoryHog(appPID: pid_t)
+        case swapGrowth
+        case cpuSustained
+        case knownActivity(appPID: pid_t, activity: HealthActivity)
+        case updateAvailable
+    }
+
+    var kind: Kind {
+        switch self {
+        case .batteryLow: return .batteryLow
+        case .thermal: return .thermal
+        case .memoryPressureCritical: return .memoryPressureCritical
+        case .diskLow: return .diskLow
+        case .memoryPressureWarning: return .memoryPressureWarning
+        case .memoryHog(let app, _, _): return .memoryHog(appPID: app.pid)
+        case .swapGrowth: return .swapGrowth
+        case .cpuSustained: return .cpuSustained
+        case .knownActivity(let sighting): return .knownActivity(appPID: sighting.appPID, activity: sighting.activity)
+        case .updateAvailable: return .updateAvailable
+        }
+    }
+
     /// Most urgent first. A fixed rank rather than case order, so reordering
     /// the cases above for readability can never silently reorder the header.
     fileprivate var priority: Int {

@@ -576,6 +576,18 @@ private struct MenuPanelHeader: View {
     /// stateless-per-render header does not keep; that rule is silent here
     /// until whichever task adds persistent snapshot history.
     @State private var healthGates = HealthFindingGates()
+    /// `findings` is read more than once per render (`statusText`,
+    /// `.onChange`, `restartRolling()`). `&healthGates` is an inout access,
+    /// which unconditionally calls `@State`'s setter on every call whether
+    /// anything inside the gate actually changed or not — SwiftUI has no way
+    /// to know otherwise, so it invalidates the view every time, which reads
+    /// `findings` again, forever. These two cache the detector's result
+    /// against the reading it was computed from, so the mutating call only
+    /// happens once per real monitor tick instead of once per read.
+    @State private var cachedFindings: [HealthFinding] = []
+    @State private var cachedFindingsReadAt: TimeInterval?
+    @ObservedObject private var healthJournal = HealthActivityJournalService.shared
+    @ObservedObject private var healthDetail = HealthCoachDetailPresentation.shared
 
     private static let rollInterval: TimeInterval = 3.4
 
@@ -585,52 +597,65 @@ private struct MenuPanelHeader: View {
     @State private var greetingWordIndex = Int.random(in: 0..<6)
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            logoBadge
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 10) {
+                logoBadge
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(greeting)
-                        .font(.system(size: 13, weight: .semibold))
-                        .lineLimit(1)
-                    if monitor.isRefreshing {
-                        RefreshingIndicator()
-                            .transition(.opacity)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(greeting)
+                            .font(.system(size: 13, weight: .semibold))
+                            .lineLimit(1)
+                        if monitor.isRefreshing {
+                            RefreshingIndicator()
+                                .transition(.opacity)
+                        }
                     }
-                }
-                Text(statusText)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .multilineTextAlignment(.leading)
+                    Button {
+                        HealthCoachDetailPresentation.shared.toggle()
+                    } label: {
+                        Text(statusText)
+                            .font(.system(size: 10.5))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .buttonStyle(.plain)
                     .id(conditionIndex)
                     .transition(.opacity)
+                }
+
+                Spacer(minLength: 8)
+
+                if AppInfo.isBeta {
+                    Text(l10n.s.betaBadgeLabel.uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.18))
+                        .foregroundStyle(.orange)
+                        .clipShape(Capsule())
+                        .fixedSize()
+                }
+
+                HStack(spacing: 6) {
+                    searchButton
+                    settingsButton
+                }
+                .panelGlassGroup()
             }
 
-            Spacer(minLength: 8)
-
-            if AppInfo.isBeta {
-                Text(l10n.s.betaBadgeLabel.uppercased())
-                    .font(.system(size: 9, weight: .bold))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.18))
-                    .foregroundStyle(.orange)
-                    .clipShape(Capsule())
-                    .fixedSize()
+            if healthDetail.isExpanded {
+                HealthCoachDetailView()
+                    .transition(.opacity)
             }
-
-            HStack(spacing: 6) {
-                searchButton
-                settingsButton
-            }
-            .panelGlassGroup()
         }
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.easeInOut(duration: 0.2), value: monitor.isRefreshing)
         .animation(.easeInOut(duration: 0.3), value: conditionIndex)
+        .animation(.easeInOut(duration: 0.2), value: healthDetail.isExpanded)
         .onAppear { restartRolling() }
         .onChange(of: findings.count) { _, _ in restartRolling() }
         .onDisappear {
@@ -771,9 +796,17 @@ private struct MenuPanelHeader: View {
     }
 
     private var findings: [HealthFinding] {
+        let snapshot = healthSnapshot
+        if let cachedFindingsReadAt, cachedFindingsReadAt == snapshot.capturedAt {
+            return cachedFindings
+        }
         let thresholds = HealthFindingThresholds.sanitized(defaults: .standard)
-        return HealthFindingDetector.findings(for: healthSnapshot, previous: nil,
-                                              gates: &healthGates, thresholds: thresholds)
+        let result = HealthFindingDetector.findings(for: snapshot, previous: nil,
+                                                    gates: &healthGates, thresholds: thresholds)
+        cachedFindings = result
+        cachedFindingsReadAt = snapshot.capturedAt
+        healthJournal.noteFindings(result)
+        return result
     }
 
     private var statusText: String {

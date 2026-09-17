@@ -15,6 +15,10 @@ enum HealthCoachTests {
         templateChecks(suite)
         headerWiringChecks(suite)
         registrationChecks(suite)
+        journalChecks(suite)
+        journalTemplateChecks(suite)
+        journalWiringChecks(suite)
+        renderLoopGuardChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -408,5 +412,133 @@ enum HealthCoachTests {
         suite.expect(!FeatureStrings.healthCoach(.enUS).pageTitle.isEmpty
                         && !FeatureStrings.healthCoach(.enUS).hubDescription.isEmpty,
                      "health coach has a hub title and description distinct from its template strings")
+    }
+
+    private static func journalChecks(_ suite: TestSuite) {
+        var journal = HealthActivityJournal()
+        let now = Date()
+        journal.record(.keepAwakeStarted(automatic: false), at: now)
+        suite.expect(journal.entries.count == 1 && journal.entries.first?.event == .keepAwakeStarted(automatic: false),
+                     "recording an event adds it, newest first")
+
+        journal.record(.recordingStarted, at: now.addingTimeInterval(1))
+        suite.expect(journal.entries.first?.event == .recordingStarted,
+                     "a newer event sorts ahead of an older one")
+        suite.expect(journal.entries.count == 2, "both distinct events are kept")
+
+        var overflow = HealthActivityJournal()
+        for index in 0..<(HealthActivityJournal.maximumEntries + 10) {
+            overflow.record(.updateAvailable, at: now.addingTimeInterval(TimeInterval(index)))
+        }
+        suite.expect(overflow.entries.count == HealthActivityJournal.maximumEntries,
+                     "the journal never grows past its entry cap")
+        suite.expect(overflow.entries.first?.occurredAt == now.addingTimeInterval(
+            TimeInterval(HealthActivityJournal.maximumEntries + 9)),
+                     "the entry cap keeps the newest events, not the oldest")
+
+        var aged = HealthActivityJournal()
+        aged.record(.recordingStarted, at: now)
+        aged.prune(now: now.addingTimeInterval(HealthActivityJournal.maximumAge + 1))
+        suite.expect(aged.entries.isEmpty,
+                     "an entry older than the age window is pruned even without a new event arriving")
+
+        var fresh = HealthActivityJournal()
+        fresh.record(.recordingStarted, at: now)
+        fresh.prune(now: now.addingTimeInterval(HealthActivityJournal.maximumAge - 1))
+        suite.expect(fresh.entries.count == 1,
+                     "an entry inside the age window survives a prune")
+
+        var cleared = HealthActivityJournal()
+        cleared.record(.updateAvailable, at: now)
+        cleared.clear()
+        suite.expect(cleared.entries.isEmpty, "clearing the journal removes every entry")
+    }
+
+    private static func journalTemplateChecks(_ suite: TestSuite) {
+        let hc = HealthCoachStrings.enUS
+
+        func text(_ event: HealthJournalEvent) -> String {
+            HealthJournalTemplate.text(for: event, strings: hc)
+        }
+
+        suite.expect(text(.keepAwakeStarted(automatic: false)) == hc.journalKeepAwakeStartedManual,
+                     "a manual Keep Awake session reads differently from an automatic one")
+        suite.expect(text(.keepAwakeStarted(automatic: true)) == hc.journalKeepAwakeStartedAutomatic,
+                     "an automatic Keep Awake session says so")
+        suite.expect(text(.keepAwakeEnded) == hc.journalKeepAwakeEnded, "keep awake ending has its own line")
+        suite.expect(text(.recordingStarted) == hc.journalRecordingStarted, "recording starting has its own line")
+        suite.expect(text(.recordingStopped(duration: 65))
+                        == String(format: hc.journalRecordingStoppedFormat, "1m 5s"),
+                     "a recording's duration is quoted from its own evidence, not recomputed elsewhere")
+        suite.expect(text(.clipboardCaptured(sourceAppName: "Safari"))
+                        == String(format: hc.journalClipboardCapturedFormat, "Safari"),
+                     "a clipboard capture names only the source app, never content")
+        suite.expect(text(.findingRaised(.batteryLow))
+                        == String(format: hc.journalFindingRaisedFormat, hc.kindLabelBatteryLow),
+                     "a raised finding names its own kind")
+        suite.expect(text(.findingCleared(.diskLow))
+                        == String(format: hc.journalFindingClearedFormat, hc.kindLabelDiskLow),
+                     "a cleared finding names its own kind")
+
+        for kind: HealthFinding.Kind in [.batteryLow, .thermal, .memoryPressureCritical, .diskLow,
+                                         .memoryPressureWarning, .memoryHog(appPID: 1), .swapGrowth,
+                                         .cpuSustained, .knownActivity(appPID: 1, activity: .compiling),
+                                         .updateAvailable] {
+            suite.expect(!hc.label(for: kind).isEmpty, "every finding kind has a journal label: \(kind)")
+        }
+
+        suite.expect(HealthFinding.batteryLow(chargePercent: 1, thresholdPercent: 2).kind == .batteryLow
+                        && HealthFinding.memoryHog(app: ProcessUsage(pid: 9, name: "A", value: 1),
+                                                   percentOfTotal: 1, thresholdPercent: 1).kind == .memoryHog(appPID: 9),
+                     "a finding's kind strips its evidence but keeps what tells two instances apart")
+        let compilingCode = HealthActivitySighting(appPID: 1, appName: "Code", activity: .compiling,
+                                                   processCount: 1, appValue: 1, valueIsMemoryBytes: true)
+        let buildingRust = HealthActivitySighting(appPID: 1, appName: "Code", activity: .rustBuild,
+                                                  processCount: 1, appValue: 1, valueIsMemoryBytes: true)
+        suite.expect(HealthFinding.knownActivity(compilingCode).kind != HealthFinding.knownActivity(buildingRust).kind,
+                     "the same app running two different recognised activities are two different kinds")
+    }
+
+    private static func journalWiringChecks(_ suite: TestSuite) {
+        let panelSource = (try? String(contentsOfFile: "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift",
+                                       encoding: .utf8)) ?? ""
+        suite.expect(!panelSource.isEmpty, "the menu panel source is readable for its journal wiring checks")
+        suite.expect(panelSource.contains("healthJournal.noteFindings(result)"),
+                     "the header's findings are relayed to the journal instead of it running a second detector")
+        suite.expect(panelSource.contains("HealthCoachDetailPresentation.shared.toggle()"),
+                     "the status line opens the shared detail presentation, not a view-local one")
+        suite.expect(panelSource.contains("HealthCoachDetailView()"),
+                     "the header actually shows the detail view when expanded")
+
+        let appDelegateSource = (try? String(contentsOfFile: "Sources/PowerTools/App/AppDelegate.swift",
+                                             encoding: .utf8)) ?? ""
+        suite.expect(appDelegateSource.contains("HealthActivityJournalService.shared.clear()"),
+                     "the in-memory-only journal is cleared on quit, never left for the next launch to find")
+    }
+
+    /// Regression coverage for a real incident: the header's `findings`
+    /// property is read more than once per render, and both an unconditional
+    /// `@Published` write and a `@State` gate mutated through `inout` fire
+    /// their observer on every call regardless of whether the value actually
+    /// changed. Together those turned one render into an infinite one,
+    /// pegging a CPU core (`ps` showed a 99% RUNNING process, not a crash).
+    /// These are source-shape checks because the actual failure only shows
+    /// up as CPU behaviour over time in a live SwiftUI view, which nothing
+    /// in this suite can observe directly — the fix was confirmed instead by
+    /// installing a Developer build and watching `ps` before and after.
+    private static func renderLoopGuardChecks(_ suite: TestSuite) {
+        let servicePath = "Sources/PowerTools/Services/HealthCoach/HealthActivityJournalService.swift"
+        let rawServiceSource = (try? String(contentsOfFile: servicePath, encoding: .utf8)) ?? ""
+        suite.expect(!rawServiceSource.isEmpty, "the journal service source is readable for its render-loop guard check")
+        let serviceSource = rawServiceSource.components(separatedBy: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+        suite.expect(serviceSource.contains("guard findings != latestFindings else { return }"),
+                     "noteFindings skips its @Published write when nothing changed, so an observer reading it cannot re-trigger itself forever")
+
+        let panelSource = (try? String(contentsOfFile: "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift",
+                                       encoding: .utf8)) ?? ""
+        suite.expect(panelSource.contains("cachedFindingsReadAt, cachedFindingsReadAt == snapshot.capturedAt"),
+                     "the header only mutates its gate once per real monitor tick, not once per read of findings")
     }
 }

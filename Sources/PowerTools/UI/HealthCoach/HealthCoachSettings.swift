@@ -3,14 +3,14 @@
 
 import SwiftUI
 
-/// Skeleton page (`docs/ai-health-coach/`, task 04): the panel header already
-/// narrates findings unconditionally once this feature is installed or not —
-/// installing it only reveals the one control that already has a real,
-/// working effect, `healthCoachMemoryHogPercent`. Narration mode, limits, the
-/// provider choice and the activity journal are later tasks; this page grows
-/// into them rather than being replaced.
+/// Grown across tasks 04-06 (`docs/ai-health-coach/`): the panel header
+/// already narrates findings unconditionally whether this feature is
+/// installed or not — installing it reveals the controls that already have
+/// a real, working effect. Narration mode, limits and the provider choice
+/// are later tasks; this page grows into them rather than being replaced.
 struct HealthCoachSettings: View {
     @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var journalService = HealthActivityJournalService.shared
     @AppStorage(DefaultsKey.healthCoachMemoryHogPercent) private var memoryHogPercent = 30
 
     private var strings: HealthCoachStrings { FeatureStrings.healthCoach(l10n.language) }
@@ -29,6 +29,18 @@ struct HealthCoachSettings: View {
                         value: $memoryHogPercent,
                         in: 10...80,
                         step: 5)
+            }
+
+            Section(strings.detailActivitySectionTitle) {
+                if journalService.journal.entries.isEmpty {
+                    Text(strings.detailJournalEmptyText)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Button(strings.detailClearActivity) {
+                        journalService.clear()
+                    }
+                }
             }
         }
         .formStyle(.grouped)

@@ -264,6 +264,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
         // Every pinned window belongs to another app: its level change
         // outlives this process unless it is put back before quit.
         AlwaysOnTopService.shared.suspend()
+        // The journal is in-memory only by design; nothing here should
+        // outlive the process that collected it.
+        HealthActivityJournalService.shared.clear()
         KeyboardDebounceService.shared.suspend()
         MouseClickDebounceService.shared.suspend()
         TextSnippetService.shared.suspend()

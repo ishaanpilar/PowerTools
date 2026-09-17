@@ -2,6 +2,17 @@
 
 Notable changes to PowerTools AI are recorded here.
 
+## [1.0.0-beta.6] - 2026-09-17
+
+### Fixed
+
+- Health Coach's expanded detail (Findings, Recent activity) could grow the
+  menu panel's header past the window's assumed height, clipping the only
+  way to close it out of reach and leaving the panel stuck expanded with no
+  way back to the compact view. The panel now measures the header's real
+  height instead of assuming a fixed size, and the expanded detail also
+  carries its own always-reachable collapse button.
+
 ## [1.0.0-beta.5] - 2026-09-16
 
 ### Summary

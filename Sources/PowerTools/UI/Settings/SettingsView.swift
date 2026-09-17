@@ -361,6 +361,7 @@ struct SettingsView: View {
         case .cutPaste: CutPasteSettings()
         case .autoQuit: AutoQuitSettings()
         case .alwaysOnTop: AlwaysOnTopSettings()
+        case .healthCoach: HealthCoachSettings()
         case .quitProtection: QuitProtectionSettings()
         case .uninstaller: UninstallerView()
         case .killProcess: KillProcessView()

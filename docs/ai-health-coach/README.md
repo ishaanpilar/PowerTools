@@ -236,7 +236,10 @@ so the policy needs no separate notion of "which kind of provider."
 
 ### 3.7 Settings page
 
-`UI/HealthCoach/HealthCoachSettings.swift`, destination `.healthCoach`:
+`UI/HealthCoach/HealthCoachSettings.swift`, destination `.healthCoach`. Task 04
+built the skeleton — the intro paragraph and the sensitivity control below,
+which already has a real effect on the header findings — and the rest is
+grown in by the tasks named next to each bullet:
 
 - Install state and a one-paragraph description.
 - **Narration**: mode picker; severity for "When something changes"; interval
@@ -305,8 +308,8 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 | --- | --- | --- | --- |
 | 01 | `HealthSignalSnapshot`; `ProcessUsageService` returns helper names with grouped rows; `HealthKnownActivity` table + tests | No | Done — merged `96c8ca62`, 2026-09-16 |
 | 02 | `HealthFindingDetector` with sustained gates; `SystemHealthSummary` becomes an adapter over it; tests including "no flicker" | No | Done — merged `652f8878`, 2026-09-16 |
-| 03 | `HealthNarrationTemplate`; header shows attributed findings ("Code is running a build, using 9.2 GB") with the existing roll | No | Done — `health-coach/03-narration-template`, 2026-09-16 (uncommitted) |
-| 04 | `AppFeature.healthCoach` registration (catalog, strings, destination, energy profile, panel search, availability default off) + Settings page skeleton | No | Not started |
+| 03 | `HealthNarrationTemplate`; header shows attributed findings ("Code is running a build, using 9.2 GB") with the existing roll | No | Done — merged `b3b033e0`, 2026-09-16 |
+| 04 | `AppFeature.healthCoach` registration (catalog, strings, destination, energy profile, panel search, availability default off) + Settings page skeleton | No | Done — `health-coach/04-feature-registration`, 2026-09-17 (uncommitted) |
 | 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Not started |
 | 06 | `HealthCoachTriggerPolicy` + usage ledger (pure) + Settings controls | No | Not started |
 | 07 | `HealthNarrator`: prompt builder, provider call, validator, cache, fallback; Explain button | Yes | Not started |
@@ -364,4 +367,4 @@ grows past about 250 lines.
 | D5 | Does this replace roadmap slice 3.4 and start the Mac Health Coach early? | Yes; update the roadmap's M3 table and section 9's "How often AI runs" row | Open |
 | D6 | For cloud providers, send real app names or categories ("a code editor")? | Categories by default, real names as an opt-in | Open |
 | D7 | Any action buttons beyond navigation (Quit app, open Activity Monitor filtered)? | Navigation only in v1; a Quit button would need its own approval design | Open |
-| D8 | Feature name in the UI | "Health Coach" (matches the roadmap); header copy unchanged in tone | Open |
+| D8 | Feature name in the UI | "Health Coach" (matches the roadmap); header copy unchanged in tone | **Settled by use, 2026-09-17:** task 04 registered the feature as "Health Coach" throughout (`AppFeature.healthCoach`, hub title, settings page) |

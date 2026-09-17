@@ -7,6 +7,11 @@ import Foundation
 /// had (`docs/ai-health-coach/`). English only for now (roadmap D5); every
 /// other language repeats the English text until translation resumes.
 struct HealthCoachStrings {
+    let pageTitle: String
+    let hubDescription: String
+    let settingsIntro: String
+    let sensitivitySectionTitle: String
+    let memoryHogThresholdLabel: String
     let thermalThrottling: String
     let memoryPressureWarning: String
     /// %1 = app name, %2 = percent of total RAM, already rounded to a whole number
@@ -70,6 +75,11 @@ extension FeatureStrings {
 
 extension HealthCoachStrings {
     static let enUS = HealthCoachStrings(
+        pageTitle: "Health Coach",
+        hubDescription: "Notices when something on your Mac is off and says what is causing it, in plain words.",
+        settingsIntro: "The panel header already names what is using memory or CPU, right down to a recognised build or backup, from readings PowerTools already takes. Nothing here is sent anywhere, and no AI runs without you asking for it.",
+        sensitivitySectionTitle: "Sensitivity",
+        memoryHogThresholdLabel: "Flag an app using over",
         thermalThrottling: "Your Mac is running warm and slowing down.",
         memoryPressureWarning: "Memory pressure is building up.",
         memoryHogFormat: "%1$@ is using %2$d%% of your memory.",

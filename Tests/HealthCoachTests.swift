@@ -14,6 +14,7 @@ enum HealthCoachTests {
         orderingChecks(suite)
         templateChecks(suite)
         headerWiringChecks(suite)
+        registrationChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -387,5 +388,25 @@ enum HealthCoachTests {
                      "the header's status line is worded by the shared template, not its own copy of the sentences")
         suite.expect(source.contains("gates: &healthGates"),
                      "the header threads a persistent gate across renders so a reading has to hold before it is shown")
+    }
+
+    private static func registrationChecks(_ suite: TestSuite) {
+        suite.expect(AppFeature.healthCoach.group == .tools,
+                     "Health Coach sits in the Tools group of the Features hub")
+        suite.expect(AppFeature.healthCoach.enabledKeys.isEmpty,
+                     "Health Coach is engaged simply by being installed, like other on-demand tools")
+        suite.expect(AppFeature.healthCoach.permissions.isEmpty,
+                     "Health Coach reads only data other already-permitted features already collect")
+        suite.expect((AppFeature.availabilityDefaults[AppFeature.healthCoach.availabilityKey] as? Bool) == false,
+                     "Health Coach ships uninstalled, matching every other feature added since aiTextActions")
+        suite.expect(AppFeature.healthCoach.settingsDestination == FeatureSettingsDestination(.healthCoach),
+                     "Health Coach has its own dedicated settings page, not a section on a shared one")
+        suite.expect(FeatureVisibilitySupport.features(for: .healthCoach) == [.healthCoach],
+                     "the health coach settings page is gated on the health coach feature alone")
+        suite.expect(AppFeature.healthCoach.panelSearchDestination == .settings,
+                     "health coach opens its dedicated settings page from panel search, not the panel itself")
+        suite.expect(!FeatureStrings.healthCoach(.enUS).pageTitle.isEmpty
+                        && !FeatureStrings.healthCoach(.enUS).hubDescription.isEmpty,
+                     "health coach has a hub title and description distinct from its template strings")
     }
 }

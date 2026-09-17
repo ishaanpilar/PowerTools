@@ -570,6 +570,12 @@ private struct MenuPanelHeader: View {
     /// on a timer only while there is more than one to cycle through.
     @State private var conditionIndex = 0
     @State private var rollTimer: Timer?
+    /// Carried across renders so a reading has to hold before it is shown,
+    /// exactly like `MonitorAlertService`'s own gates. Swap growth needs a
+    /// snapshot from several minutes ago to compare against, which this
+    /// stateless-per-render header does not keep; that rule is silent here
+    /// until whichever task adds persistent snapshot history.
+    @State private var healthGates = HealthFindingGates()
 
     private static let rollInterval: TimeInterval = 3.4
 
@@ -626,7 +632,7 @@ private struct MenuPanelHeader: View {
         .animation(.easeInOut(duration: 0.2), value: monitor.isRefreshing)
         .animation(.easeInOut(duration: 0.3), value: conditionIndex)
         .onAppear { restartRolling() }
-        .onChange(of: conditions.count) { _, _ in restartRolling() }
+        .onChange(of: findings.count) { _, _ in restartRolling() }
         .onDisappear {
             rollTimer?.invalidate()
             rollTimer = nil
@@ -734,19 +740,54 @@ private struct MenuPanelHeader: View {
         return false
     }
 
-    private var conditions: [SystemHealthCondition] {
-        SystemHealthSummary.conditions(for: monitor.snapshot, updateAvailable: updateAvailable)
+    /// Assembled only from readings the monitor and these two services
+    /// already hold — no new sampling of any kind (`docs/ai-health-coach/`).
+    /// `capturedAt` is tied to the monitor's own last real CPU read rather
+    /// than the wall clock, so reading this more than once before the next
+    /// tick yields the same value and `healthGates` never double-advances.
+    private var healthSnapshot: HealthSignalSnapshot {
+        let system = monitor.snapshot
+        var snapshot = HealthSignalSnapshot()
+        snapshot.memoryPressure = system.memoryPressure
+        snapshot.memoryUsedBytes = system.memoryUsed
+        snapshot.memoryTotalBytes = system.memoryTotal
+        snapshot.swapUsedBytes = system.memorySwapUsed
+        snapshot.cpuUsage = system.cpuUsage
+        snapshot.cpuUsageReadAt = system.cpuUsageReadAt
+        snapshot.thermalPressure = system.thermalPressure
+        snapshot.topMemory = ProcessUsageService.shared.cachedTop(.memory, limit: 3) ?? []
+        snapshot.topCPU = ProcessUsageService.shared.cachedTop(.cpu, limit: 3) ?? []
+        snapshot.keepAwakeActive = KeepAwakeManager.shared.isActive
+        snapshot.recordingActive = ScreenRecorderService.shared.isRecording
+        snapshot.updateAvailable = updateAvailable
+        snapshot.hasInternalBattery = PowerSampler.hasInternalBattery
+        snapshot.batteryIsCharging = system.power?.isCharging ?? false
+        snapshot.batteryChargePercent = system.power?.chargePercent
+        snapshot.diskDevices = (system.disk?.devices ?? []).map {
+            HealthDiskEvidence(name: $0.name, freeBytes: $0.freeBytes, totalBytes: $0.totalBytes)
+        }
+        snapshot.capturedAt = system.cpuUsageReadAt
+        return snapshot
+    }
+
+    private var findings: [HealthFinding] {
+        let thresholds = HealthFindingThresholds.sanitized(defaults: .standard)
+        return HealthFindingDetector.findings(for: healthSnapshot, previous: nil,
+                                              gates: &healthGates, thresholds: thresholds)
     }
 
     private var statusText: String {
-        guard !conditions.isEmpty else { return l10n.s.healthEverythingGood }
-        return conditions[conditionIndex % conditions.count].message(l10n.s)
+        let findings = findings
+        guard !findings.isEmpty else { return l10n.s.healthEverythingGood }
+        let finding = findings[conditionIndex % findings.count]
+        return HealthNarrationTemplate.headline(for: finding, strings: l10n.s,
+                                                healthCoach: FeatureStrings.healthCoach(l10n.language))
     }
 
     private func restartRolling() {
         rollTimer?.invalidate()
         conditionIndex = 0
-        guard conditions.count > 1 else { return }
+        guard findings.count > 1 else { return }
         rollTimer = Timer.scheduledTimer(withTimeInterval: Self.rollInterval, repeats: true) { _ in
             DispatchQueue.main.async {
                 conditionIndex += 1

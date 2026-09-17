@@ -51,6 +51,52 @@ struct HealthCoachStrings {
         case .virtualMachine: return activityVirtualMachine
         }
     }
+
+    // MARK: - Detail popover and journal (task 05)
+
+    let detailFindingsSectionTitle: String
+    let detailNoFindingsText: String
+    let detailActivitySectionTitle: String
+    let detailJournalEmptyText: String
+    let detailClearActivity: String
+
+    let journalKeepAwakeStartedManual: String
+    let journalKeepAwakeStartedAutomatic: String
+    let journalKeepAwakeEnded: String
+    let journalRecordingStarted: String
+    /// %1 = duration, already formatted ("5m")
+    let journalRecordingStoppedFormat: String
+    /// %1 = the source app's name only (task 09, D2) — never content
+    let journalClipboardCapturedFormat: String
+    /// %1 = one of the kindLabel* phrases below
+    let journalFindingRaisedFormat: String
+    let journalFindingClearedFormat: String
+
+    let kindLabelBatteryLow: String
+    let kindLabelThermal: String
+    let kindLabelMemoryPressureCritical: String
+    let kindLabelDiskLow: String
+    let kindLabelMemoryPressureWarning: String
+    let kindLabelMemoryHog: String
+    let kindLabelSwapGrowth: String
+    let kindLabelCPUSustained: String
+    let kindLabelKnownActivity: String
+    let kindLabelUpdateAvailable: String
+
+    func label(for kind: HealthFinding.Kind) -> String {
+        switch kind {
+        case .batteryLow: return kindLabelBatteryLow
+        case .thermal: return kindLabelThermal
+        case .memoryPressureCritical: return kindLabelMemoryPressureCritical
+        case .diskLow: return kindLabelDiskLow
+        case .memoryPressureWarning: return kindLabelMemoryPressureWarning
+        case .memoryHog: return kindLabelMemoryHog
+        case .swapGrowth: return kindLabelSwapGrowth
+        case .cpuSustained: return kindLabelCPUSustained
+        case .knownActivity: return kindLabelKnownActivity
+        case .updateAvailable: return kindLabelUpdateAvailable
+        }
+    }
 }
 
 extension FeatureStrings {
@@ -95,6 +141,29 @@ extension HealthCoachStrings {
         activityPhotosAnalysis: "Photos analysis",
         activitySystemUpdate: "a system update",
         activityICloudSync: "an iCloud sync",
-        activityVirtualMachine: "a container or virtual machine"
+        activityVirtualMachine: "a container or virtual machine",
+        detailFindingsSectionTitle: "Findings",
+        detailNoFindingsText: "Nothing notable right now.",
+        detailActivitySectionTitle: "Recent activity",
+        detailJournalEmptyText: "No activity yet.",
+        detailClearActivity: "Clear",
+        journalKeepAwakeStartedManual: "Keep Awake turned on",
+        journalKeepAwakeStartedAutomatic: "Keep Awake turned on automatically",
+        journalKeepAwakeEnded: "Keep Awake turned off",
+        journalRecordingStarted: "Screen recording started",
+        journalRecordingStoppedFormat: "Screen recording stopped, %1$@",
+        journalClipboardCapturedFormat: "Copied something from %1$@",
+        journalFindingRaisedFormat: "%1$@ started",
+        journalFindingClearedFormat: "%1$@ cleared",
+        kindLabelBatteryLow: "Low battery",
+        kindLabelThermal: "Thermal throttling",
+        kindLabelMemoryPressureCritical: "Critical memory pressure",
+        kindLabelDiskLow: "Low storage",
+        kindLabelMemoryPressureWarning: "Memory pressure",
+        kindLabelMemoryHog: "High memory use",
+        kindLabelSwapGrowth: "Swap growth",
+        kindLabelCPUSustained: "Sustained CPU use",
+        kindLabelKnownActivity: "A recognised activity",
+        kindLabelUpdateAvailable: "An update"
     )
 }

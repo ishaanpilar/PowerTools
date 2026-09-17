@@ -226,10 +226,15 @@ so the policy needs no separate notion of "which kind of provider."
   badge — nothing for template text, a sparkle for AI, and "On this Mac" or the
   cloud provider's name on hover. A compact **Explain** button (sparkles icon)
   sits beside search and settings when the feature is installed.
-- **Detail popover** (click the status line): findings by severity, each with
-  evidence chips that open the matching dashboard card; the journal's recent
-  events; "Explain again"; provider and time of the explanation; Cancel while
-  streaming.
+- **Detail view** (click the status line): findings by severity, each with an
+  evidence chip that opens the matching dashboard card; the journal's recent
+  events. Built in task 05 as "expand in place" below the header — the same
+  shape the dashboard's own cards already use — rather than a genuine second
+  `NSPopover`: nothing else in this app nests SwiftUI's `.popover` inside the
+  menu bar's own already-`NSPopover`-hosted content, and task 05 didn't
+  introduce the first instance untested. "Explain again"; provider and time
+  of the explanation; Cancel while streaming: task 07, once there is
+  something to explain again.
 - Existing rolling behaviour stays for multiple findings; AI headlines do not
   roll mid-read.
 - VoiceOver reads the headline and severity; Reduce Motion drops the fade.
@@ -309,8 +314,8 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 | 01 | `HealthSignalSnapshot`; `ProcessUsageService` returns helper names with grouped rows; `HealthKnownActivity` table + tests | No | Done — merged `96c8ca62`, 2026-09-16 |
 | 02 | `HealthFindingDetector` with sustained gates; `SystemHealthSummary` becomes an adapter over it; tests including "no flicker" | No | Done — merged `652f8878`, 2026-09-16 |
 | 03 | `HealthNarrationTemplate`; header shows attributed findings ("Code is running a build, using 9.2 GB") with the existing roll | No | Done — merged `b3b033e0`, 2026-09-16 |
-| 04 | `AppFeature.healthCoach` registration (catalog, strings, destination, energy profile, panel search, availability default off) + Settings page skeleton | No | Done — `health-coach/04-feature-registration`, 2026-09-17 (uncommitted) |
-| 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Not started |
+| 04 | `AppFeature.healthCoach` registration (catalog, strings, destination, energy profile, panel search, availability default off) + Settings page skeleton | No | Done — merged `e2c27546`, 2026-09-17 |
+| 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Done — `health-coach/05-activity-journal`, 2026-09-17 (uncommitted) |
 | 06 | `HealthCoachTriggerPolicy` + usage ledger (pure) + Settings controls | No | Not started |
 | 07 | `HealthNarrator`: prompt builder, provider call, validator, cache, fallback; Explain button | Yes | Not started |
 | 08 | Cloud: manifest content type, preview, redaction option; PRIVACY.md | Yes | Not started |

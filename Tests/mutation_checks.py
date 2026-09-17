@@ -124,6 +124,16 @@ MUTATIONS = [
      "return readAt - since >= Self.sustainedSeconds",
      "return true",
      "critical memory pressure short of the sustained window still does not fire"),
+    ("journal never ages out", "health-coach",
+     "Sources/PowerTools/Services/HealthCoach/HealthActivityJournal.swift",
+     "entries.removeAll { $0.occurredAt < cutoff }",
+     "_ = cutoff",
+     "an entry older than the age window is pruned even without a new event arriving"),
+    ("journal cap drops the newest entries", "health-coach",
+     "Sources/PowerTools/Services/HealthCoach/HealthActivityJournal.swift",
+     "entries.removeLast(entries.count - Self.maximumEntries)",
+     "entries.removeFirst(entries.count - Self.maximumEntries)",
+     "the entry cap keeps the newest events, not the oldest"),
 ]
 
 

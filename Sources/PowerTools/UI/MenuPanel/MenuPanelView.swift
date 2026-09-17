@@ -100,6 +100,16 @@ struct MenuPanelView: View {
     @State private var navigableContentHeight: CGFloat = 0
     @State private var metricContentHeight: CGFloat = 0
     @State private var updateBannerHeight: CGFloat = 0
+    /// The header's real height, measured rather than assumed: unlike the
+    /// dashboard's own cards (which expand inside the scrollable content, so
+    /// a taller one just grows what's already measured), the Health Coach
+    /// detail expands *inside the header itself*, above the scroll view,
+    /// where nothing was ever measuring it. A fixed estimate here left the
+    /// panel's window too short once that detail opened, clipping the
+    /// header's own collapse control off the top of the visible frame with
+    /// no scroll view able to reach it - the one control that closes it,
+    /// gone, with the panel looking stuck open.
+    @State private var headerHeight: CGFloat = 0
     /// The section opened from the dashboard; nil is the dashboard itself.
     @State private var openedSection: PanelSectionID?
     @State private var selectedMetric: MetricDetailKind?
@@ -431,16 +441,29 @@ struct MenuPanelView: View {
         min(maxHeight, max(220, metricScrollHeight + navigableChromeHeight))
     }
 
+    /// The compact, two-line greeting's height, used until the header's real
+    /// height has actually been measured (the first render, before
+    /// `.reportHeight` reports back) - same fallback shape as
+    /// `estimatedNavigableContentHeight` below.
+    private var estimatedHeaderHeight: CGFloat { 54 }
+
+    private var measuredHeaderHeight: CGFloat {
+        headerHeight == 0 ? estimatedHeaderHeight : headerHeight
+    }
+
     private var navigableChromeHeight: CGFloat {
         let bannerHeight = updates.state.showsMenuPanelBanner
             ? (max(updateBannerHeight, 48) + 12)
             : 0
-        // Padding and the header (now a two-line greeting, no separate
-        // footer row since Settings/Quit moved up into it); a section or
-        // metric adds its back row.
+        // Outer padding (12 top + 12 bottom) plus the one VStack spacing gap
+        // between the header and whatever comes right after it, plus the
+        // header's own real height - measured, not assumed, because the
+        // Health Coach detail (Findings, Recent activity) can expand inside
+        // the header to several times its compact size. A section or metric
+        // adds its own back row on top of that.
         let backRow: CGFloat = isSearching ? 42
             : (selectedMetric != nil || activeSection != nil) ? 38 : 0
-        return 90 + backRow + bannerHeight
+        return 24 + 12 + measuredHeaderHeight + backRow + bannerHeight
     }
 
     private var estimatedNavigableContentHeight: CGFloat {
@@ -554,6 +577,7 @@ struct MenuPanelView: View {
 
     private var header: some View {
         MenuPanelHeader(isSearching: isSearching)
+            .reportHeight($headerHeight)
     }
 }
 

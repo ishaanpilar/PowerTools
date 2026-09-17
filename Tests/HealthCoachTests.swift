@@ -20,6 +20,9 @@ enum HealthCoachTests {
         journalWiringChecks(suite)
         renderLoopGuardChecks(suite)
         detailHeightAndCollapseChecks(suite)
+        usageLedgerChecks(suite)
+        triggerSettingsChecks(suite)
+        triggerPolicyChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -541,6 +544,191 @@ enum HealthCoachTests {
                                        encoding: .utf8)) ?? ""
         suite.expect(panelSource.contains("cachedFindingsReadAt, cachedFindingsReadAt == snapshot.capturedAt"),
                      "the header only mutates its gate once per real monitor tick, not once per read of findings")
+    }
+
+    private static func usageLedgerChecks(_ suite: TestSuite) {
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        var ledger = HealthCoachUsageLedger()
+        suite.expect(ledger.lastCallAt == nil && ledger.lastExplainedKinds.isEmpty,
+                     "a fresh usage ledger has made no calls")
+
+        ledger.recordCall(at: base, findingKinds: [.diskLow], estimatedTokens: 120)
+        suite.expect(ledger.lastCallAt == base && ledger.lastExplainedKinds == [.diskLow],
+                     "recording a call remembers when it happened and which kinds it explained")
+        suite.expect(ledger.callCount(sinceLast: 3_600, asOf: base.addingTimeInterval(10)) == 1,
+                     "a call inside the window counts")
+        suite.expect(ledger.callCount(sinceLast: 3_600, asOf: base.addingTimeInterval(3_601)) == 0,
+                     "a call outside the window no longer counts")
+        suite.expect(ledger.estimatedTokens(sinceLast: 3_600, asOf: base.addingTimeInterval(10)) == 120,
+                     "estimated tokens are summed only from calls inside the window")
+
+        ledger.recordCall(at: base.addingTimeInterval(60), findingKinds: [.cpuSustained], estimatedTokens: 80)
+        suite.expect(ledger.lastExplainedKinds == [.cpuSustained],
+                     "a later call replaces the remembered kinds with its own")
+        suite.expect(ledger.callCount(sinceLast: 3_600, asOf: base.addingTimeInterval(70)) == 2,
+                     "both calls inside the window are counted")
+        suite.expect(ledger.estimatedTokens(sinceLast: 3_600, asOf: base.addingTimeInterval(70)) == 200,
+                     "estimated tokens from every call inside the window are added together")
+
+        ledger.reset()
+        suite.expect(ledger.calls.isEmpty && ledger.lastCallAt == nil && ledger.lastExplainedKinds.isEmpty,
+                     "resetting the ledger clears every call and remembered kind")
+    }
+
+    private static func triggerSettingsChecks(_ suite: TestSuite) {
+        suite.expect(Defaults.registeredDefaults[DefaultsKey.healthCoachTriggerMode] as? String
+                        == HealthCoachTriggerSettings.Mode.onDemand.rawValue,
+                     "the trigger mode registers a default so Settings never reads an unset key")
+        suite.expect(Defaults.registeredDefaults[DefaultsKey.healthCoachMaxCallsPerHour] as? Int == 4
+                        && Defaults.registeredDefaults[DefaultsKey.healthCoachMaxCallsPerDay] as? Int == 20,
+                     "the call caps register the plan's defaults, 4 per hour and 20 per day")
+
+        let defaults = UserDefaults.standard
+        let keys = [DefaultsKey.healthCoachTriggerMode, DefaultsKey.healthCoachChangeSeverity,
+                   DefaultsKey.healthCoachScheduledIntervalMinutes, DefaultsKey.healthCoachMaxCallsPerHour,
+                   DefaultsKey.healthCoachMaxCallsPerDay]
+        let saved = keys.map { defaults.object(forKey: $0) }
+        defer {
+            for (key, value) in zip(keys, saved) {
+                if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+            }
+        }
+
+        for key in keys { defaults.removeObject(forKey: key) }
+        suite.expect(HealthCoachTriggerSettings.sanitized(defaults: defaults) == HealthCoachTriggerSettings(),
+                     "unset trigger settings fall back to the plan's defaults")
+
+        defaults.set("not-a-real-mode", forKey: DefaultsKey.healthCoachTriggerMode)
+        suite.expect(HealthCoachTriggerSettings.sanitized(defaults: defaults).mode == .onDemand,
+                     "a corrupted trigger mode falls back rather than crashing on an unknown case")
+
+        defaults.set(99, forKey: DefaultsKey.healthCoachChangeSeverity)
+        suite.expect(HealthCoachTriggerSettings.sanitized(defaults: defaults).changeSeverityThreshold == .notable,
+                     "an out-of-range severity falls back to notable")
+
+        defaults.set(7, forKey: DefaultsKey.healthCoachScheduledIntervalMinutes)
+        suite.expect(HealthCoachTriggerSettings.sanitized(defaults: defaults).scheduledIntervalMinutes == 15,
+                     "a scheduled interval outside the offered choices falls back to 15 minutes")
+
+        defaults.set(HealthCoachTriggerSettings.Mode.scheduled.rawValue, forKey: DefaultsKey.healthCoachTriggerMode)
+        defaults.set(HealthFinding.Severity.critical.rawValue, forKey: DefaultsKey.healthCoachChangeSeverity)
+        defaults.set(30, forKey: DefaultsKey.healthCoachScheduledIntervalMinutes)
+        defaults.set(10, forKey: DefaultsKey.healthCoachMaxCallsPerHour)
+        defaults.set(50, forKey: DefaultsKey.healthCoachMaxCallsPerDay)
+        suite.expect(HealthCoachTriggerSettings.sanitized(defaults: defaults)
+                        == HealthCoachTriggerSettings(mode: .scheduled, changeSeverityThreshold: .critical,
+                                                      scheduledIntervalMinutes: 30, maxCallsPerHour: 10, maxCallsPerDay: 50),
+                     "a full set of valid trigger settings is read back exactly")
+    }
+
+    private static func triggerPolicyChecks(_ suite: TestSuite) {
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        let notableFinding = HealthFinding.memoryHog(app: ProcessUsage(pid: 1, name: "A", value: 1),
+                                                     percentOfTotal: 50, thresholdPercent: 30)
+        let criticalFinding = HealthFinding.diskLow(device: HealthDiskEvidence(name: "D", freeBytes: 0, totalBytes: 100),
+                                                    thresholdPercent: 10)
+        let infoFinding = HealthFinding.updateAvailable
+        let defaultSettings = HealthCoachTriggerSettings()
+        let calmSystem = HealthCoachSystemState()
+
+        func decide(findings: [HealthFinding] = [],
+                   trigger: HealthCoachTrigger,
+                   ledger: HealthCoachUsageLedger = HealthCoachUsageLedger(),
+                   settings: HealthCoachTriggerSettings = defaultSettings,
+                   system: HealthCoachSystemState = calmSystem,
+                   boundary: AIContextManifest.Boundary = .local,
+                   now: Date = base) -> HealthCoachTriggerDecision {
+            HealthCoachTriggerPolicy.decide(now: now, findings: findings, trigger: trigger, ledger: ledger,
+                                            settings: settings, system: system, providerBoundary: boundary)
+        }
+
+        suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed,
+                            settings: HealthCoachTriggerSettings(mode: .off)) == .useTemplate(.off),
+                     "mode Off refuses even an explicit Explain press")
+
+        suite.expect(decide(findings: [criticalFinding], trigger: .panelOpened,
+                            settings: HealthCoachTriggerSettings(mode: .onDemand)) == .useTemplate(.notTriggered),
+                     "on demand mode never calls automatically, no matter how severe the finding")
+        suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed,
+                            settings: HealthCoachTriggerSettings(mode: .onDemand)) == .callModel,
+                     "on demand mode calls the model when the person presses Explain")
+
+        let changeSettings = HealthCoachTriggerSettings(mode: .whenSomethingChanges, changeSeverityThreshold: .notable)
+        suite.expect(decide(findings: [infoFinding], trigger: .panelOpened, settings: changeSettings) == .useTemplate(.notTriggered),
+                     "when-something-changes mode ignores findings below its chosen severity")
+        suite.expect(decide(findings: [notableFinding], trigger: .panelOpened, settings: changeSettings) == .callModel,
+                     "a first, sufficiently severe finding set calls the model")
+
+        var seenLedger = HealthCoachUsageLedger()
+        seenLedger.recordCall(at: base, findingKinds: [notableFinding.kind], estimatedTokens: 50)
+        suite.expect(decide(findings: [notableFinding], trigger: .panelOpened, ledger: seenLedger, settings: changeSettings,
+                            now: base.addingTimeInterval(5)) == .useCache,
+                     "an unchanged finding set reuses the cached explanation instead of calling again")
+        suite.expect(decide(findings: [criticalFinding], trigger: .panelOpened, ledger: seenLedger, settings: changeSettings,
+                            now: base.addingTimeInterval(60)) == .useTemplate(.cooldownActive),
+                     "a changed finding set still waits out the per-finding-kind cooldown before calling again")
+        suite.expect(decide(findings: [criticalFinding], trigger: .panelOpened, ledger: seenLedger, settings: changeSettings,
+                            now: base.addingTimeInterval(HealthCoachTriggerPolicy.findingKindCooldown + 1)) == .callModel,
+                     "a changed finding set calls the model again once the cooldown has passed")
+
+        let scheduledSettings = HealthCoachTriggerSettings(mode: .scheduled, scheduledIntervalMinutes: 15)
+        suite.expect(decide(findings: [infoFinding], trigger: .panelAlreadyOpen, settings: scheduledSettings) == .useTemplate(.notTriggered),
+                     "scheduled mode never calls when nothing notable is happening")
+        suite.expect(decide(findings: [notableFinding], trigger: .panelAlreadyOpen, settings: scheduledSettings) == .callModel,
+                     "scheduled mode's first call happens as soon as something notable is present")
+
+        var scheduledLedger = HealthCoachUsageLedger()
+        scheduledLedger.recordCall(at: base, findingKinds: [notableFinding.kind], estimatedTokens: 50)
+        suite.expect(decide(findings: [notableFinding], trigger: .panelAlreadyOpen, ledger: scheduledLedger, settings: scheduledSettings,
+                            now: base.addingTimeInterval(60)) == .useCache,
+                     "scheduled mode reuses the cache while the same situation is still true")
+        suite.expect(decide(findings: [criticalFinding], trigger: .panelAlreadyOpen, ledger: scheduledLedger, settings: scheduledSettings,
+                            now: base.addingTimeInterval(60)) == .useTemplate(.cooldownActive),
+                     "scheduled mode will not call again before its chosen interval has passed, even for a new finding")
+        suite.expect(decide(findings: [criticalFinding], trigger: .panelAlreadyOpen, ledger: scheduledLedger, settings: scheduledSettings,
+                            now: base.addingTimeInterval(16 * 60)) == .callModel,
+                     "scheduled mode calls again once its chosen interval has passed")
+
+        var hourlyFullLedger = HealthCoachUsageLedger()
+        for index in 0..<defaultSettings.maxCallsPerHour {
+            hourlyFullLedger.recordCall(at: base.addingTimeInterval(TimeInterval(index)), findingKinds: [], estimatedTokens: 10)
+        }
+        suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed, ledger: hourlyFullLedger,
+                            now: base.addingTimeInterval(30)) == .useTemplate(.hourlyCapReached),
+                     "the hourly cap refuses even an explicit Explain press")
+
+        var dailyFullLedger = HealthCoachUsageLedger()
+        for index in 0..<defaultSettings.maxCallsPerDay {
+            dailyFullLedger.recordCall(at: base.addingTimeInterval(TimeInterval(index) * 1_000), findingKinds: [], estimatedTokens: 10)
+        }
+        suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed, ledger: dailyFullLedger,
+                            now: base.addingTimeInterval(TimeInterval(defaultSettings.maxCallsPerDay) * 1_000 + 30))
+                        == .useTemplate(.dailyCapReached),
+                     "the daily cap refuses even an explicit Explain press")
+
+        let lowPower = HealthCoachSystemState(lowPowerModeEnabled: true)
+        suite.expect(decide(findings: [criticalFinding], trigger: .panelOpened, settings: changeSettings, system: lowPower)
+                        == .useTemplate(.lowPowerMode),
+                     "Low Power Mode defers an automatic call")
+        suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed, settings: changeSettings, system: lowPower)
+                        == .callModel,
+                     "Low Power Mode does not stop an explicit Explain press")
+
+        let throttling = HealthCoachSystemState(thermalThrottling: true)
+        suite.expect(decide(findings: [criticalFinding], trigger: .panelOpened, settings: changeSettings, system: throttling)
+                        == .useTemplate(.thermalThrottling),
+                     "thermal throttling defers an automatic call")
+        suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed, settings: changeSettings, system: throttling)
+                        == .callModel,
+                     "thermal throttling does not stop an explicit Explain press")
+
+        let criticalMemory = HealthCoachSystemState(memoryPressureCritical: true)
+        suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed, system: criticalMemory, boundary: .local)
+                        == .useTemplate(.criticalMemoryPressureLocalProvider),
+                     "Decision D4: critical memory pressure refuses the on-device or a local server provider, even via Explain's cooldown bypass")
+        suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed, system: criticalMemory, boundary: .remote)
+                        == .callModel,
+                     "Decision D4: a cloud provider runs elsewhere, so critical memory pressure does not affect it")
     }
 
     /// Regression coverage for a real incident: `HealthCoachDetailView`

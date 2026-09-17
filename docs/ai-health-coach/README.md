@@ -315,8 +315,8 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 | 02 | `HealthFindingDetector` with sustained gates; `SystemHealthSummary` becomes an adapter over it; tests including "no flicker" | No | Done — merged `652f8878`, 2026-09-16 |
 | 03 | `HealthNarrationTemplate`; header shows attributed findings ("Code is running a build, using 9.2 GB") with the existing roll | No | Done — merged `b3b033e0`, 2026-09-16 |
 | 04 | `AppFeature.healthCoach` registration (catalog, strings, destination, energy profile, panel search, availability default off) + Settings page skeleton | No | Done — merged `e2c27546`, 2026-09-17 |
-| 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Done — `health-coach/05-activity-journal`, 2026-09-17 (uncommitted) |
-| 06 | `HealthCoachTriggerPolicy` + usage ledger (pure) + Settings controls | No | Not started |
+| 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Done — merged `005ea6e5`, 2026-09-17 (includes a follow-up fix for a render-loop CPU regression found after merge) |
+| 06 | `HealthCoachTriggerPolicy` + usage ledger (pure) + Settings controls | No | Done — `health-coach/06-trigger-policy`, 2026-09-17 (uncommitted) |
 | 07 | `HealthNarrator`: prompt builder, provider call, validator, cache, fallback; Explain button | Yes | Not started |
 | 08 | Cloud: manifest content type, preview, redaction option; PRIVACY.md | Yes | Not started |
 | 09 | Clipboard activity event: source app only, off by default (D2) | No | Not started |

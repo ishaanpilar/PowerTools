@@ -397,6 +397,11 @@ enum DefaultsKey {
     static let monitorAlertBatteryPercent = "monitorAlertBatteryPercent"
     static let monitorAlertCooldownMinutes = "monitorAlertCooldownMinutes"
     static let healthCoachMemoryHogPercent = "healthCoachMemoryHogPercent"
+    static let healthCoachTriggerMode = "healthCoachTriggerMode"
+    static let healthCoachChangeSeverity = "healthCoachChangeSeverity"
+    static let healthCoachScheduledIntervalMinutes = "healthCoachScheduledIntervalMinutes"
+    static let healthCoachMaxCallsPerHour = "healthCoachMaxCallsPerHour"
+    static let healthCoachMaxCallsPerDay = "healthCoachMaxCallsPerDay"
     static let monitorAlertThermal = "monitorAlertThermal"
     static let monitorAlertThermalRecovery = "monitorAlertThermalRecovery"
     // Menu panel layout — the order the major sections appear in and which are
@@ -868,6 +873,7 @@ enum Defaults {
     ]
 
     static let allowedDurations = [0, 15, 30, 60, 120, 240, 480]
+    static let allowedHealthCoachScheduledIntervalMinutes = [5, 15, 30]
     static let allowedKeepAwakeMouseJiggleIntervals = [1, 2, 5, 10, 15]
     static let allowedBatteryLimits = [0, 5, 10, 15, 20]
     static let allowedMonitorIntervals = [1, 2, 5]
@@ -1242,6 +1248,11 @@ enum Defaults {
         DefaultsKey.monitorAlertDiskFreePercent: 10,
         DefaultsKey.monitorAlertBatteryPercent: 15,
         DefaultsKey.healthCoachMemoryHogPercent: 30,
+        DefaultsKey.healthCoachTriggerMode: HealthCoachTriggerSettings.Mode.onDemand.rawValue,
+        DefaultsKey.healthCoachChangeSeverity: HealthFinding.Severity.notable.rawValue,
+        DefaultsKey.healthCoachScheduledIntervalMinutes: 15,
+        DefaultsKey.healthCoachMaxCallsPerHour: 4,
+        DefaultsKey.healthCoachMaxCallsPerDay: 20,
         DefaultsKey.monitorAlertCooldownMinutes: 15,
         DefaultsKey.mediaLastTool: MediaTool.videoCompressor.rawValue,
         DefaultsKey.mediaVideoStart: 0.0,
@@ -1748,6 +1759,24 @@ enum Defaults {
 
     static func sanitizedMonitorInterval(_ seconds: Int) -> Int {
         allowedMonitorIntervals.contains(seconds) ? seconds : 2
+    }
+
+    static func sanitizedHealthCoachTriggerMode(_ rawValue: String?) -> HealthCoachTriggerSettings.Mode {
+        guard let rawValue, let mode = HealthCoachTriggerSettings.Mode(rawValue: rawValue) else {
+            return .onDemand
+        }
+        return mode
+    }
+
+    static func sanitizedHealthCoachChangeSeverity(_ rawValue: Int?) -> HealthFinding.Severity {
+        guard let rawValue, let severity = HealthFinding.Severity(rawValue: rawValue) else {
+            return .notable
+        }
+        return severity
+    }
+
+    static func sanitizedHealthCoachScheduledInterval(_ minutes: Int) -> Int {
+        allowedHealthCoachScheduledIntervalMinutes.contains(minutes) ? minutes : 15
     }
 
     /// Tap-to-middle-click accepts exactly three or four fingers; anything

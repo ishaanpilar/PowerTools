@@ -52,6 +52,48 @@ struct HealthCoachStrings {
         }
     }
 
+    // MARK: - Narration and limits (task 06)
+
+    let narrationSectionTitle: String
+    let narrationModeLabel: String
+    let narrationModeOff: String
+    let narrationModeOnDemand: String
+    let narrationModeWhenSomethingChanges: String
+    let narrationModeScheduled: String
+    let narrationChangeSeverityLabel: String
+    let narrationScheduledIntervalLabel: String
+    let severityNotable: String
+    let severityCritical: String
+    /// %1 = minutes
+    let scheduledIntervalFormat: String
+
+    let limitsSectionTitle: String
+    let limitsPerHourLabel: String
+    let limitsPerDayLabel: String
+    /// %1 = calls today, %2 = calls this hour
+    let limitsUsageFormat: String
+    let limitsResetButton: String
+
+    /// Only `.notable` and `.critical` are offered: `.info` findings (a
+    /// recognised activity, an available update) are routine, not something
+    /// worth spending a model call to narrate every time one appears.
+    func label(for severity: HealthFinding.Severity) -> String? {
+        switch severity {
+        case .info: return nil
+        case .notable: return severityNotable
+        case .critical: return severityCritical
+        }
+    }
+
+    func label(for mode: HealthCoachTriggerSettings.Mode) -> String {
+        switch mode {
+        case .off: return narrationModeOff
+        case .onDemand: return narrationModeOnDemand
+        case .whenSomethingChanges: return narrationModeWhenSomethingChanges
+        case .scheduled: return narrationModeScheduled
+        }
+    }
+
     // MARK: - Detail popover and journal (task 05)
 
     let detailFindingsSectionTitle: String
@@ -143,6 +185,22 @@ extension HealthCoachStrings {
         activitySystemUpdate: "a system update",
         activityICloudSync: "an iCloud sync",
         activityVirtualMachine: "a container or virtual machine",
+        narrationSectionTitle: "Narration",
+        narrationModeLabel: "Explain automatically",
+        narrationModeOff: "Off",
+        narrationModeOnDemand: "Only when I press Explain",
+        narrationModeWhenSomethingChanges: "When something changes",
+        narrationModeScheduled: "On a schedule",
+        narrationChangeSeverityLabel: "Worth explaining starting at",
+        narrationScheduledIntervalLabel: "How often",
+        severityNotable: "Notable",
+        severityCritical: "Critical",
+        scheduledIntervalFormat: "Every %1$d minutes",
+        limitsSectionTitle: "Limits",
+        limitsPerHourLabel: "Calls per hour",
+        limitsPerDayLabel: "Calls per day",
+        limitsUsageFormat: "%1$d today, %2$d this hour",
+        limitsResetButton: "Reset counters",
         detailFindingsSectionTitle: "Findings",
         detailNoFindingsText: "Nothing notable right now.",
         detailActivitySectionTitle: "Recent activity",

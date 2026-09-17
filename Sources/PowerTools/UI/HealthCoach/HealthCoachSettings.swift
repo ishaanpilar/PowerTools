@@ -18,6 +18,7 @@ struct HealthCoachSettings: View {
     @AppStorage(DefaultsKey.healthCoachScheduledIntervalMinutes) private var scheduledIntervalMinutes = 15
     @AppStorage(DefaultsKey.healthCoachMaxCallsPerHour) private var maxCallsPerHour = 4
     @AppStorage(DefaultsKey.healthCoachMaxCallsPerDay) private var maxCallsPerDay = 20
+    @AppStorage(DefaultsKey.healthCoachRedactAppNamesForCloud) private var redactAppNamesForCloud = true
 
     private var strings: HealthCoachStrings { FeatureStrings.healthCoach(l10n.language) }
 
@@ -80,6 +81,14 @@ struct HealthCoachSettings: View {
                         usageLedgerService.reset()
                     }
                 }
+            }
+
+            Section(strings.redactionSectionTitle) {
+                Toggle(strings.redactionToggleLabel, isOn: $redactAppNamesForCloud)
+                Text(strings.redactionToggleFootnote)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Section(strings.detailActivitySectionTitle) {

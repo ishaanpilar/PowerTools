@@ -50,14 +50,20 @@ enum HealthNarratorPrompt {
     /// summary". `findings` is expected pre-ordered by urgency
     /// (`orderedByUrgency`), so the most important line comes first even
     /// after any truncation a provider applies under load.
-    static func prompt(findings: [HealthFinding], journal: HealthActivityJournal, healthCoach: HealthCoachStrings) -> String {
+    /// `nameForApp` resolves an app's evidence name to what actually reaches
+    /// the model - `sanitizeName` by default, or a category label
+    /// (`HealthAppCategoryTable.label(forAppName:strings:)`) when redacting
+    /// for a cloud provider (Decision D6). Never applied to `diskLow`'s
+    /// device name, which is not an app.
+    static func prompt(findings: [HealthFinding], journal: HealthActivityJournal, healthCoach: HealthCoachStrings,
+                       nameForApp: (String) -> String = sanitizeName) -> String {
         var lines: [String] = ["DATA:", "```"]
         lines.append("Findings:")
         if findings.isEmpty {
             lines.append("- none")
         } else {
             for finding in findings {
-                lines.append("- \(evidenceLine(for: finding, healthCoach: healthCoach))")
+                lines.append("- \(evidenceLine(for: finding, healthCoach: healthCoach, nameForApp: nameForApp))")
             }
         }
         let recentJournal = journal.entries.prefix(5)
@@ -79,52 +85,56 @@ enum HealthNarratorPrompt {
         return Int((Double(words) * 1.15).rounded(.up))
     }
 
-    private static func evidenceLine(for finding: HealthFinding, healthCoach: HealthCoachStrings) -> String {
+    private static func evidenceLine(for finding: HealthFinding, healthCoach: HealthCoachStrings,
+                                     nameForApp: (String) -> String) -> String {
         switch finding {
         case .batteryLow(let chargePercent, let thresholdPercent):
             return "Battery low: \(chargePercent)% (threshold \(thresholdPercent)%)"
         case .thermal(let level, let topCPUApp):
-            let app = topCPUApp.map { ", top CPU app \(sanitizeName($0.name))" } ?? ""
+            let app = topCPUApp.map { ", top CPU app \(nameForApp($0.name))" } ?? ""
             return "Thermal pressure: \(level)\(app)"
         case .memoryPressureCritical(let usedBytes, let totalBytes, let swapBytes, let topApps):
             return "Memory pressure critical: used \(MetricFormat.bytes(usedBytes))"
                 + (totalBytes.map { " of \(MetricFormat.bytes($0))" } ?? "")
                 + (swapBytes.map { ", swap \(MetricFormat.bytes($0))" } ?? "")
-                + topAppsSuffix(topApps)
+                + topAppsSuffix(topApps, nameForApp: nameForApp)
         case .memoryPressureWarning(let usedBytes, let totalBytes, let swapBytes, let topApps):
             return "Memory pressure building: used \(MetricFormat.bytes(usedBytes))"
                 + (totalBytes.map { " of \(MetricFormat.bytes($0))" } ?? "")
                 + (swapBytes.map { ", swap \(MetricFormat.bytes($0))" } ?? "")
-                + topAppsSuffix(topApps)
+                + topAppsSuffix(topApps, nameForApp: nameForApp)
         case .diskLow(let device, let thresholdPercent):
+            // Not an app, so never redacted the same way (Decision D6 is
+            // about app names specifically).
             return "Disk low: \(sanitizeName(device.name)) has \(MetricFormat.bytes(device.freeBytes)) free "
                 + "of \(MetricFormat.bytes(device.totalBytes)) (threshold \(thresholdPercent)%)"
         case .memoryHog(let app, let percentOfTotal, let thresholdPercent):
-            return "Memory hog: \(sanitizeName(app.name)) using \(Int(percentOfTotal.rounded()))% of RAM "
+            return "Memory hog: \(nameForApp(app.name)) using \(Int(percentOfTotal.rounded()))% of RAM "
                 + "(threshold \(thresholdPercent)%)"
         case .swapGrowth(let beforeBytes, let afterBytes, let windowSeconds):
             return "Swap growth: now \(MetricFormat.bytes(afterBytes)), was \(MetricFormat.bytes(beforeBytes)) "
                 + "over \(Int(windowSeconds))s"
         case .cpuSustained(let usage, let thresholdPercent, let topApps):
             return "Sustained CPU: \(Int((usage * 100).rounded()))% (threshold \(thresholdPercent)%)"
-                + topAppsSuffix(topApps, percentIsCPU: true)
+                + topAppsSuffix(topApps, percentIsCPU: true, nameForApp: nameForApp)
         case .knownActivity(let sighting):
             let phrase = healthCoach.phrase(for: sighting.activity)
             let value = sighting.valueIsMemoryBytes
                 ? MetricFormat.bytes(UInt64(max(0, sighting.appValue)))
                 : "\(Int(sighting.appValue.rounded()))% CPU"
-            return "Recognised activity: \(sanitizeName(sighting.appName)) running \(phrase), "
+            return "Recognised activity: \(nameForApp(sighting.appName)) running \(phrase), "
                 + "\(sighting.processCount) process(es), \(value)"
         case .updateAvailable:
             return "An app update is available"
         }
     }
 
-    private static func topAppsSuffix(_ apps: [ProcessUsage], percentIsCPU: Bool = false) -> String {
+    private static func topAppsSuffix(_ apps: [ProcessUsage], percentIsCPU: Bool = false,
+                                      nameForApp: (String) -> String) -> String {
         guard !apps.isEmpty else { return "" }
         let named = apps.prefix(3).map { app -> String in
-            percentIsCPU ? "\(sanitizeName(app.name)) (\(Int(app.value.rounded()))%)"
-                         : "\(sanitizeName(app.name)) (\(MetricFormat.bytes(UInt64(max(0, app.value)))))"
+            percentIsCPU ? "\(nameForApp(app.name)) (\(Int(app.value.rounded()))%)"
+                         : "\(nameForApp(app.name)) (\(MetricFormat.bytes(UInt64(max(0, app.value)))))"
         }
         return ", top apps: " + named.joined(separator: ", ")
     }

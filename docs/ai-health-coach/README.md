@@ -253,8 +253,11 @@ grown in by the tasks named next to each bullet:
   estimated tokens); "Reset counters".
 - **What it may look at**: apps and processes (on), PowerTools activity (on),
   clipboard activity (off; hidden unless Clipboard History is installed).
-- **Provider**: "Same as AI text actions" or a specific configured provider;
-  for cloud, "Replace app names with categories" (Decision D6).
+- **Provider**: "Same as AI text actions" or a specific configured provider
+  — not yet built; Health Coach always uses the AI text actions provider.
+- **Cloud providers**: "Replace app names with categories" (Decision D6,
+  settled and built in task 08, ahead of the provider picker above since it
+  does not depend on it).
 - **Sensitivity**: memory-hog threshold; link to Monitor alert thresholds
   (not a second copy of them).
 - **Activity journal**: view, clear.
@@ -318,7 +321,7 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 | 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Done — merged `005ea6e5`, 2026-09-17 (includes a follow-up fix for a render-loop CPU regression found after merge) |
 | 06 | `HealthCoachTriggerPolicy` + usage ledger (pure) + Settings controls | No | Done — merged `2b1dc67a`, 2026-09-17 |
 | 07 | `HealthNarrator`: prompt builder, provider call, validator, cache, fallback; Explain button | Yes | Done — `health-coach/07-narrator`, 2026-09-18 |
-| 08 | Cloud: redaction option (D6); PRIVACY.md | Yes | Not started |
+| 08 | Cloud: redaction option (D6); PRIVACY.md | Yes | Done — `health-coach/08-cloud-redaction`, 2026-09-18 |
 | 09 | Clipboard activity event: source app only, off by default (D2) | No | Not started |
 | 10 | Budget measurement script run, mutation entries for every guard, roadmap and AI-HARNESS.md updates | — | Not started |
 
@@ -377,6 +380,35 @@ Known gaps, deliberately left rather than guessed at:
   added in this task so D4's critical-memory-pressure refusal can never be
   silently skipped by a caller passing a stale or partial reading.
 
+### Task 08 notes
+
+Decision D6 settled: categories by default, a Settings toggle
+("Replace app names with categories", on by default) opts into real names.
+Built as `HealthAppCategoryTable` (a small, exact-match-only table of
+common apps to a broad category — code editor, browser, communication,
+media, design, productivity, terminal — with a generic "an app" fallback
+for anything not in it, which is what actually keeps an unrecognised app's
+real name from ever reaching a cloud provider, table coverage aside).
+
+The redaction seam is `nameForApp: (String) -> String`, threaded through
+`HealthNarratorPrompt.prompt`, `HealthNarratorValidator.validate` and
+`HealthNarratorProcessing.process` — `sanitizeName` by default (unchanged
+behaviour), or `HealthAppCategoryTable.label(forAppName:strings:)` when
+`HealthNarratorService` resolves a cloud (`.remote`) request with the
+toggle on. The validator's "invented app name" check uses the *same*
+resolver a request's prompt was built with, so a reply that names the real
+app anyway (the model never having been told it) is correctly rejected as
+invented, not waved through because the name happens to be true — this is
+also what a leaked real name from the model's own training data would look
+like, so it is caught the same way an actual hallucination would be.
+
+`docs/PRIVACY.md`'s AI section gained a "Health Coach" subsection covering
+the whole feature (detection needs no AI, the model runs only on request or
+a chosen mode, what it may/never sees, on-device by default, the pre-send
+preview, and this task's redaction default) — the first time Health Coach's
+own behaviour was written into PRIVACY.md; tasks 01–07 built the behaviour
+without a corresponding doc update, which this task also closes out.
+
 ---
 
 ## 8. Tests to add
@@ -418,6 +450,6 @@ Known gaps, deliberately left rather than guessed at:
 | D3 | May it read macOS logs or crash / memory-kill reports? | **Not in v1.** Later: on demand only, report names and dates only | **Decided 2026-09-16: not in v1** |
 | D4 | At critical memory pressure, should Explain still run? | Refuse for the on-device Apple model and a local server (both add load to this Mac); allow for a cloud provider (runs elsewhere) | **Decided 2026-09-16: on-device/local server refused outright at critical memory pressure, even on explicit press; a cloud (API) provider still runs normally** |
 | D5 | Does this replace roadmap slice 3.4 and start the Mac Health Coach early? | Yes; update the roadmap's M3 table and section 9's "How often AI runs" row | Open |
-| D6 | For cloud providers, send real app names or categories ("a code editor")? | Categories by default, real names as an opt-in | Open |
+| D6 | For cloud providers, send real app names or categories ("a code editor")? | Categories by default, real names as an opt-in | **Decided 2026-09-18: categories by default.** A Settings toggle ("Replace app names with categories") opts into real names; on-device and a local server always use real names, since neither request leaves the Mac |
 | D7 | Any action buttons beyond navigation (Quit app, open Activity Monitor filtered)? | Navigation only in v1; a Quit button would need its own approval design | Open |
 | D8 | Feature name in the UI | "Health Coach" (matches the roadmap); header copy unchanged in tone | **Settled by use, 2026-09-17:** task 04 registered the feature as "Health Coach" throughout (`AppFeature.healthCoach`, hub title, settings page) |

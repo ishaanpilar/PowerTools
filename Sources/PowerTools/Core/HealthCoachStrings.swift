@@ -74,6 +74,21 @@ struct HealthCoachStrings {
     let limitsUsageFormat: String
     let limitsResetButton: String
 
+    // MARK: - Narrator (task 07)
+
+    let narratorExplainButton: String
+    let narratorSparkleAccessibilityLabel: String
+    let narratorSourceOnDevice: String
+    /// %1 = a relative time ("2m ago"), %2 = `narratorSourceOnDevice` or a
+    /// cloud provider's display name
+    let narratorExplainedFormat: String
+    let narratorExplainAgainButton: String
+    let narratorCancelButton: String
+    /// The content-type label the pre-send preview shows the first time a
+    /// configured cloud provider is about to receive a health snapshot —
+    /// `AIContextManifest.contentTypeLabel`, not specific to any one provider.
+    let narratorPreviewContentTypeLabel: String
+
     /// Only `.notable` and `.critical` are offered: `.info` findings (a
     /// recognised activity, an available update) are routine, not something
     /// worth spending a model call to narrate every time one appears.
@@ -201,6 +216,13 @@ extension HealthCoachStrings {
         limitsPerDayLabel: "Calls per day",
         limitsUsageFormat: "%1$d today, %2$d this hour",
         limitsResetButton: "Reset counters",
+        narratorExplainButton: "Explain",
+        narratorSparkleAccessibilityLabel: "AI explanation",
+        narratorSourceOnDevice: "On this Mac",
+        narratorExplainedFormat: "Explained %1$@ · %2$@",
+        narratorExplainAgainButton: "Explain again",
+        narratorCancelButton: "Cancel",
+        narratorPreviewContentTypeLabel: "Your Mac’s health snapshot",
         detailFindingsSectionTitle: "Findings",
         detailNoFindingsText: "Nothing notable right now.",
         detailActivitySectionTitle: "Recent activity",

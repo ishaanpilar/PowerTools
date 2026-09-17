@@ -27,6 +27,17 @@ final class ClipboardHistoryService: ObservableObject {
     @Published private(set) var entries: [ClipboardHistoryEntry] = [] {
         didSet { entriesStamp &+= 1 }
     }
+    /// A transient signal, never persisted with the entry itself: the app
+    /// that was in front when a capture was accepted, published only while
+    /// Health Coach's own "note when something is copied" toggle is on
+    /// (`docs/ai-health-coach/README.md`, Decision D2 - off by default, the
+    /// source app's name only, never content). Read by
+    /// `HealthActivityJournalService`, never stored alongside the clipboard
+    /// entry it names. A best-effort guess, same as `ClipboardIgnoredApps`'
+    /// own doc comment explains: the pasteboard is read on a timer, so the
+    /// frontmost app by the time this fires may already be whichever app
+    /// the person went to paste into, not the one they copied from.
+    @Published private(set) var lastCaptureSourceAppName: String?
     @Published private(set) var isRunning = false
     @Published private(set) var shortcutRegistrationFailed = false
     @Published private(set) var quickBatchEntryIDs: Set<UUID> = []
@@ -606,6 +617,7 @@ final class ClipboardHistoryService: ObservableObject {
                 guard changeCount > self.lastChangeCount else { return }
                 self.lastChangeCount = changeCount
                 guard self.isRunning, !excludedSource, let content else { return }
+                self.noteHealthCoachCaptureSource()
                 switch content {
                 case .files(let paths): self.promoteFiles(paths)
                 case .image(let image): self.promoteImage(image)
@@ -613,6 +625,19 @@ final class ClipboardHistoryService: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Assigned unconditionally (not `.removeDuplicates()`-guarded) so a
+    /// second capture from the same app still republishes and reaches
+    /// `HealthActivityJournalService`'s subscriber as its own event, not a
+    /// no-op. Gated on Health Coach being installed and its own Settings
+    /// toggle, so nothing here runs for someone who has neither - no new
+    /// per-capture work just because Clipboard History itself is on.
+    private func noteHealthCoachCaptureSource() {
+        guard AppFeature.healthCoach.isAvailable,
+              UserDefaults.standard.bool(forKey: DefaultsKey.healthCoachJournalClipboardCaptures)
+        else { return }
+        lastCaptureSourceAppName = NSWorkspace.shared.frontmostApplication?.localizedName
     }
 
     /// Runs on the shared pasteboard lane: everything in here may block behind

@@ -19,6 +19,7 @@ struct HealthCoachSettings: View {
     @AppStorage(DefaultsKey.healthCoachMaxCallsPerHour) private var maxCallsPerHour = 4
     @AppStorage(DefaultsKey.healthCoachMaxCallsPerDay) private var maxCallsPerDay = 20
     @AppStorage(DefaultsKey.healthCoachRedactAppNamesForCloud) private var redactAppNamesForCloud = true
+    @AppStorage(DefaultsKey.healthCoachJournalClipboardCaptures) private var journalClipboardCaptures = false
 
     private var strings: HealthCoachStrings { FeatureStrings.healthCoach(l10n.language) }
 
@@ -92,6 +93,17 @@ struct HealthCoachSettings: View {
             }
 
             Section(strings.detailActivitySectionTitle) {
+                // Hidden rather than disabled when Clipboard History isn't
+                // installed: the toggle would do nothing to explain, and a
+                // dead control reads as a bug, not a feature waiting to be
+                // unlocked (Decision D2).
+                if AppFeature.clipboardHistory.isAvailable {
+                    Toggle(strings.clipboardCaptureToggleLabel, isOn: $journalClipboardCaptures)
+                    Text(strings.clipboardCaptureToggleFootnote)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if journalService.journal.entries.isEmpty {
                     Text(strings.detailJournalEmptyText)
                         .font(.callout)

@@ -45,6 +45,14 @@ final class HealthActivityJournalService: ObservableObject {
                 self?.record(.updateAvailable)
             }
             .store(in: &cancellables)
+
+        // Not `.removeDuplicates()`: `ClipboardHistoryService` republishes
+        // this on every qualifying capture, even a repeat of the same app,
+        // and each one is its own event, not a change to dedup away.
+        ClipboardHistoryService.shared.$lastCaptureSourceAppName
+            .compactMap { $0 }
+            .sink { [weak self] sourceAppName in self?.noteClipboardCapture(sourceAppName: sourceAppName) }
+            .store(in: &cancellables)
     }
 
     func clear() {
@@ -75,8 +83,9 @@ final class HealthActivityJournalService: ObservableObject {
         activeFindingKinds = current
     }
 
-    /// Off by default (D2); called only once a later task wires the
-    /// Clipboard History event through its own Settings toggle.
+    /// Off by default (D2); driven by `ClipboardHistoryService.$lastCaptureSourceAppName`,
+    /// which itself only republishes while Health Coach's own Settings
+    /// toggle is on (task 09).
     func noteClipboardCapture(sourceAppName: String) {
         record(.clipboardCaptured(sourceAppName: sourceAppName))
     }

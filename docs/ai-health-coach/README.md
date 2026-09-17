@@ -322,7 +322,7 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 | 06 | `HealthCoachTriggerPolicy` + usage ledger (pure) + Settings controls | No | Done — merged `2b1dc67a`, 2026-09-17 |
 | 07 | `HealthNarrator`: prompt builder, provider call, validator, cache, fallback; Explain button | Yes | Done — `health-coach/07-narrator`, 2026-09-18 |
 | 08 | Cloud: redaction option (D6); PRIVACY.md | Yes | Done — `health-coach/08-cloud-redaction`, 2026-09-18 |
-| 09 | Clipboard activity event: source app only, off by default (D2) | No | Not started |
+| 09 | Clipboard activity event: source app only, off by default (D2) | No | Done — `health-coach/09-clipboard-activity`, 2026-09-18 |
 | 10 | Budget measurement script run, mutation entries for every guard, roadmap and AI-HARNESS.md updates | — | Not started |
 
 Tasks 01–05 ship value with no AI at all: the header already becomes specific
@@ -408,6 +408,37 @@ a chosen mode, what it may/never sees, on-device by default, the pre-send
 preview, and this task's redaction default) — the first time Health Coach's
 own behaviour was written into PRIVACY.md; tasks 01–07 built the behaviour
 without a corresponding doc update, which this task also closes out.
+
+### Task 09 notes
+
+The event type and its journal/template wiring already existed from task
+05 (`HealthJournalEvent.clipboardCaptured(sourceAppName:)`,
+`HealthActivityJournalService.noteClipboardCapture`, its own doc comment
+already saying "called only once a later task wires the Clipboard History
+event") — this task only had to supply the source.
+
+`ClipboardHistoryService` gained `@Published private(set) var
+lastCaptureSourceAppName: String?`, a transient signal (never persisted
+alongside the clipboard entry it names) set from
+`NSWorkspace.shared.frontmostApplication` at the moment a capture is
+accepted - gated on `AppFeature.healthCoach.isAvailable` and a new
+Settings toggle ("Note when something is copied", off by default), so
+nothing here runs for someone who has neither. `HealthActivityJournalService`
+subscribes to it the same way it subscribes to Keep Awake, recording and
+updates. This is a best-effort guess sharing the exact same timing caveat
+`ClipboardIgnoredApps`' own doc comment already describes: the pasteboard
+is read on a timer, so the frontmost app by the time this fires may
+already be whichever app the person went to paste into, not the one they
+copied from. `ClipboardIgnoredApps` itself was not touched - its own
+candidate-tracking only runs when its ignore list is non-empty, a
+different question (exclusion, not attribution) than this task needed, and
+extending it risked the already-careful reasoning behind that file for a
+lower-stakes journal feature.
+
+The Settings toggle is hidden, not merely disabled, when Clipboard History
+isn't installed, matching how every other "would do nothing yet" control
+in this app is handled - a dead control reads as a bug, not a feature
+waiting to be unlocked.
 
 ---
 

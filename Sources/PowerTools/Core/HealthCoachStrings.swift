@@ -118,6 +118,13 @@ struct HealthCoachStrings {
         }
     }
 
+    // MARK: - Clipboard activity (task 09, Decision D2)
+
+    /// Shown only once Clipboard History is installed - hidden otherwise,
+    /// since the toggle would do nothing without it.
+    let clipboardCaptureToggleLabel: String
+    let clipboardCaptureToggleFootnote: String
+
     /// Only `.notable` and `.critical` are offered: `.info` findings (a
     /// recognised activity, an available update) are routine, not something
     /// worth spending a model call to narrate every time one appears.
@@ -263,6 +270,8 @@ extension HealthCoachStrings {
         categoryProductivity: "a productivity app",
         categoryTerminal: "a terminal",
         categoryGeneric: "an app",
+        clipboardCaptureToggleLabel: "Note when something is copied",
+        clipboardCaptureToggleFootnote: "Recent activity shows only which app you copied from, never what you copied. Off by default. Ignored apps in Clipboard History settings are never recorded here either.",
         detailFindingsSectionTitle: "Findings",
         detailNoFindingsText: "Nothing notable right now.",
         detailActivitySectionTitle: "Recent activity",

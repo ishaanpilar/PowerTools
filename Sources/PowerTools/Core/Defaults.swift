@@ -403,6 +403,7 @@ enum DefaultsKey {
     static let healthCoachMaxCallsPerHour = "healthCoachMaxCallsPerHour"
     static let healthCoachMaxCallsPerDay = "healthCoachMaxCallsPerDay"
     static let healthCoachRedactAppNamesForCloud = "healthCoachRedactAppNamesForCloud"
+    static let healthCoachJournalClipboardCaptures = "healthCoachJournalClipboardCaptures"
     static let monitorAlertThermal = "monitorAlertThermal"
     static let monitorAlertThermalRecovery = "monitorAlertThermalRecovery"
     // Menu panel layout — the order the major sections appear in and which are

@@ -67,13 +67,13 @@ More of my tools are on [my GitHub](https://github.com/ishaanpilar).
 
 PowerTools AI is in active development. The first beta is out.
 
-- **Works today:** every utility below. [Download the beta](#install) or
-  [build it](#build-it).
-- **Being built:** the AI features. You can already install AI text actions
-  and connect a provider — on-device, a cloud provider with your own key, or
-  a local server — and test the connection, but the actions themselves
-  (rewrite, shorten, proofread, summarise, translate) aren't wired into the
-  Command Bar yet. The [roadmap](docs/AI-PRODUCT-ROADMAP.md) tracks progress.
+- **Works today:** every utility below, plus AI text actions. Install the
+  feature, connect a provider — on-device, a cloud provider with your own
+  key, or a local server — and select text anywhere to enhance, rewrite,
+  shorten, proofread, summarise or translate it from the Command Bar.
+  [Download the beta](#install) or [build it](#build-it).
+- **Being built:** more AI features beyond text actions. The
+  [roadmap](docs/AI-PRODUCT-ROADMAP.md) tracks progress.
 
 ## What it does
 
@@ -148,8 +148,8 @@ The app is available in 13 languages. AI features start in English.
 
 ## AI built in
 
-> The AI features are being built now. This describes how they work; the
-> [roadmap](docs/AI-PRODUCT-ROADMAP.md) tracks progress.
+> Text actions are live; more AI features are being built. This describes how
+> they work; the [roadmap](docs/AI-PRODUCT-ROADMAP.md) tracks progress.
 
 | Where AI runs | Needs | What leaves your Mac |
 | --- | --- | --- |
@@ -167,14 +167,14 @@ The app is available in 13 languages. AI features start in English.
 - **Nothing in the background.** AI never reads your clipboard history, screen,
   files or microphone unless you pick them for a request.
 
-What comes first:
+What's here, and what's next:
 
-1. **Text actions in the Command Bar:** rewrite, shorten, proofread, summarise
-   and translate whatever text you have selected.
-2. **AI inside the tools you use:** summaries and action items from Scratchpad
-   notes and clipboard items, release-note summaries in App updates, a plain
-   answer to "why is my Mac busy?", alt text for screenshots, and a setup
-   assistant on first launch (macOS 26).
+1. **Text actions in the Command Bar, live today:** enhance, rewrite, shorten,
+   proofread, summarise and translate whatever text you have selected.
+2. **AI inside the tools you use, coming next:** summaries and action items
+   from Scratchpad notes and clipboard items, release-note summaries in App
+   updates, a plain answer to "why is my Mac busy?", alt text for
+   screenshots, and a setup assistant on first launch (macOS 26).
 3. **Plans from a sentence:** ask the Command Bar to "set up a writing session"
    and get a step-by-step plan built from the app's own tools, run only after
    you approve it.

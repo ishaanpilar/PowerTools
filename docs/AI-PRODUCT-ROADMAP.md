@@ -9,16 +9,16 @@
 > checks) and proven by 18 mutations, 11 of them the harness's own. It is not
 > yet called by any executor; that is M4. See
 > [docs/ai-harness/](ai-harness/README.md) for how it was built, task by
-> task. **M2 is functionally complete:** AI text actions (rewrite, shorten,
-> proofread, summarise, translate) run from the Command Bar against the
-> on-device model, a cloud provider the person connects with their own key,
-> or a local server — off by default, previewed before the first real send
-> per provider, nothing sent or replaced without an explicit action (33,013
-> total checks). Not verified: a macOS 14 Mac or VM with a live cloud
-> provider (this Mac only runs one current macOS version); the milestone's
-> eighth screenshot is a maintainer task, not yet captured. See
-> [docs/ai-text-actions/](ai-text-actions/README.md) for how it was built,
-> task by task.
+> task. **M2 is functionally complete:** AI text actions (enhance, rewrite,
+> shorten, proofread, summarise, translate — enhance added just after M2
+> closed) run from the Command Bar against the on-device model, a cloud
+> provider the person connects with their own key, or a local server — off by
+> default, previewed before the first real send per provider, nothing sent or
+> replaced without an explicit action. Not verified: a macOS 14 Mac or VM
+> with a live cloud provider (this Mac only runs one current macOS version);
+> the milestone's eighth screenshot is a maintainer task, not yet captured.
+> See [docs/ai-text-actions/](ai-text-actions/README.md) for how it was
+> built, task by task.
 
 1. [Decisions](#1-decisions)
 2. [Where things stand](#2-where-things-stand)

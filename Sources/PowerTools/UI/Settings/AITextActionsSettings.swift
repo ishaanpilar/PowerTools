@@ -113,14 +113,6 @@ struct AITextActionsSettings: View {
                 Link(strings.privacyPolicyLink, destination: option.privacyURL)
                     .font(.caption)
             }
-
-            Section {
-                Label(strings.comingSoonTitle, systemImage: "hourglass")
-                    .font(.callout.weight(.medium))
-                Text(strings.comingSoonBody)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
         }
         .formStyle(.grouped)
         .onAppear { refreshStoredKeyState() }

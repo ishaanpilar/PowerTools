@@ -15,7 +15,8 @@ enum AITextActionsProviderTests {
 
     private static func actionKindChecks(_ suite: TestSuite) {
         let strings = AITextActionsFeatureStrings.enUS
-        suite.expect(AITextActionKind.allCases.count == 5, "there are exactly the five actions roadmap 2.8 names")
+        suite.expect(AITextActionKind.allCases.count == 6,
+                     "the five actions roadmap 2.8 names, plus Enhance added after M2 shipped")
 
         let ids = AITextActionKind.allCases.map(\.id)
         suite.expect(Set(ids).count == ids.count, "every action has a distinct id")

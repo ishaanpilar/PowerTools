@@ -9,8 +9,6 @@ struct AITextActionsFeatureStrings {
     let pageTitle: String
     let hubDescription: String
     let settingsIntro: String
-    let comingSoonTitle: String
-    let comingSoonBody: String
 
     let providerSectionTitle: String
     let providerOnDevice: String
@@ -62,6 +60,7 @@ struct AITextActionsFeatureStrings {
     let previewSendButton: String
     let previewDontAskAgainNote: String
 
+    let actionEnhanceTitle: String
     let actionRewriteTitle: String
     let actionShortenTitle: String
     let actionProofreadTitle: String
@@ -98,10 +97,8 @@ extension FeatureStrings {
 extension AITextActionsFeatureStrings {
     static let enUS = AITextActionsFeatureStrings(
         pageTitle: "AI text actions",
-        hubDescription: "Rewrite, shorten or translate the text you select, on this Mac or with a provider you choose",
-        settingsIntro: "Select text anywhere and rewrite, shorten, proofread, summarise or translate it from the Command Bar. Nothing is sent anywhere until you choose a provider.",
-        comingSoonTitle: "Actions not wired in yet",
-        comingSoonBody: "Provider setup below is real, but rewrite, shorten, proofread, summarise and translate aren’t in the Command Bar yet. Nothing is sent until they ship.",
+        hubDescription: "Enhance, rewrite, shorten or translate the text you select, on this Mac or with a provider you choose",
+        settingsIntro: "Select text anywhere and enhance, rewrite, shorten, proofread, summarise or translate it from the Command Bar. Nothing is sent until you choose a provider and confirm the first send.",
 
         providerSectionTitle: "Provider",
         providerOnDevice: "On this Mac (Apple Intelligence)",
@@ -153,6 +150,7 @@ extension AITextActionsFeatureStrings {
         previewSendButton: "Send",
         previewDontAskAgainNote: "You won’t see this again for this provider",
 
+        actionEnhanceTitle: "Enhance",
         actionRewriteTitle: "Rewrite",
         actionShortenTitle: "Shorten",
         actionProofreadTitle: "Proofread",

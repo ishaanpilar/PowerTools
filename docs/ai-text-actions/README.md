@@ -508,3 +508,36 @@ rewrite, shorten, proofread, summarise or translate from the Command Bar on
 whatever text they've selected - off by default, previewed before the first
 real send per provider, nothing sent or replaced without an explicit
 action.
+
+## Task 08 — Enhance action (post-M2)
+
+Not a roadmap slice - a sixth Command Bar action added after M2 shipped, the
+general-purpose "make this better" action people reach for most in
+comparable tools, distinct from Rewrite (which keeps roughly the same
+length and register) in aiming at overall clarity, flow and impact.
+
+- `Services/AI/AITextActionKind.swift`: added `.enhance` as the first case
+  (`CaseIterable`'s declaration order sets Command Bar row order), with its
+  own title, SF Symbol (`sparkles`, distinct from the other five) and fixed
+  instructions - no changes needed anywhere else, since the Command Bar row
+  loop, the result panel's title/icon lookup and the manifest builder all
+  already iterate `AITextActionKind.allCases` generically rather than
+  naming each case.
+- `Core/AITextActionsStrings.swift`: added `actionEnhanceTitle`; updated
+  `hubDescription` and `settingsIntro` to mention it.
+- Removed `AITextActionsSettings.swift`'s "Actions not wired in yet" notice
+  and its two now-dead strings (`comingSoonTitle`/`comingSoonBody`) - a real
+  gap task 07 should have caught: the notice was written for beta.2, and
+  stayed on the settings page describing the Command Bar actions as not
+  wired in through all of beta.3 and beta.4, after task 06 had actually
+  wired them in. Found only because adding a sixth action prompted a fresh
+  look at that page's copy.
+- `README.md` and `docs/PRIVACY.md`: same staleness, same fix. Both still
+  said text actions "aren't wired into the Command Bar yet" - accurate when
+  written, false since beta.3. Updated to describe current reality (text
+  actions live today) and to name all six actions.
+- `Tests/AITextActionsProviderTests.swift`: the pinned "exactly five
+  actions" count updated to six.
+- Verified: full `./build.sh --test` green; `Tests/mutation_checks.py`
+  green; full `./build.sh` produces a signed `PowerTools.app`. Shipped in
+  `1.0.0-beta.5`.

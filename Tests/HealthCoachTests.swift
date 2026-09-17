@@ -19,6 +19,7 @@ enum HealthCoachTests {
         journalTemplateChecks(suite)
         journalWiringChecks(suite)
         renderLoopGuardChecks(suite)
+        detailHeightAndCollapseChecks(suite)
         usageLedgerChecks(suite)
         triggerSettingsChecks(suite)
         triggerPolicyChecks(suite)
@@ -728,5 +729,79 @@ enum HealthCoachTests {
         suite.expect(decide(findings: [criticalFinding], trigger: .explainPressed, system: criticalMemory, boundary: .remote)
                         == .callModel,
                      "Decision D4: a cloud provider runs elsewhere, so critical memory pressure does not affect it")
+    }
+
+    /// Regression coverage for a real incident: `HealthCoachDetailView`
+    /// expands *inside* `MenuPanelHeader`, which sits outside the scrollable
+    /// content and had a flat, hardcoded height budget
+    /// (`navigableChromeHeight`) that assumed the header was always its
+    /// compact two-line size. Once the Health Coach detail was open, the
+    /// header's real height grew well past that budget, but the panel's
+    /// window never grew to match; the shortfall clipped the header's own
+    /// collapse toggle off the top of the visible window, with no scroll
+    /// view able to reach it - the panel looked permanently stuck open, with
+    /// no way back to the compact view. Two independent fixes, checked
+    /// separately so either one regressing is caught on its own: the chrome
+    /// height is now measured, not assumed, and the expanded content also
+    /// carries its own always-reachable collapse control, so the fix holds
+    /// even if some future change to the header's layout throws the height
+    /// measurement off again.
+    private static func detailHeightAndCollapseChecks(_ suite: TestSuite) {
+        let panelPath = "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift"
+        let panelSource = (try? String(contentsOfFile: panelPath, encoding: .utf8)) ?? ""
+        suite.expect(!panelSource.isEmpty, "the menu panel source is readable for its height-measurement check")
+        suite.expect(panelSource.contains(".reportHeight($headerHeight)"),
+                     "the header's real height is measured, not assumed, because Health Coach's detail can expand inside it")
+        suite.expect(panelSource.contains("measuredHeaderHeight") && !panelSource.contains("return 90 + backRow"),
+                     "the panel's chrome height budget uses the header's measured height, not a flat constant sized for its compact state")
+
+        let detailPath = "Sources/PowerTools/UI/HealthCoach/HealthCoachDetailView.swift"
+        let detailSource = (try? String(contentsOfFile: detailPath, encoding: .utf8)) ?? ""
+        suite.expect(!detailSource.isEmpty, "the health coach detail view source is readable for its collapse check")
+        suite.expect(detailSource.contains("var collapseRow"),
+                     "the collapse control is its own named row, not folded invisibly into another one")
+        // Checking `body`'s own text, not just the file's, so this catches
+        // `collapseRow` being defined but silently dropped from what's
+        // actually shown - the file would still "contain" it either way.
+        // `AIHarnessSource.body` assumes its declaration closes at an
+        // unindented "\n}", true for the top-level structs it was built
+        // for but not for a struct's own indented `body` property, so a
+        // brace-matched extractor is used here instead.
+        let bodyDeclaration = matchedBraceBody(of: "var body: some View {", in: detailSource)
+        suite.expect(!bodyDeclaration.isEmpty, "the detail view's body declaration is found for the collapse-row check")
+        suite.expect(bodyDeclaration.contains("collapseRow"),
+                     "the collapse row is actually shown, not just defined and forgotten")
+        // Two call sites, checked as a count rather than a single `contains`,
+        // so this also fails if the dedicated collapse row loses its own
+        // action even though the per-finding chevron's own `.collapse()`
+        // (which jumps to a metric, not back to the compact panel) would
+        // still make a plain substring check pass.
+        let collapseCallSites = detailSource.components(separatedBy: "HealthCoachDetailPresentation.shared.collapse()").count - 1
+        suite.expect(collapseCallSites >= 2,
+                     "the expanded detail carries its own collapse control (not only the per-finding chevron's), reachable from wherever the header's toggle ends up")
+    }
+
+    /// The text between `marker`'s own opening brace and its matching close,
+    /// found by counting braces rather than assuming any particular
+    /// indentation - needed for a property like `body` that closes on an
+    /// indented line, unlike `AIHarnessSource.body`'s unindented `"\n}"`.
+    private static func matchedBraceBody(of marker: String, in source: String) -> String {
+        guard let markerRange = source.range(of: marker) else { return "" }
+        var depth = 0
+        var index = markerRange.upperBound
+        let contentStart = index
+        while index < source.endIndex {
+            let character = source[index]
+            if character == "{" {
+                depth += 1
+            } else if character == "}" {
+                if depth == 0 {
+                    return String(source[contentStart..<index])
+                }
+                depth -= 1
+            }
+            index = source.index(after: index)
+        }
+        return String(source[contentStart...])
     }
 }

@@ -101,6 +101,7 @@ struct HealthCoachStrings {
     let detailActivitySectionTitle: String
     let detailJournalEmptyText: String
     let detailClearActivity: String
+    let detailCollapseButton: String
 
     let journalKeepAwakeStartedManual: String
     let journalKeepAwakeStartedAutomatic: String
@@ -205,6 +206,7 @@ extension HealthCoachStrings {
         detailActivitySectionTitle: "Recent activity",
         detailJournalEmptyText: "No activity yet.",
         detailClearActivity: "Clear",
+        detailCollapseButton: "Collapse",
         journalKeepAwakeStartedManual: "Keep Awake turned on",
         journalKeepAwakeStartedAutomatic: "Keep Awake turned on automatically",
         journalKeepAwakeEnded: "Keep Awake turned off",

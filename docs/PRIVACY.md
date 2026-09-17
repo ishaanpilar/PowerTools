@@ -6,10 +6,10 @@ only where you send it — never to a PowerTools AI server, because there isn't
 one.
 
 This policy applies to PowerTools AI from its first public release. AI text
-actions — rewrite, shorten, proofread, summarise, translate — are in the
-Command Bar, working with a provider you install and connect yourself. Until
-you install the feature and choose a provider, the app makes no AI requests
-of any kind.
+actions — enhance, rewrite, shorten, proofread, summarise, translate — are in
+the Command Bar, working with a provider you install and connect yourself.
+Until you install the feature and choose a provider, the app makes no AI
+requests of any kind.
 
 ## The short version
 
@@ -104,8 +104,9 @@ file, screenshot or webpage cannot make AI take an action.
 
 - **Answers and drafts** are shown to you. Nothing is replaced or sent until you
   choose to.
-- **Command Bar text actions** (rewrite, shorten, proofread, summarise,
-  translate) show their answer in a small panel with Copy and Replace.
+- **Command Bar text actions** (enhance, rewrite, shorten, proofread,
+  summarise, translate) show their answer in a small panel with Copy and
+  Replace.
   Nothing is copied or replaces your selection until you press one of those
   buttons; pressing Escape or clicking away closes the panel and does nothing
   else.

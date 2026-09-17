@@ -3,12 +3,15 @@
 
 import Foundation
 
-/// The five actions roadmap slice 2.8 puts on a Command Bar text selection.
-/// Each is a fixed system prompt sent as `AIProvider.streamText`'s
-/// `instructions`, with the selected text itself as `prompt` - never mixed
-/// together, so the selection is always treated as data, never as
-/// instructions (PRIVACY.md's "Content is treated as data, not instructions").
+/// The Command Bar text actions: `.enhance` first (added after M2 shipped,
+/// the general-purpose "make this better" action people reach for most),
+/// then the five roadmap slice 2.8 named. Each is a fixed system prompt sent
+/// as `AIProvider.streamText`'s `instructions`, with the selected text
+/// itself as `prompt` - never mixed together, so the selection is always
+/// treated as data, never as instructions (PRIVACY.md's "Content is treated
+/// as data, not instructions").
 enum AITextActionKind: String, CaseIterable, Identifiable {
+    case enhance
     case rewrite
     case shorten
     case proofread
@@ -21,6 +24,7 @@ enum AITextActionKind: String, CaseIterable, Identifiable {
     /// Bar row and the panel that opens from it never disagree on the name.
     func title(strings: AITextActionsFeatureStrings) -> String {
         switch self {
+        case .enhance: return strings.actionEnhanceTitle
         case .rewrite: return strings.actionRewriteTitle
         case .shorten: return strings.actionShortenTitle
         case .proofread: return strings.actionProofreadTitle
@@ -32,6 +36,7 @@ enum AITextActionKind: String, CaseIterable, Identifiable {
     /// A distinct SF Symbol per action; all long-shipped, safe on macOS 14.
     var symbolName: String {
         switch self {
+        case .enhance: return "sparkles"
         case .rewrite: return "pencil"
         case .shorten: return "scissors"
         case .proofread: return "checkmark.seal"
@@ -47,6 +52,10 @@ enum AITextActionKind: String, CaseIterable, Identifiable {
     /// adding one later.
     func instructions(targetLanguage: AppLanguage) -> String {
         switch self {
+        case .enhance:
+            return "Enhance the user's text: improve clarity, flow and impact while keeping "
+                + "its meaning, tone and roughly its length. Reply with only the enhanced "
+                + "text - no preamble, no explanation, no quotation marks around it."
         case .rewrite:
             return "Rewrite the user's text to be clearer and more natural, keeping its "
                 + "meaning and roughly its length. Reply with only the rewritten text - no "

@@ -2,6 +2,26 @@
 
 Notable changes to PowerTools AI are recorded here.
 
+## [1.0.0-beta.5] - 2026-09-16
+
+### Summary
+
+A sixth Command Bar text action: Enhance, the general-purpose "make this
+better" action, alongside Rewrite, Shorten, Proofread, Summarise and
+Translate. A settings-page notice left over from before the actions were
+wired in is gone too.
+
+### Added
+
+- Enhance: improves clarity, flow and impact while keeping your text's
+  meaning, tone and roughly its length - distinct from Rewrite, which keeps
+  closer to the original phrasing.
+
+### Fixed
+
+- The AI text actions settings page no longer says the actions "aren't
+  wired in yet" - stale since 1.0.0-beta.3, when they actually were.
+
 ## [1.0.0-beta.4] - 2026-09-16
 
 ### Summary

@@ -231,6 +231,10 @@ enum SettingsDirectory {
                                       title: FeatureStrings.aiTextActions(language).pageTitle,
                                       icon: "wand.and.stars",
                                       keywords: ["rewrite", "summarize", "translate", "proofread"]),
+                SettingsDirectoryItem(page: .healthCoach,
+                                      title: FeatureStrings.healthCoach(language).pageTitle,
+                                      icon: "waveform.path.ecg",
+                                      keywords: [FeatureStrings.healthCoach(language).sensitivitySectionTitle]),
                 SettingsDirectoryItem(page: .quickTools, title: s.quickToolsTab, icon: "wand.and.rays",
                                        featureKeywords: [
                                         (.quickLauncher, [s.launcherName]),

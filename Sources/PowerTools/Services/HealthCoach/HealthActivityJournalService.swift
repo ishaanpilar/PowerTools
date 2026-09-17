@@ -53,7 +53,17 @@ final class HealthActivityJournalService: ObservableObject {
 
     /// Called with whatever the caller already computed live; diffs against
     /// the kinds seen last time and journals only the transitions.
+    ///
+    /// The equality guard is not an optimisation: `MenuPanelHeader` observes
+    /// this object, and its `findings` computed property calls this on every
+    /// body evaluation. An unconditional `@Published` write here fires on
+    /// every call regardless of whether the value actually changed, which
+    /// invalidates that same header, which re-evaluates `findings`, which
+    /// calls this again — an infinite render loop that pegs a core at 100%
+    /// rather than a crash. Skipping the write when nothing changed breaks
+    /// that cycle at its source.
     func noteFindings(_ findings: [HealthFinding]) {
+        guard findings != latestFindings else { return }
         latestFindings = findings
         let current = Set(findings.map(\.kind))
         for kind in current.subtracting(activeFindingKinds) {

@@ -134,6 +134,16 @@ MUTATIONS = [
      "entries.removeLast(entries.count - Self.maximumEntries)",
      "entries.removeFirst(entries.count - Self.maximumEntries)",
      "the entry cap keeps the newest events, not the oldest"),
+    ("noteFindings always republishes", "health-coach",
+     "Sources/PowerTools/Services/HealthCoach/HealthActivityJournalService.swift",
+     "guard findings != latestFindings else { return }",
+     "// guard findings != latestFindings else { return }",
+     "noteFindings skips its @Published write when nothing changed, so an observer reading it cannot re-trigger itself forever"),
+    ("header gate mutates on every read", "health-coach",
+     "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift",
+     "if let cachedFindingsReadAt, cachedFindingsReadAt == snapshot.capturedAt {\n            return cachedFindings\n        }",
+     "if false {\n            return cachedFindings\n        }",
+     "the header only mutates its gate once per real monitor tick, not once per read of findings"),
 ]
 
 

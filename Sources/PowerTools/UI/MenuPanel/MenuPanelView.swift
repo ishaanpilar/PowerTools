@@ -576,6 +576,16 @@ private struct MenuPanelHeader: View {
     /// stateless-per-render header does not keep; that rule is silent here
     /// until whichever task adds persistent snapshot history.
     @State private var healthGates = HealthFindingGates()
+    /// `findings` is read more than once per render (`statusText`,
+    /// `.onChange`, `restartRolling()`). `&healthGates` is an inout access,
+    /// which unconditionally calls `@State`'s setter on every call whether
+    /// anything inside the gate actually changed or not — SwiftUI has no way
+    /// to know otherwise, so it invalidates the view every time, which reads
+    /// `findings` again, forever. These two cache the detector's result
+    /// against the reading it was computed from, so the mutating call only
+    /// happens once per real monitor tick instead of once per read.
+    @State private var cachedFindings: [HealthFinding] = []
+    @State private var cachedFindingsReadAt: TimeInterval?
     @ObservedObject private var healthJournal = HealthActivityJournalService.shared
     @ObservedObject private var healthDetail = HealthCoachDetailPresentation.shared
 
@@ -786,12 +796,15 @@ private struct MenuPanelHeader: View {
     }
 
     private var findings: [HealthFinding] {
+        let snapshot = healthSnapshot
+        if let cachedFindingsReadAt, cachedFindingsReadAt == snapshot.capturedAt {
+            return cachedFindings
+        }
         let thresholds = HealthFindingThresholds.sanitized(defaults: .standard)
-        let result = HealthFindingDetector.findings(for: healthSnapshot, previous: nil,
+        let result = HealthFindingDetector.findings(for: snapshot, previous: nil,
                                                     gates: &healthGates, thresholds: thresholds)
-        // Idempotent for repeat reads of the same tick: noteFindings diffs
-        // against what it already has, so re-entering here before the next
-        // real sample changes nothing.
+        cachedFindings = result
+        cachedFindingsReadAt = snapshot.capturedAt
         healthJournal.noteFindings(result)
         return result
     }

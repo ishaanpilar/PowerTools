@@ -18,6 +18,7 @@ enum HealthCoachTests {
         journalChecks(suite)
         journalTemplateChecks(suite)
         journalWiringChecks(suite)
+        renderLoopGuardChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -513,5 +514,31 @@ enum HealthCoachTests {
                                              encoding: .utf8)) ?? ""
         suite.expect(appDelegateSource.contains("HealthActivityJournalService.shared.clear()"),
                      "the in-memory-only journal is cleared on quit, never left for the next launch to find")
+    }
+
+    /// Regression coverage for a real incident: the header's `findings`
+    /// property is read more than once per render, and both an unconditional
+    /// `@Published` write and a `@State` gate mutated through `inout` fire
+    /// their observer on every call regardless of whether the value actually
+    /// changed. Together those turned one render into an infinite one,
+    /// pegging a CPU core (`ps` showed a 99% RUNNING process, not a crash).
+    /// These are source-shape checks because the actual failure only shows
+    /// up as CPU behaviour over time in a live SwiftUI view, which nothing
+    /// in this suite can observe directly — the fix was confirmed instead by
+    /// installing a Developer build and watching `ps` before and after.
+    private static func renderLoopGuardChecks(_ suite: TestSuite) {
+        let servicePath = "Sources/PowerTools/Services/HealthCoach/HealthActivityJournalService.swift"
+        let rawServiceSource = (try? String(contentsOfFile: servicePath, encoding: .utf8)) ?? ""
+        suite.expect(!rawServiceSource.isEmpty, "the journal service source is readable for its render-loop guard check")
+        let serviceSource = rawServiceSource.components(separatedBy: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+        suite.expect(serviceSource.contains("guard findings != latestFindings else { return }"),
+                     "noteFindings skips its @Published write when nothing changed, so an observer reading it cannot re-trigger itself forever")
+
+        let panelSource = (try? String(contentsOfFile: "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift",
+                                       encoding: .utf8)) ?? ""
+        suite.expect(panelSource.contains("cachedFindingsReadAt, cachedFindingsReadAt == snapshot.capturedAt"),
+                     "the header only mutates its gate once per real monitor tick, not once per read of findings")
     }
 }

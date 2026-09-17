@@ -144,6 +144,16 @@ MUTATIONS = [
      "if let cachedFindingsReadAt, cachedFindingsReadAt == snapshot.capturedAt {\n            return cachedFindings\n        }",
      "if false {\n            return cachedFindings\n        }",
      "the header only mutates its gate once per real monitor tick, not once per read of findings"),
+    ("chrome height reverts to a flat constant", "health-coach",
+     "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift",
+     "return 24 + 12 + measuredHeaderHeight + backRow + bannerHeight",
+     "return 90 + backRow + bannerHeight",
+     "the panel's chrome height budget uses the header's measured height, not a flat constant sized for its compact state"),
+    ("expanded detail loses its own collapse control", "health-coach",
+     "Sources/PowerTools/UI/HealthCoach/HealthCoachDetailView.swift",
+     "        VStack(alignment: .leading, spacing: 10) {\n            collapseRow\n            findingsSection\n",
+     "        VStack(alignment: .leading, spacing: 10) {\n            findingsSection\n",
+     "the collapse row is actually shown, not just defined and forgotten"),
 ]
 
 

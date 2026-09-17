@@ -15,11 +15,32 @@ struct HealthCoachDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            collapseRow
             findingsSection
             Divider()
             journalSection
         }
         .padding(.vertical, 6)
+    }
+
+    /// A close control that lives with the content it closes, not only back
+    /// at the header row that opened it: the header's own toggle can scroll
+    /// or resize out of easy reach once this view is showing several
+    /// findings and journal entries, and a person looking at this content
+    /// should not have to go hunting for where they tapped to get here.
+    private var collapseRow: some View {
+        HStack {
+            Spacer()
+            Button {
+                HealthCoachDetailPresentation.shared.collapse()
+            } label: {
+                Image(systemName: "chevron.up.circle.fill")
+                    .font(.system(size: 13))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(strings.detailCollapseButton)
+        }
     }
 
     private var findingsSection: some View {

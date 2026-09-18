@@ -21,6 +21,17 @@ struct HealthCoachSystemState: Equatable {
     var lowPowerModeEnabled = false
     var thermalThrottling = false
     var memoryPressureCritical = false
+
+    /// The one real reading every caller (the header's Explain button, the
+    /// detail view's "Explain again") should build from — so D4's critical-
+    /// memory-pressure refusal can never be silently skipped by a caller
+    /// that only had a stale or partial view of these three conditions.
+    static func current(thermalPressure: ThermalPressure?, memoryPressure: MemoryPressure) -> HealthCoachSystemState {
+        HealthCoachSystemState(
+            lowPowerModeEnabled: ProcessInfo.processInfo.isLowPowerModeEnabled,
+            thermalThrottling: thermalPressure?.isThrottling ?? false,
+            memoryPressureCritical: memoryPressure == .critical)
+    }
 }
 
 /// The Settings-controlled half of section 3.5 (`docs/ai-health-coach/`).

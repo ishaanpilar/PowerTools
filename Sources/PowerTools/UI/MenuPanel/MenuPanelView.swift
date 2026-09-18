@@ -612,6 +612,7 @@ private struct MenuPanelHeader: View {
     @State private var cachedFindingsReadAt: TimeInterval?
     @ObservedObject private var healthJournal = HealthActivityJournalService.shared
     @ObservedObject private var healthDetail = HealthCoachDetailPresentation.shared
+    @ObservedObject private var narrator = HealthNarratorService.shared
 
     private static let rollInterval: TimeInterval = 3.4
 
@@ -638,12 +639,24 @@ private struct MenuPanelHeader: View {
                     Button {
                         HealthCoachDetailPresentation.shared.toggle()
                     } label: {
-                        Text(statusText)
-                            .font(.system(size: 10.5))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .multilineTextAlignment(.leading)
+                        HStack(spacing: 4) {
+                            if let activeNarration {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 9))
+                                    .accessibilityLabel(FeatureStrings.healthCoach(l10n.language).narratorSparkleAccessibilityLabel)
+                                    .help(activeNarration.providerBoundary == .local
+                                          ? FeatureStrings.healthCoach(l10n.language).narratorSourceOnDevice
+                                          : AITextActionsProviderCatalog.displayName(
+                                              for: AITextActionsProviderConfiguration.current().kind,
+                                              strings: FeatureStrings.aiTextActions(l10n.language)))
+                            }
+                            Text(statusText)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                     .id(conditionIndex)
@@ -664,6 +677,9 @@ private struct MenuPanelHeader: View {
                 }
 
                 HStack(spacing: 6) {
+                    if AppFeature.healthCoach.isAvailable {
+                        explainButton
+                    }
                     searchButton
                     settingsButton
                 }
@@ -700,6 +716,37 @@ private struct MenuPanelHeader: View {
                     .fill(colorScheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.08))
             )
             .accessibilityHidden(true)
+    }
+
+    /// Asks `HealthNarratorService` to explain the current findings, and
+    /// expands the detail view so there is somewhere for the answer (or the
+    /// pre-send preview, the first time) to actually appear — pressing this
+    /// with the detail already collapsed should not narrate somewhere the
+    /// person cannot see.
+    private var explainButton: some View {
+        Button {
+            healthDetail.isExpanded = true
+            narrator.explain(trigger: .explainPressed, findings: findings, journal: healthJournal.journal,
+                             settings: .sanitized(defaults: .standard), system: healthSystemState)
+        } label: {
+            Image(systemName: "sparkles")
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 26, height: 26)
+                .contentShape(Circle())
+                .panelGlassControl(in: Circle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .help(FeatureStrings.healthCoach(l10n.language).narratorExplainButton)
+        .accessibilityLabel(FeatureStrings.healthCoach(l10n.language).narratorExplainButton)
+    }
+
+    /// Built from readings this header already holds — no new sampling —
+    /// for `HealthCoachTriggerPolicy`'s deferral rules (section 3.5): Low
+    /// Power Mode, thermal throttling (`.heavy` or worse), critical memory
+    /// pressure.
+    private var healthSystemState: HealthCoachSystemState {
+        .current(thermalPressure: monitor.snapshot.thermalPressure, memoryPressure: monitor.snapshot.memoryPressure)
     }
 
     /// Opens the feature search in place of the dashboard; lit while it is up.
@@ -833,7 +880,21 @@ private struct MenuPanelHeader: View {
         return result
     }
 
+    /// The current AI answer, only while it still explains the situation
+    /// that is actually showing — a stale one (the finding set moved on
+    /// since it was generated) falls straight back to the template rather
+    /// than showing an answer to a question that is no longer being asked.
+    private var activeNarration: HealthNarration? {
+        guard let current = narrator.current, !findings.isEmpty,
+              current.findingKinds == Set(findings.map(\.kind)) else { return nil }
+        return current
+    }
+
+    /// AI headlines do not roll mid-read (section 3.6): once there is a
+    /// valid one, it replaces the per-finding rolling template entirely
+    /// until it goes stale.
     private var statusText: String {
+        if let activeNarration { return activeNarration.headline }
         let findings = findings
         guard !findings.isEmpty else { return l10n.s.healthEverythingGood }
         let finding = findings[conditionIndex % findings.count]

@@ -1,8 +1,8 @@
 # Health Coach — a live, AI-narrated panel header
 
 Status: **in progress.** Drafted 2026-09-16 from a reading of the code at
-`68d6bdfe`. Task 01 is built; see the table in section 7. Decisions D1–D4 are
-settled (section 9).
+`68d6bdfe`. Tasks 01–07 are built, including the model itself; see the table
+in section 7. Decisions D1–D4 are settled (section 9).
 
 This turns the menu panel header ("Hello, Ishaan! Everything looks good, except
 your storage.") into a live system narrator: it notices when something on the
@@ -317,8 +317,8 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 | 04 | `AppFeature.healthCoach` registration (catalog, strings, destination, energy profile, panel search, availability default off) + Settings page skeleton | No | Done — merged `e2c27546`, 2026-09-17 |
 | 05 | `HealthActivityJournal` + event sources (Keep Awake, recorder, findings, updates); detail popover showing findings and journal | No | Done — merged `005ea6e5`, 2026-09-17 (includes a follow-up fix for a render-loop CPU regression found after merge) |
 | 06 | `HealthCoachTriggerPolicy` + usage ledger (pure) + Settings controls | No | Done — merged `2b1dc67a`, 2026-09-17 |
-| 07 | `HealthNarrator`: prompt builder, provider call, validator, cache, fallback; Explain button | Yes | Not started |
-| 08 | Cloud: manifest content type, preview, redaction option; PRIVACY.md | Yes | Not started |
+| 07 | `HealthNarrator`: prompt builder, provider call, validator, cache, fallback; Explain button | Yes | Done — `health-coach/07-narrator`, 2026-09-18 |
+| 08 | Cloud: redaction option (D6); PRIVACY.md | Yes | Not started |
 | 09 | Clipboard activity event: source app only, off by default (D2) | No | Not started |
 | 10 | Budget measurement script run, mutation entries for every guard, roadmap and AI-HARNESS.md updates | — | Not started |
 
@@ -328,6 +328,54 @@ and "alive". Tasks 06–08 add the model behind limits.
 **Stop and ask the maintainer when** a task needs a file it does not list, a
 check cannot be written as described, an unrelated test fails, or the change
 grows past about 250 lines.
+
+### Task 07 notes
+
+Built as: `HealthNarratorPrompt` (fixed instructions + evidence block, name
+sanitisation, token estimate), `HealthNarratorValidator` (parse + the five
+checks in section 5/8), `HealthNarratorProcessing.process` (the pure
+raw-reply-to-narration step, kept in its own dependency-free file so it is
+directly testable without `L10n` or a live provider — see the file's own
+doc comment), and `HealthNarratorService` (the async orchestration: trigger
+policy → pre-send preview gate → provider call → validate → cache → ledger).
+The header shows the AI headline in place of the rolling template once one
+is current and still answers what is on screen (`activeNarration` in both
+`MenuPanelHeader` and `HealthCoachDetailView`, kept in sync on purpose — a
+mutation entry proves it); the detail view shows the bullets, "Explain
+again", and Cancel while streaming; a compact Explain (sparkles) button
+sits beside search and settings once the feature is installed.
+
+Section 3.4's "Cloud only when configured, after the pre-send preview with
+a new content type" is a cross-cutting `AI-HARNESS.md` requirement, not
+something that could safely wait for task 08 — a configured cloud provider
+with no preview at all would be a real privacy gap from the moment this
+shipped. Task 07 therefore already adds
+`AIContextManifestBuilder.healthSnapshot` (content type `"health-snapshot"`)
+and reuses `AIPreSendPreviewSheet` (generalised: `previewIntroFormat` takes
+the content type label instead of hardcoding "selected text", and the sheet
+takes an optional `width` so Health Coach can embed it at the panel's own
+332pt width instead of the floating text-action panel's 380pt). What's left
+for task 08 is specifically the redaction option (D6, still open — real app
+names vs. categories for cloud) and the matching `PRIVACY.md` wording.
+
+Known gaps, deliberately left rather than guessed at:
+- No redraw throttling on the streamed partial text (section 3.4 point 3):
+  the raw stream is validated only once complete and never shown
+  unvalidated anyway (section 3.4 point 4/section 5), so there is nothing
+  partial to throttle yet — worth revisiting if a future task starts
+  showing partial text live.
+- The validator's "invented app name" check (`namesAnAppNotInEvidence`) is
+  a textual heuristic, not real language understanding: it flags a
+  capitalised word or phrase not in the evidence and not a common English
+  word from a hand-picked list. It will have false positives on
+  vocabulary the list doesn't cover and, in principle, false negatives on
+  an invented name that happens to look like an ordinary word. Documented
+  in the function's own doc comment.
+- `HealthCoachTriggerPolicy`'s planned `HealthCoachSystemState` callers
+  (the header's Explain button, the detail view's "Explain again") now
+  share one constructor, `HealthCoachSystemState.current(thermalPressure:memoryPressure:)`,
+  added in this task so D4's critical-memory-pressure refusal can never be
+  silently skipped by a caller passing a stale or partial reading.
 
 ---
 

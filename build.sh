@@ -497,6 +497,10 @@ if (( TEST )); then
         Sources/PowerTools/Services/HealthCoach/HealthJournalTemplate.swift
         Sources/PowerTools/Services/HealthCoach/HealthCoachTriggerPolicy.swift
         Sources/PowerTools/Services/HealthCoach/HealthCoachUsageLedger.swift
+        Sources/PowerTools/Services/HealthCoach/HealthNarration.swift
+        Sources/PowerTools/Services/HealthCoach/HealthNarratorPrompt.swift
+        Sources/PowerTools/Services/HealthCoach/HealthNarratorValidator.swift
+        Sources/PowerTools/Services/HealthCoach/HealthNarratorProcessing.swift
         Sources/PowerTools/Core/HealthCoachStrings.swift
         Sources/PowerTools/Services/WindowLayout/WindowLayoutSupport.swift
         Sources/PowerTools/Services/WindowLayout/WindowGestureSupport.swift

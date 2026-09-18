@@ -14,6 +14,10 @@ struct AIPreSendPreviewSheet: View {
     let manifest: AIContextManifest
     let onSend: () -> Void
     let onCancel: () -> Void
+    /// 380 fits the floating text-action panel this was built for; Health
+    /// Coach embeds the same sheet inside the menu panel's own 332-wide
+    /// content, so it passes a narrower width instead of a second view.
+    var width: CGFloat = 380
 
     @ObservedObject private var l10n = L10n.shared
     private var strings: AITextActionsFeatureStrings { FeatureStrings.aiTextActions(l10n.language) }
@@ -22,7 +26,7 @@ struct AIPreSendPreviewSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(strings.previewTitle)
                 .font(.title3.weight(.semibold))
-            Text(strings.previewIntro)
+            Text(String(format: strings.previewIntroFormat, manifest.contentTypeLabel.lowercased()))
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
@@ -53,7 +57,7 @@ struct AIPreSendPreviewSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 380)
+        .frame(width: width)
     }
 
     private func field(_ label: String, _ value: String) -> some View {

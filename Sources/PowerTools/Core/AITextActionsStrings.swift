@@ -50,7 +50,10 @@ struct AITextActionsFeatureStrings {
     let previewRetentionLocal: String
     let previewRetentionRemote: String
     let previewTitle: String
-    let previewIntro: String
+    /// %1 = the content type label (`AIContextManifest.contentTypeLabel`,
+    /// lowercased), so this one sheet (`AIPreSendPreviewSheet`) reads
+    /// naturally for every feature that shows it, not only selected text.
+    let previewIntroFormat: String
     let previewFieldContent: String
     let previewFieldItemCount: String
     let previewFieldSize: String
@@ -140,7 +143,7 @@ extension AITextActionsFeatureStrings {
         previewRetentionLocal: "Processed on this Mac. Not kept anywhere, not sent anywhere.",
         previewRetentionRemote: "Governed by the provider’s own policy. See the privacy link below.",
         previewTitle: "Before this is sent",
-        previewIntro: "This is the first time selected text is going to this provider. You’ll see this once per provider; after that it sends right away.",
+        previewIntroFormat: "This is the first time %1$@ is going to this provider. You’ll see this once per provider; after that it sends right away.",
         previewFieldContent: "Content",
         previewFieldItemCount: "Items",
         previewFieldSize: "Size",

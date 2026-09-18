@@ -100,16 +100,23 @@ struct MenuPanelView: View {
     @State private var navigableContentHeight: CGFloat = 0
     @State private var metricContentHeight: CGFloat = 0
     @State private var updateBannerHeight: CGFloat = 0
-    /// The header's real height, measured rather than assumed: unlike the
-    /// dashboard's own cards (which expand inside the scrollable content, so
-    /// a taller one just grows what's already measured), the Health Coach
-    /// detail expands *inside the header itself*, above the scroll view,
-    /// where nothing was ever measuring it. A fixed estimate here left the
-    /// panel's window too short once that detail opened, clipping the
-    /// header's own collapse control off the top of the visible frame with
-    /// no scroll view able to reach it - the one control that closes it,
-    /// gone, with the panel looking stuck open.
+    /// The header's real height, measured rather than assumed, the same way
+    /// `UpdateBanner` already is: cheap defensive engineering against
+    /// anything conditionally shown in the header (the beta badge, a
+    /// refreshing indicator, Explain) nudging its height a little, so the
+    /// panel's chrome budget never has to guess. The Health Coach detail
+    /// (Findings, Recent activity) used to expand *inside* this header,
+    /// above the scroll view, which is what this measurement was originally
+    /// added to compensate for (a real incident: an unmeasured header left
+    /// the window too short, clipping the only collapse control off the top
+    /// of the visible frame with no scroll view able to reach it). The
+    /// detail view has since moved into the scrollable content below,
+    /// alongside the dashboard, so this now only ever measures the small,
+    /// bounded compact header - kept anyway since it costs little and
+    /// guards against the same class of bug recurring for a different
+    /// reason later.
     @State private var headerHeight: CGFloat = 0
+    @ObservedObject private var healthDetail = HealthCoachDetailPresentation.shared
     /// The section opened from the dashboard; nil is the dashboard itself.
     @State private var openedSection: PanelSectionID?
     @State private var selectedMetric: MetricDetailKind?
@@ -356,6 +363,18 @@ struct MenuPanelView: View {
 
             OverlayScrollView(measuredHeight: $navigableContentHeight) {
                 VStack(alignment: .leading, spacing: 12) {
+                    // Inside the scroll view, not the fixed header above it,
+                    // for the same reason the dashboard's own cards expand
+                    // here rather than there: unbounded content (findings
+                    // plus up to 8 recent-activity entries) outside a scroll
+                    // view has nothing to shrink into once it no longer
+                    // fits the window, which is exactly what left the panel
+                    // stuck open with its collapse control clipped off
+                    // screen - a real incident, not a hypothetical one.
+                    if healthDetail.isExpanded {
+                        HealthCoachDetailView()
+                            .transition(.opacity)
+                    }
                     if isSearching {
                         PanelSearchResultsList(results: searchResults,
                                                query: searchQuery,
@@ -371,6 +390,7 @@ struct MenuPanelView: View {
                     }
                 }
                 .frame(width: 308)
+                .animation(.easeInOut(duration: 0.2), value: healthDetail.isExpanded)
             }
             .frame(width: 308, height: navigableScrollHeight)
         }
@@ -392,8 +412,20 @@ struct MenuPanelView: View {
                     MenuPanelFocus.shared.clearMetricFocus()
                 }
                 OverlayScrollView(measuredHeight: $metricContentHeight) {
-                    MetricDetailView(kind: selectedMetric)
-                        .frame(width: 308)
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Selecting a metric already collapses the detail
+                        // (see the finding row's chevron button), but the
+                        // header's own toggle is still reachable from here
+                        // too - same scrollable placement as navigablePanel,
+                        // for the same reason.
+                        if healthDetail.isExpanded {
+                            HealthCoachDetailView()
+                                .transition(.opacity)
+                        }
+                        MetricDetailView(kind: selectedMetric)
+                    }
+                    .frame(width: 308)
+                    .animation(.easeInOut(duration: 0.2), value: healthDetail.isExpanded)
                 }
                 .frame(width: 308, height: metricScrollHeight)
             }
@@ -685,17 +717,11 @@ private struct MenuPanelHeader: View {
                 }
                 .panelGlassGroup()
             }
-
-            if healthDetail.isExpanded {
-                HealthCoachDetailView()
-                    .transition(.opacity)
-            }
         }
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.easeInOut(duration: 0.2), value: monitor.isRefreshing)
         .animation(.easeInOut(duration: 0.3), value: conditionIndex)
-        .animation(.easeInOut(duration: 0.2), value: healthDetail.isExpanded)
         .onAppear { restartRolling() }
         .onChange(of: findings.count) { _, _ in restartRolling() }
         .onDisappear {

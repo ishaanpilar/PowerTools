@@ -81,6 +81,9 @@ enum HealthCoachTriggerDecision: Equatable {
         case lowPowerMode
         case thermalThrottling
         case criticalMemoryPressureLocalProvider
+        /// Only ever for an explicit Explain press: the automatic modes
+        /// already return `.notTriggered` when there is nothing notable.
+        case nothingToExplain
     }
 }
 
@@ -100,6 +103,11 @@ enum HealthCoachTriggerPolicy {
                        system: HealthCoachSystemState,
                        providerBoundary: AIContextManifest.Boundary) -> HealthCoachTriggerDecision {
         guard settings.mode != .off else { return .useTemplate(.off) }
+
+        // Explain with nothing wrong would spend a capped model call on an
+        // answer the header cannot show (it only shows an explanation while
+        // there is a finding for it to answer).
+        guard trigger != .explainPressed || !findings.isEmpty else { return .useTemplate(.nothingToExplain) }
 
         // Decision D4: both run inference on this Mac, adding to pressure
         // that is already critical, so this is refused even via Explain's

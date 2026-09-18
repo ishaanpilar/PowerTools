@@ -2,6 +2,41 @@
 
 Notable changes to PowerTools AI are recorded here.
 
+## [1.0.0-beta.7] - 2026-09-18
+
+### Summary
+
+Health Coach, the live AI-narrated panel header, is complete. It ships
+uninstalled like every recent feature: install it from the Features hub to
+try it.
+
+### Added
+
+- Health Coach: the panel header names what is using your Mac's memory or
+  CPU and why ("Code is running a build, using 9.2 GB"), notices low battery
+  or storage, thermal throttling and memory pressure, and keeps a short,
+  in-memory-only activity journal. Detection needs no AI at all.
+- An Explain button (sparkles) asks the AI text actions provider to explain
+  what is going on. On this Mac by default; a cloud provider only after the
+  same pre-send preview every other AI content type shows. Replies are
+  validated against the evidence and fall back to the plain sentence if
+  they name something invented.
+- Limits and control: an Off / On demand / When something changes / On a
+  schedule mode, per-hour and per-day caps, and no automatic call in Low
+  Power Mode or under thermal throttling. The on-device model and a local
+  server are refused outright at critical memory pressure.
+- With a cloud provider, app names are replaced by a category ("a code
+  editor" instead of "Xcode") by default; a Health Coach setting sends real
+  names instead.
+- Off by default: note in Recent activity which app you copied from (never
+  what you copied), when Clipboard History is installed.
+- PRIVACY.md now describes Health Coach.
+
+### Fixed
+
+- Health Coach's expanded detail could still get stuck open when the
+  journal was long; it now scrolls with the rest of the panel.
+
 ## [1.0.0-beta.6] - 2026-09-17
 
 ### Fixed

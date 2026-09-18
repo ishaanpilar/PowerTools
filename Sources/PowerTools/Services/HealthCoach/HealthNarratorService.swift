@@ -27,6 +27,10 @@ final class HealthNarratorService: ObservableObject {
     /// detail view shows `AIPreSendPreviewSheet` for exactly as long as
     /// this is non-nil.
     @Published private(set) var pendingPreview: AIContextManifest?
+    /// Why the last explicit Explain press produced nothing, or nil. Only
+    /// ever set for `.explainPressed`: an automatic trigger that is refused
+    /// or fails stays silent, since nobody asked for it.
+    @Published private(set) var notice: HealthNarratorNotice?
 
     private var cache: [Set<HealthFinding.Kind>: HealthNarration] = [:]
     private let request = AICancellableRequest()
@@ -43,6 +47,9 @@ final class HealthNarratorService: ObservableObject {
         /// prompt) and `finish` (which validates the reply) always resolve
         /// an app's name the same way for one call, per Decision D6.
         let nameForApp: (String) -> String
+        /// Whether the person pressed Explain, so a failure later, in
+        /// `finish`, knows whether it owes them a notice.
+        let explicit: Bool
     }
 
     private init() {}
@@ -64,19 +71,25 @@ final class HealthNarratorService: ObservableObject {
             ledger: HealthCoachUsageLedgerService.shared.ledger,
             settings: settings, system: system, providerBoundary: option.boundary)
 
+        let explicit = trigger == .explainPressed
+        if explicit { notice = nil }
+
         switch decision {
-        case .useTemplate:
+        case .useTemplate(let reason):
             current = nil
+            if explicit { notice = HealthNarratorNotice(reason) }
         case .useCache:
             current = cache[kinds]
         case .callModel:
             guard let provider = AITextActionsProviderFactory.makeProvider(for: configuration),
                   case .ready = provider.currentAvailability() else {
                 current = nil
+                if explicit { notice = .providerUnavailable }
                 return
             }
             let call = PendingCall(findings: findings, journal: journal, provider: provider,
-                                   option: option, kinds: kinds, nameForApp: nameForApp(boundary: option.boundary))
+                                   option: option, kinds: kinds, nameForApp: nameForApp(boundary: option.boundary),
+                                   explicit: explicit)
             let manifest = healthSnapshotManifest(findings: findings, journal: journal, option: option,
                                                   nameForApp: call.nameForApp)
             if AIPreSendPreviewTracker.hasShownPreview(contentType: manifest.contentType, providerID: manifest.providerID) {
@@ -101,9 +114,18 @@ final class HealthNarratorService: ObservableObject {
         pendingCall = nil
     }
 
+    /// Called when the detail collapses: a notice describes one press, and
+    /// "nothing to explain" would be wrong the moment a finding appears.
+    func clearNotice() {
+        notice = nil
+    }
+
     func cancelStreaming() {
         request.cancel()
         isStreaming = false
+        // A stopped request is not a failure to explain, so it leaves no
+        // notice; and its partial text must not leak into the next finish.
+        lastAccumulatedText = nil
     }
 
     private func start(_ call: PendingCall) {
@@ -136,19 +158,29 @@ final class HealthNarratorService: ObservableObject {
         // last `onUpdate` call already carried, so `start` accumulates it.
         let raw = lastAccumulatedText
         lastAccumulatedText = nil
-        guard case .success = result, let raw,
-              let narration = HealthNarratorProcessing.process(
-                  raw: raw, findings: call.findings, kinds: call.kinds,
-                  providerID: call.option.providerID, providerBoundary: call.option.boundary,
-                  nameForApp: call.nameForApp)
+        guard case .success = result, let raw else {
+            current = nil
+            if call.explicit { notice = .failed }
+            return
+        }
+        // A request that completed counts against the caps whether or not
+        // its reply turns out usable: it reached the provider (and, for a
+        // cloud one, was billed), so a provider that keeps answering with
+        // something the validator rejects must not be able to run past
+        // the hourly and daily limits.
+        HealthCoachUsageLedgerService.shared.recordCall(
+            findingKinds: call.kinds, estimatedTokens: HealthNarratorPrompt.estimatedTokens(for: prompt))
+        guard let narration = HealthNarratorProcessing.process(
+            raw: raw, findings: call.findings, kinds: call.kinds,
+            providerID: call.option.providerID, providerBoundary: call.option.boundary,
+            nameForApp: call.nameForApp)
         else {
             current = nil
+            if call.explicit { notice = .replyRejected }
             return
         }
         cache[call.kinds] = narration
         current = narration
-        HealthCoachUsageLedgerService.shared.recordCall(
-            findingKinds: call.kinds, estimatedTokens: HealthNarratorPrompt.estimatedTokens(for: prompt))
     }
 
     /// Set by `start`'s `onUpdate`, read by `finish` — kept as a plain

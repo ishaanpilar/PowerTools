@@ -279,6 +279,11 @@ MUTATIONS = [
      "guard seen.insert(key).inserted else { continue }",
      "_ = seen.insert(key)",
      "an activity inside one app is reported once across memory and CPU rows"),
+    ("expanded detail moves back into the unscrollable header", "health-coach",
+     "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift",
+     "                HStack(spacing: 6) {\n                    if AppFeature.healthCoach.isAvailable {\n                        explainButton\n                    }\n                    searchButton\n                    settingsButton\n                }\n                .panelGlassGroup()\n            }\n        }\n        .padding(.vertical, 4)",
+     "                HStack(spacing: 6) {\n                    if AppFeature.healthCoach.isAvailable {\n                        explainButton\n                    }\n                    searchButton\n                    settingsButton\n                }\n                .panelGlassGroup()\n            }\n            if healthDetail.isExpanded { HealthCoachDetailView() }\n        }\n        .padding(.vertical, 4)",
+     "the expanded detail never renders inside the header itself, which sits outside every scroll view and has nothing to shrink into once its content overflows the window"),
 ]
 
 

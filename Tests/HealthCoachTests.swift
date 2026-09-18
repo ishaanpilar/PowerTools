@@ -31,6 +31,7 @@ enum HealthCoachTests {
         redactionThreadingChecks(suite)
         redactionWiringChecks(suite)
         clipboardCaptureWiringChecks(suite)
+        detailScrollableChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -1127,5 +1128,38 @@ enum HealthCoachTests {
         suite.expect(!settingsSource.isEmpty, "the settings page source is readable for its clipboard wiring check")
         suite.expect(settingsSource.contains("if AppFeature.clipboardHistory.isAvailable {"),
                      "the clipboard-capture toggle is hidden, not merely disabled, when Clipboard History isn't installed - a control that would do nothing should not be shown at all")
+    }
+
+    /// A real incident, twice: the expanded detail (Findings, Recent
+    /// activity) once lived inside the header, which sits outside any
+    /// scroll view - fine while it stayed small, but a fixed, unscrollable
+    /// element has nothing to shrink into once its true content (many
+    /// findings, up to 8 recent-activity entries) no longer fits the
+    /// window. The measured-height fix in `detailHeightAndCollapseChecks`
+    /// raised the bar before that happened, but did not remove it: a
+    /// person with enough activity still hit the same "stuck open, no way
+    /// back" failure, just later. The real fix moves the detail view
+    /// itself into the scrollable content, the same place the dashboard's
+    /// own cards already expand safely - checked here by confirming the
+    /// header's own `body` never renders it, and the panel's scrollable
+    /// content does.
+    private static func detailScrollableChecks(_ suite: TestSuite) {
+        let panelPath = "Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift"
+        let panelSource = (try? String(contentsOfFile: panelPath, encoding: .utf8)) ?? ""
+        suite.expect(!panelSource.isEmpty, "the menu panel source is readable for its detail-scrollability check")
+
+        guard let headerStructRange = panelSource.range(of: "private struct MenuPanelHeader: View {") else {
+            suite.expect(false, "MenuPanelHeader's own declaration is found, so its body can be checked in isolation")
+            return
+        }
+        let headerStructSource = String(panelSource[headerStructRange.lowerBound...])
+        let headerBody = matchedBraceBody(of: "var body: some View {", in: headerStructSource)
+        suite.expect(!headerBody.isEmpty, "MenuPanelHeader's body declaration is found for the detail-scrollability check")
+        suite.expect(!headerBody.contains("HealthCoachDetailView"),
+                     "the expanded detail never renders inside the header itself, which sits outside every scroll view and has nothing to shrink into once its content overflows the window")
+
+        let scrollableOccurrences = panelSource.components(separatedBy: "HealthCoachDetailView()").count - 1
+        suite.expect(scrollableOccurrences >= 2,
+                     "the expanded detail is rendered inside the scrollable content on both screens that show the header (the dashboard and a metric's own detail), where a long list can always be scrolled back to its own collapse control")
     }
 }

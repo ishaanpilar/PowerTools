@@ -122,6 +122,32 @@ PowerTools AI does not collect your prompts or responses, and does not train any
 model. If you turn on the AI activity log, it is stored only on your Mac, never
 contains API keys, and can be cleared at any time.
 
+### Health Coach
+
+Health Coach notices when something on your Mac is off — high memory or CPU
+use, low battery or storage, a recognised build or backup running — and can
+explain it in plain words.
+
+- **Detection needs no AI.** The panel header already names what it notices
+  from readings PowerTools already takes, with no model call at all.
+- **The model runs only when you ask**, or when a mode you chose in Settings
+  decides something is worth explaining. It never runs while the panel is
+  closed.
+- **What it may see**: app and process names (never command-line arguments),
+  memory/CPU/disk/battery figures, and a short summary of PowerTools' own
+  recent activity (Keep Awake, screen recording, findings) — never a window
+  title, a file path, clipboard content or the macOS system log.
+- **On this Mac by default**, same as every other AI feature. If you connect
+  a cloud provider, the same pre-send preview shown for any other content
+  applies before the first request.
+- **Categories by default with a cloud provider.** When a configured cloud
+  provider explains something, app names are replaced with a category
+  ("a code editor" instead of "Xcode") unless you turn that off in Health
+  Coach's settings. On-device and a local server always use real names,
+  since neither request leaves your Mac.
+- **Nothing is kept.** The short-term memory of what just happened, and any
+  cached explanation, live only in memory and are cleared when you quit.
+
 ## Network connections
 
 This is the complete list. Each connection belongs to a feature you can see.

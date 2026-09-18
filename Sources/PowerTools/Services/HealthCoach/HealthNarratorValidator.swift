@@ -41,7 +41,15 @@ enum HealthNarratorValidator {
         return Parsed(headline: headline, bullets: bullets)
     }
 
-    static func validate(_ raw: String, findings: [HealthFinding]) -> Parsed? {
+    /// `nameForApp` must be the exact same resolver the prompt was built
+    /// with (`HealthNarratorPrompt.prompt`'s own parameter): when it
+    /// redacts for a cloud provider (Decision D6), the model never saw the
+    /// real app names, so the evidence this validates against has to be
+    /// built from the same category labels it was actually shown - a reply
+    /// that still names the real app is then correctly caught as invented,
+    /// not waved through because the name happens to be true.
+    static func validate(_ raw: String, findings: [HealthFinding],
+                         nameForApp: (String) -> String = HealthNarratorPrompt.sanitizeName) -> Parsed? {
         guard let parsed = parse(raw) else { return nil }
         guard parsed.headline.count <= maxHeadlineLength else { return nil }
         guard parsed.bullets.count <= maxBullets else { return nil }
@@ -50,7 +58,7 @@ enum HealthNarratorValidator {
         let fullText = ([parsed.headline] + parsed.bullets).joined(separator: "\n")
         guard !containsURLOrCommand(fullText) else { return nil }
         guard !claimsAllIsWellDuringACritical(parsed.headline, findings: findings) else { return nil }
-        guard !namesAnAppNotInEvidence(fullText, findings: findings) else { return nil }
+        guard !namesAnAppNotInEvidence(fullText, findings: findings, nameForApp: nameForApp) else { return nil }
         guard !citesAPercentNotInEvidence(fullText, findings: findings) else { return nil }
 
         return parsed
@@ -70,25 +78,28 @@ enum HealthNarratorValidator {
     }
 
     /// Every app/process/device name the model could truthfully cite,
-    /// sanitised the same way the prompt builder sanitised it going in, so
+    /// resolved the same way the prompt builder resolved it going in
+    /// (`nameForApp` for apps; always `sanitizeName` for `diskLow`'s
+    /// device, which is never redacted - see `HealthNarratorPrompt`), so
     /// the comparison is apples to apples with what the model actually saw.
-    private static func evidenceNames(_ findings: [HealthFinding]) -> Set<String> {
+    private static func evidenceNames(_ findings: [HealthFinding], nameForApp: (String) -> String) -> Set<String> {
         var names: Set<String> = []
-        func add(_ name: String) { names.insert(HealthNarratorPrompt.sanitizeName(name).lowercased()) }
+        func addApp(_ name: String) { names.insert(nameForApp(name).lowercased()) }
+        func addDevice(_ name: String) { names.insert(HealthNarratorPrompt.sanitizeName(name).lowercased()) }
         for finding in findings {
             switch finding {
             case .thermal(_, let topCPUApp):
-                if let topCPUApp { add(topCPUApp.name) }
+                if let topCPUApp { addApp(topCPUApp.name) }
             case .memoryPressureCritical(_, _, _, let topApps), .memoryPressureWarning(_, _, _, let topApps):
-                topApps.forEach { add($0.name) }
+                topApps.forEach { addApp($0.name) }
             case .diskLow(let device, _):
-                add(device.name)
+                addDevice(device.name)
             case .memoryHog(let app, _, _):
-                add(app.name)
+                addApp(app.name)
             case .cpuSustained(_, _, let topApps):
-                topApps.forEach { add($0.name) }
+                topApps.forEach { addApp($0.name) }
             case .knownActivity(let sighting):
-                add(sighting.appName)
+                addApp(sighting.appName)
             case .batteryLow, .swapGrowth, .updateAvailable:
                 break
             }
@@ -107,8 +118,9 @@ enum HealthNarratorValidator {
     /// produces by accident, but a real multi-word app name often is —
     /// "Visual Studio Code") is treated as the stronger signal and is
     /// always checked against the evidence, common-word or not.
-    private static func namesAnAppNotInEvidence(_ text: String, findings: [HealthFinding]) -> Bool {
-        let allowed = evidenceNames(findings).union(alwaysAllowedWords)
+    private static func namesAnAppNotInEvidence(_ text: String, findings: [HealthFinding],
+                                                nameForApp: (String) -> String) -> Bool {
+        let allowed = evidenceNames(findings, nameForApp: nameForApp).union(alwaysAllowedWords)
         // A literal space only, not `\s`: NSRegularExpression's `\s` also
         // matches the newline between two bullets, which glued the last
         // word of one bullet to the first word of the next into a single

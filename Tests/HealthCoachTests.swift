@@ -27,6 +27,9 @@ enum HealthCoachTests {
         narratorValidatorChecks(suite)
         narratorServiceChecks(suite)
         narratorWiringChecks(suite)
+        redactionCategoryChecks(suite)
+        redactionThreadingChecks(suite)
+        redactionWiringChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -1006,5 +1009,83 @@ enum HealthCoachTests {
                      "the expanded detail is where the pre-send preview actually appears, not a second floating panel")
         suite.expect(detailSource.contains("narratorExplainAgainButton") && detailSource.contains("narratorCancelButton"),
                      "the expanded detail offers Explain again once answered, and Cancel while streaming")
+    }
+
+    private static func redactionCategoryChecks(_ suite: TestSuite) {
+        suite.expect(HealthAppCategoryTable.category(forAppName: "Xcode") == .codeEditor
+                        && HealthAppCategoryTable.category(forAppName: "Safari") == .browser
+                        && HealthAppCategoryTable.category(forAppName: "Slack") == .communication,
+                     "known apps map to their category")
+        suite.expect(HealthAppCategoryTable.category(forAppName: "SomeIndieAppNobodyHeardOf") == nil,
+                     "an app outside the table has no category")
+        suite.expect(HealthAppCategoryTable.category(forAppName: "XcodePreviews") == nil
+                        && HealthAppCategoryTable.category(forAppName: "xcode") == nil,
+                     "matching is exact, not by substring or case - a name that merely resembles a known one is not the same app")
+
+        let strings = HealthCoachStrings.enUS
+        suite.expect(HealthAppCategoryTable.label(forAppName: "Xcode", strings: strings) == strings.categoryCodeEditor,
+                     "a recognised app's label is its category's own string")
+        suite.expect(HealthAppCategoryTable.label(forAppName: "SomeIndieAppNobodyHeardOf", strings: strings) == strings.categoryGeneric,
+                     "an unrecognised app's label is the generic fallback - what keeps its real name from ever reaching a cloud provider when redaction is on")
+    }
+
+    /// `nameForApp` (`HealthNarratorPrompt.prompt`, `HealthNarratorValidator.validate`,
+    /// `HealthNarratorProcessing.process`) is the actual redaction seam:
+    /// these check that the same resolver, threaded through, changes what
+    /// leaves in the prompt and what the validator accepts - not just that
+    /// `HealthAppCategoryTable` itself works in isolation.
+    private static func redactionThreadingChecks(_ suite: TestSuite) {
+        let healthCoach = HealthCoachStrings.enUS
+        let memoryHog = HealthFinding.memoryHog(app: ProcessUsage(pid: 1, name: "Xcode", value: 1),
+                                                percentOfTotal: 42, thresholdPercent: 30)
+        let redact: (String) -> String = { HealthAppCategoryTable.label(forAppName: $0, strings: healthCoach) }
+
+        let defaultPrompt = HealthNarratorPrompt.prompt(findings: [memoryHog], journal: HealthActivityJournal(),
+                                                        healthCoach: healthCoach)
+        suite.expect(defaultPrompt.contains("Xcode"),
+                     "with no redaction, the real app name reaches the prompt, matching every behaviour before task 08")
+
+        let redactedPrompt = HealthNarratorPrompt.prompt(findings: [memoryHog], journal: HealthActivityJournal(),
+                                                          healthCoach: healthCoach, nameForApp: redact)
+        suite.expect(!redactedPrompt.contains("Xcode") && redactedPrompt.contains(healthCoach.categoryCodeEditor),
+                     "with redaction, the real app name never reaches the prompt - only its category does")
+
+        let categoryReply = "Headline: A code editor is using a lot of memory\nDetail:\n- a code editor is using 42% of your RAM"
+        suite.expect(HealthNarratorValidator.validate(categoryReply, findings: [memoryHog], nameForApp: redact) != nil,
+                     "a reply that only cites the category the model was actually shown is accepted")
+
+        let leakedRealName = "Headline: Xcode is using a lot of memory\nDetail:\n- Xcode is using 42% of your RAM"
+        suite.expect(HealthNarratorValidator.validate(leakedRealName, findings: [memoryHog], nameForApp: redact) == nil,
+                     "a reply that names the real app anyway is rejected as invented, since the model was never shown that name")
+        suite.expect(HealthNarratorValidator.validate(leakedRealName, findings: [memoryHog]) != nil,
+                     "the same reply is accepted without redaction, confirming the rejection above is specifically about what the model was shown")
+
+        let processedWithRedaction = HealthNarratorProcessing.process(
+            raw: categoryReply, findings: [memoryHog], kinds: [memoryHog.kind],
+            providerID: "mock", providerBoundary: .remote, nameForApp: redact)
+        suite.expect(processedWithRedaction?.headline == "A code editor is using a lot of memory",
+                     "HealthNarratorProcessing.process threads nameForApp into validation the same way the prompt used it")
+    }
+
+    private static func redactionWiringChecks(_ suite: TestSuite) {
+        let servicePath = "Sources/PowerTools/Services/HealthCoach/HealthNarratorService.swift"
+        let rawServiceSource = (try? String(contentsOfFile: servicePath, encoding: .utf8)) ?? ""
+        suite.expect(!rawServiceSource.isEmpty, "the narrator service source is readable for its redaction wiring checks")
+        let serviceSource = rawServiceSource.components(separatedBy: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+
+        suite.expect(serviceSource.contains("boundary == .remote"),
+                     "redaction only ever applies to a cloud provider - on-device and a local server keep real names, since nothing leaves the Mac either way")
+        suite.expect(serviceSource.contains("DefaultsKey.healthCoachRedactAppNamesForCloud"),
+                     "the redaction toggle in Settings actually gates the behaviour, not a hardcoded choice")
+        suite.expect(serviceSource.contains("nameForApp: call.nameForApp"),
+                     "the same resolver used to build the prompt (start) is the one used to validate the reply (finish) - a mismatch would let a redacted request's reply be checked against real names it was never shown, or vice versa")
+
+        let settingsPath = "Sources/PowerTools/UI/HealthCoach/HealthCoachSettings.swift"
+        let settingsSource = (try? String(contentsOfFile: settingsPath, encoding: .utf8)) ?? ""
+        suite.expect(!settingsSource.isEmpty, "the settings page source is readable for its redaction wiring check")
+        suite.expect(settingsSource.contains("Toggle(strings.redactionToggleLabel, isOn: $redactAppNamesForCloud)"),
+                     "the redaction default (Decision D6: categories by default) is a real, visible toggle in Settings, not a fixed choice nobody can change")
     }
 }

@@ -38,6 +38,11 @@ final class HealthNarratorService: ObservableObject {
         let provider: AIProvider
         let option: AITextActionsProviderOption
         let kinds: Set<HealthFinding.Kind>
+        /// Computed once, in `explain`, from `option.boundary` and the
+        /// redaction setting - carried through so `start` (which builds the
+        /// prompt) and `finish` (which validates the reply) always resolve
+        /// an app's name the same way for one call, per Decision D6.
+        let nameForApp: (String) -> String
     }
 
     private init() {}
@@ -71,8 +76,9 @@ final class HealthNarratorService: ObservableObject {
                 return
             }
             let call = PendingCall(findings: findings, journal: journal, provider: provider,
-                                   option: option, kinds: kinds)
-            let manifest = healthSnapshotManifest(findings: findings, journal: journal, option: option)
+                                   option: option, kinds: kinds, nameForApp: nameForApp(boundary: option.boundary))
+            let manifest = healthSnapshotManifest(findings: findings, journal: journal, option: option,
+                                                  nameForApp: call.nameForApp)
             if AIPreSendPreviewTracker.hasShownPreview(contentType: manifest.contentType, providerID: manifest.providerID) {
                 start(call)
             } else {
@@ -104,7 +110,8 @@ final class HealthNarratorService: ObservableObject {
         isStreaming = true
         let instructions = HealthNarratorPrompt.instructions
         let healthCoach = FeatureStrings.healthCoach(L10n.shared.language)
-        let prompt = HealthNarratorPrompt.prompt(findings: call.findings, journal: call.journal, healthCoach: healthCoach)
+        let prompt = HealthNarratorPrompt.prompt(findings: call.findings, journal: call.journal,
+                                                 healthCoach: healthCoach, nameForApp: call.nameForApp)
         request.run(
             call.provider.streamText(instructions: instructions, prompt: prompt, maxOutputTokens: 220),
             onUpdate: { [weak self] partial in
@@ -132,7 +139,8 @@ final class HealthNarratorService: ObservableObject {
         guard case .success = result, let raw,
               let narration = HealthNarratorProcessing.process(
                   raw: raw, findings: call.findings, kinds: call.kinds,
-                  providerID: call.option.providerID, providerBoundary: call.option.boundary)
+                  providerID: call.option.providerID, providerBoundary: call.option.boundary,
+                  nameForApp: call.nameForApp)
         else {
             current = nil
             return
@@ -150,10 +158,12 @@ final class HealthNarratorService: ObservableObject {
     private var lastAccumulatedText: String?
 
     private func healthSnapshotManifest(findings: [HealthFinding], journal: HealthActivityJournal,
-                                        option: AITextActionsProviderOption) -> AIContextManifest {
+                                        option: AITextActionsProviderOption,
+                                        nameForApp: (String) -> String) -> AIContextManifest {
         let strings = FeatureStrings.aiTextActions(L10n.shared.language)
         let healthCoach = FeatureStrings.healthCoach(L10n.shared.language)
-        let prompt = HealthNarratorPrompt.prompt(findings: findings, journal: journal, healthCoach: healthCoach)
+        let prompt = HealthNarratorPrompt.prompt(findings: findings, journal: journal, healthCoach: healthCoach,
+                                                 nameForApp: nameForApp)
         return AIContextManifestBuilder.healthSnapshot(
             findingCount: findings.count,
             approximateSizeBytes: prompt.utf8.count,
@@ -163,5 +173,20 @@ final class HealthNarratorService: ObservableObject {
             retentionRemote: strings.previewRetentionRemote,
             providerDisplayName: AITextActionsProviderCatalog.displayName(for: option.kind, strings: strings)
         )
+    }
+
+    /// `sanitizeName` for on-device or a local server (nothing leaves the
+    /// Mac, so there is nothing to redact); a category label for a cloud
+    /// provider, unless the person has turned that off (Decision D6,
+    /// `docs/ai-health-coach/README.md` section 9 - categories by default,
+    /// real names an explicit opt-out).
+    private func nameForApp(boundary: AIContextManifest.Boundary) -> (String) -> String {
+        guard boundary == .remote,
+              UserDefaults.standard.bool(forKey: DefaultsKey.healthCoachRedactAppNamesForCloud)
+        else {
+            return HealthNarratorPrompt.sanitizeName
+        }
+        let healthCoach = FeatureStrings.healthCoach(L10n.shared.language)
+        return { HealthAppCategoryTable.label(forAppName: $0, strings: healthCoach) }
     }
 }

@@ -12,8 +12,11 @@ import Foundation
 enum HealthNarratorProcessing {
     static func process(raw: String, findings: [HealthFinding], kinds: Set<HealthFinding.Kind>,
                         providerID: String, providerBoundary: AIContextManifest.Boundary,
+                        nameForApp: (String) -> String = HealthNarratorPrompt.sanitizeName,
                         now: Date = Date()) -> HealthNarration? {
-        guard let parsed = HealthNarratorValidator.validate(raw, findings: findings) else { return nil }
+        guard let parsed = HealthNarratorValidator.validate(raw, findings: findings, nameForApp: nameForApp) else {
+            return nil
+        }
         return HealthNarration(headline: parsed.headline, bullets: parsed.bullets, findingKinds: kinds,
                                providerID: providerID, providerBoundary: providerBoundary, generatedAt: now)
     }

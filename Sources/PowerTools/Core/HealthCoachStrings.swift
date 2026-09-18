@@ -89,6 +89,35 @@ struct HealthCoachStrings {
     /// `AIContextManifest.contentTypeLabel`, not specific to any one provider.
     let narratorPreviewContentTypeLabel: String
 
+    // MARK: - Cloud redaction (task 08, Decision D6)
+
+    let redactionSectionTitle: String
+    let redactionToggleLabel: String
+    let redactionToggleFootnote: String
+    let categoryCodeEditor: String
+    let categoryBrowser: String
+    let categoryCommunication: String
+    let categoryMedia: String
+    let categoryDesign: String
+    let categoryProductivity: String
+    let categoryTerminal: String
+    /// The fallback for any app `HealthAppCategoryTable` does not name —
+    /// what keeps an unrecognised app's real name from ever reaching a
+    /// cloud provider when redaction is on, table coverage aside.
+    let categoryGeneric: String
+
+    func label(for category: HealthAppCategory) -> String {
+        switch category {
+        case .codeEditor: return categoryCodeEditor
+        case .browser: return categoryBrowser
+        case .communication: return categoryCommunication
+        case .media: return categoryMedia
+        case .design: return categoryDesign
+        case .productivity: return categoryProductivity
+        case .terminal: return categoryTerminal
+        }
+    }
+
     /// Only `.notable` and `.critical` are offered: `.info` findings (a
     /// recognised activity, an available update) are routine, not something
     /// worth spending a model call to narrate every time one appears.
@@ -223,6 +252,17 @@ extension HealthCoachStrings {
         narratorExplainAgainButton: "Explain again",
         narratorCancelButton: "Cancel",
         narratorPreviewContentTypeLabel: "Your Mac’s health snapshot",
+        redactionSectionTitle: "Cloud providers",
+        redactionToggleLabel: "Replace app names with categories",
+        redactionToggleFootnote: "When a cloud provider explains something, it hears “a code editor” instead of “Xcode”. Turn this off to send real app names for a more specific explanation. This never applies on this Mac or to a local server, since nothing leaves the Mac either way.",
+        categoryCodeEditor: "a code editor",
+        categoryBrowser: "a browser",
+        categoryCommunication: "a communication app",
+        categoryMedia: "a media app",
+        categoryDesign: "a design app",
+        categoryProductivity: "a productivity app",
+        categoryTerminal: "a terminal",
+        categoryGeneric: "an app",
         detailFindingsSectionTitle: "Findings",
         detailNoFindingsText: "Nothing notable right now.",
         detailActivitySectionTitle: "Recent activity",

@@ -501,6 +501,7 @@ if (( TEST )); then
         Sources/PowerTools/Services/HealthCoach/HealthNarratorPrompt.swift
         Sources/PowerTools/Services/HealthCoach/HealthNarratorValidator.swift
         Sources/PowerTools/Services/HealthCoach/HealthNarratorProcessing.swift
+        Sources/PowerTools/Services/HealthCoach/HealthAppCategory.swift
         Sources/PowerTools/Core/HealthCoachStrings.swift
         Sources/PowerTools/Services/WindowLayout/WindowLayoutSupport.swift
         Sources/PowerTools/Services/WindowLayout/WindowGestureSupport.swift

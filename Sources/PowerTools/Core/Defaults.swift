@@ -402,6 +402,7 @@ enum DefaultsKey {
     static let healthCoachScheduledIntervalMinutes = "healthCoachScheduledIntervalMinutes"
     static let healthCoachMaxCallsPerHour = "healthCoachMaxCallsPerHour"
     static let healthCoachMaxCallsPerDay = "healthCoachMaxCallsPerDay"
+    static let healthCoachRedactAppNamesForCloud = "healthCoachRedactAppNamesForCloud"
     static let monitorAlertThermal = "monitorAlertThermal"
     static let monitorAlertThermalRecovery = "monitorAlertThermalRecovery"
     // Menu panel layout — the order the major sections appear in and which are
@@ -1253,6 +1254,7 @@ enum Defaults {
         DefaultsKey.healthCoachScheduledIntervalMinutes: 15,
         DefaultsKey.healthCoachMaxCallsPerHour: 4,
         DefaultsKey.healthCoachMaxCallsPerDay: 20,
+        DefaultsKey.healthCoachRedactAppNamesForCloud: true,
         DefaultsKey.monitorAlertCooldownMinutes: 15,
         DefaultsKey.mediaLastTool: MediaTool.videoCompressor.rawValue,
         DefaultsKey.mediaVideoStart: 0.0,

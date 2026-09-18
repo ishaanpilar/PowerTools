@@ -136,7 +136,12 @@ explain it in plain words.
 - **What it may see**: app and process names (never command-line arguments),
   memory/CPU/disk/battery figures, and a short summary of PowerTools' own
   recent activity (Keep Awake, screen recording, findings) — never a window
-  title, a file path, clipboard content or the macOS system log.
+  title, a file path or the macOS system log.
+- **Clipboard activity, off by default.** If you turn on "Note when
+  something is copied" in Health Coach's settings, and Clipboard History is
+  installed, recent activity shows which app you copied from — never what
+  you copied. An app you've told Clipboard History to ignore is never
+  recorded here either.
 - **On this Mac by default**, same as every other AI feature. If you connect
   a cloud provider, the same pre-send preview shown for any other content
   applies before the first request.

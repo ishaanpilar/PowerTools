@@ -254,6 +254,21 @@ MUTATIONS = [
      "        exactNames[name]",
      "        exactNames.first(where: { name.contains($0.key) })?.value",
      "matching is exact, not by substring or case - a name that merely resembles a known one is not the same app"),
+    ("clipboard capture source ignores whether Health Coach is installed", "health-coach",
+     "Sources/PowerTools/Services/Clipboard/ClipboardHistoryService.swift",
+     "guard AppFeature.healthCoach.isAvailable,",
+     "guard true,",
+     "a capture's source app is only ever noted while Health Coach is installed"),
+    ("clipboard capture source ignores the Settings toggle", "health-coach",
+     "Sources/PowerTools/Services/Clipboard/ClipboardHistoryService.swift",
+     "UserDefaults.standard.bool(forKey: DefaultsKey.healthCoachJournalClipboardCaptures)",
+     "true",
+     "the clipboard-journal toggle in Settings actually gates the behaviour (D2: off by default), not a hardcoded choice"),
+    ("clipboard-capture toggle shown without Clipboard History", "health-coach",
+     "Sources/PowerTools/UI/HealthCoach/HealthCoachSettings.swift",
+     "if AppFeature.clipboardHistory.isAvailable {",
+     "if true {",
+     "the clipboard-capture toggle is hidden, not merely disabled, when Clipboard History isn't installed - a control that would do nothing should not be shown at all"),
 ]
 
 

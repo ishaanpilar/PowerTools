@@ -30,6 +30,7 @@ enum HealthCoachTests {
         redactionCategoryChecks(suite)
         redactionThreadingChecks(suite)
         redactionWiringChecks(suite)
+        clipboardCaptureWiringChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -1087,5 +1088,40 @@ enum HealthCoachTests {
         suite.expect(!settingsSource.isEmpty, "the settings page source is readable for its redaction wiring check")
         suite.expect(settingsSource.contains("Toggle(strings.redactionToggleLabel, isOn: $redactAppNamesForCloud)"),
                      "the redaction default (Decision D6: categories by default) is a real, visible toggle in Settings, not a fixed choice nobody can change")
+    }
+
+    /// Task 09 (Decision D2): whether a clipboard capture is journaled at
+    /// all - never its content, only the source app's name - is driven
+    /// end to end by a real Settings toggle. Checked as source shape: the
+    /// path runs through `NSWorkspace.shared.frontmostApplication` and a
+    /// live pasteboard poll, neither of which this suite can drive
+    /// directly, the same reason `renderLoopGuardChecks` above is a
+    /// source-shape check rather than an executed one.
+    private static func clipboardCaptureWiringChecks(_ suite: TestSuite) {
+        let clipboardPath = "Sources/PowerTools/Services/Clipboard/ClipboardHistoryService.swift"
+        let rawClipboardSource = (try? String(contentsOfFile: clipboardPath, encoding: .utf8)) ?? ""
+        suite.expect(!rawClipboardSource.isEmpty, "the clipboard history service source is readable for its journal wiring check")
+        let clipboardSource = rawClipboardSource.components(separatedBy: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+        suite.expect(clipboardSource.contains("AppFeature.healthCoach.isAvailable"),
+                     "a capture's source app is only ever noted while Health Coach is installed")
+        suite.expect(clipboardSource.contains("DefaultsKey.healthCoachJournalClipboardCaptures"),
+                     "the clipboard-journal toggle in Settings actually gates the behaviour (D2: off by default), not a hardcoded choice")
+        suite.expect(clipboardSource.contains("guard self.isRunning, !excludedSource, let content else { return }\n"
+                                              + "                self.noteHealthCoachCaptureSource()"),
+                     "an ignored app's copy is never noted either - the source-recording call sits after the exact same exclusion guard the capture itself already obeys")
+
+        let journalServicePath = "Sources/PowerTools/Services/HealthCoach/HealthActivityJournalService.swift"
+        let journalServiceSource = (try? String(contentsOfFile: journalServicePath, encoding: .utf8)) ?? ""
+        suite.expect(!journalServiceSource.isEmpty, "the journal service source is readable for its clipboard wiring check")
+        suite.expect(journalServiceSource.contains("ClipboardHistoryService.shared.$lastCaptureSourceAppName"),
+                     "the journal subscribes to the clipboard service's own published signal, matching how every other event source is wired here")
+
+        let settingsPath = "Sources/PowerTools/UI/HealthCoach/HealthCoachSettings.swift"
+        let settingsSource = (try? String(contentsOfFile: settingsPath, encoding: .utf8)) ?? ""
+        suite.expect(!settingsSource.isEmpty, "the settings page source is readable for its clipboard wiring check")
+        suite.expect(settingsSource.contains("if AppFeature.clipboardHistory.isAvailable {"),
+                     "the clipboard-capture toggle is hidden, not merely disabled, when Clipboard History isn't installed - a control that would do nothing should not be shown at all")
     }
 }

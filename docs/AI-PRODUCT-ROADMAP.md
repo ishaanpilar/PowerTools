@@ -319,7 +319,7 @@ availability and failure handling.
 | 3.1 | Scratchpad: summary, action items, structure | Active tab | Writes a new tab; never overwrites |
 | 3.2 | Clipboard item transforms | One selected item | Adds a clip; the original is untouched |
 | 3.3 | App Updates release-note summaries | Notes already fetched | None |
-| 3.4 | "Why is my Mac busy?" | Local metric snapshot; each claim links to its metric | None |
+| 3.4 | "Why is my Mac busy?" — **shipped, and grown into the full M6 Mac Health Coach ahead of schedule** (Decision D5, `docs/ai-health-coach/README.md`): detection, an in-memory activity journal, a trigger policy with usage limits, AI narration with validation and a cache, and cloud redaction, not just a metric snapshot | Local metric snapshot plus PowerTools' own recent activity (Keep Awake, recording, an opt-in clipboard-source note); each claim links to its metric or evidence | None while the panel is closed; a model call only on request or a chosen automatic mode, always capped |
 | 3.5 | Screenshot alt text and OCR cleanup | Current capture; Vision OCR first; images go only to a vision-capable provider, after preview | None |
 | 3.6 | Ask PowerTools AI | Bundled documentation, cited and deep-linked | Proposes settings through a review sheet |
 | 3.7 | AI onboarding: "Make it personal" | The sentence typed during setup; macOS 26, on device only; not kept | Suggestions go through the existing Feature Hub install flow; "Choose myself" equally prominent |
@@ -374,8 +374,9 @@ Each item is gated on its own decision:
   Anthropic's plan terms re-checked when built.
 - Personal Knowledge Search, including semantic clipboard search, as its own
   feature because the index has a storage cost.
-- Capture Intelligence for recordings, the Mac Health Coach, Cleaner and
-  Uninstaller explanations.
+- Capture Intelligence for recordings, Cleaner and Uninstaller explanations.
+  **The Mac Health Coach itself shipped early**, out of M3 slice 3.4
+  (Decision D5, `docs/ai-health-coach/README.md`) — see that slice above.
 
 ---
 
@@ -571,7 +572,9 @@ documentation with citations, and proposes settings only through a review sheet.
 4. **Capture Intelligence** — one post-capture sheet: extract, summarise, action
    items, redaction suggestions, describe for accessibility, find later.
 5. **Mac Health Coach** — evidence-backed explanations with a reversible next
-   step and a source drawer of metrics.
+   step and a source drawer of metrics. **The explanations shipped early**
+   (`docs/ai-health-coach/`, Decision D5); a reversible next-step action
+   beyond navigating to the relevant metric is still open (Decision D7).
 6. **Workspace Profiles** — named modes of layout, audio, Keep Awake and
    toggles, drafted by AI and saved by the person.
 
@@ -804,7 +807,7 @@ These are design estimates, not usage data — the app collects none.
 | Command Bar text actions | Select text, pick an action | 1 | 10–30 | 50–800 / 50–300 | 0.7–2.5 s |
 | Scratchpad and clipboard transforms | Pick an action | 1, or up to 4 chunks for long text | 2–10 | 200–3,900 / 100–300 | 1–6 s |
 | Release-note summaries | Open App updates; cached per version | 1 per updated app | 0–15, in one batch | 300–1,500 / 80 | about 1.5 s each; 15 apps about 25 s in sequence |
-| "Why is my Mac busy?" | Ask | 1 | 0–3 | 500–1,000 / 150 | about 2 s |
+| Health Coach (`docs/ai-health-coach/`, formerly "Why is my Mac busy?", Decision D5) | Explain button, or an automatic mode (off by default); capped at 4/hour, 20/day | 1 | 0–6 | up to 800 / about 100–250 | under 1 s to first words |
 | Screenshot alt text and text cleanup | Ask on a capture | 1 | 0–10 | 200–1,500 / 60–200 | 1–3 s |
 | AI onboarding (macOS 26) | First launch | 1 | once | about 300 plus shortlist / 200 | about 2 s |
 | Ask mode plans (M4) | Describe a task | 1–3 | 2–10 | 600–2,500 / 100 | 2–3 s each |

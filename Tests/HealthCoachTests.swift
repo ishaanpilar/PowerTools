@@ -900,6 +900,10 @@ enum HealthCoachTests {
         suite.expect(HealthNarratorValidator.validate(tooManyBullets, findings: [memoryHog]) == nil,
                      "more than three bullets is rejected")
 
+        let tooLongBullet = "Headline: Xcode is busy\nDetail:\n- " + String(repeating: "x", count: 145)
+        suite.expect(HealthNarratorValidator.validate(tooLongBullet, findings: [memoryHog]) == nil,
+                     "a bullet over 140 characters is rejected")
+
         let withURL = "Headline: Xcode is busy\nDetail:\n- see https://example.com for more"
         suite.expect(HealthNarratorValidator.validate(withURL, findings: [memoryHog]) == nil,
                      "a bullet containing a URL is rejected")

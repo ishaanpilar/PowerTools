@@ -269,6 +269,16 @@ MUTATIONS = [
      "if AppFeature.clipboardHistory.isAvailable {",
      "if true {",
      "the clipboard-capture toggle is hidden, not merely disabled, when Clipboard History isn't installed - a control that would do nothing should not be shown at all"),
+    ("validator accepts an over-length bullet", "health-coach",
+     "Sources/PowerTools/Services/HealthCoach/HealthNarratorValidator.swift",
+     "guard parsed.bullets.allSatisfy({ $0.count <= maxBulletLength }) else { return nil }",
+     "guard true else { return nil }",
+     "a bullet over 140 characters is rejected"),
+    ("an activity is reported twice for the same app", "health-coach",
+     "Sources/PowerTools/Services/HealthCoach/HealthSignalSnapshot.swift",
+     "guard seen.insert(key).inserted else { continue }",
+     "_ = seen.insert(key)",
+     "an activity inside one app is reported once across memory and CPU rows"),
 ]
 
 

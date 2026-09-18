@@ -1,8 +1,12 @@
 # Health Coach — a live, AI-narrated panel header
 
-Status: **in progress.** Drafted 2026-09-16 from a reading of the code at
-`68d6bdfe`. Tasks 01–07 are built, including the model itself; see the table
-in section 7. Decisions D1–D4 are settled (section 9).
+Status: **all ten planned tasks built.** Drafted 2026-09-16 from a reading
+of the code at `68d6bdfe`; see the table in section 7. Decisions D1–D6 and
+D8 are settled (section 9); D7 (action buttons beyond navigation) is the
+only one still open, and the live budget measurement in task 10's own
+notes is still outstanding. PRs for tasks 07–10 are stacked
+(`health-coach/07-narrator` → `08-cloud-redaction` → `09-clipboard-activity`
+→ `10-wrap-up`) and open as of 2026-09-18.
 
 This turns the menu panel header ("Hello, Ishaan! Everything looks good, except
 your storage.") into a live system narrator: it notices when something on the
@@ -323,7 +327,7 @@ follows the workflow in [docs/ai-harness/README.md](../ai-harness/README.md)
 | 07 | `HealthNarrator`: prompt builder, provider call, validator, cache, fallback; Explain button | Yes | Done — `health-coach/07-narrator`, 2026-09-18 |
 | 08 | Cloud: redaction option (D6); PRIVACY.md | Yes | Done — `health-coach/08-cloud-redaction`, 2026-09-18 |
 | 09 | Clipboard activity event: source app only, off by default (D2) | No | Done — `health-coach/09-clipboard-activity`, 2026-09-18 |
-| 10 | Budget measurement script run, mutation entries for every guard, roadmap and AI-HARNESS.md updates | — | Not started |
+| 10 | Budget measurement script run, mutation entries for every guard, roadmap and AI-HARNESS.md updates | — | Done — `health-coach/10-wrap-up`, 2026-09-18 (budget script written but not run live; see notes) |
 
 Tasks 01–05 ship value with no AI at all: the header already becomes specific
 and "alive". Tasks 06–08 add the model behind limits.
@@ -440,6 +444,49 @@ isn't installed, matching how every other "would do nothing yet" control
 in this app is handled - a dead control reads as a bug, not a feature
 waiting to be unlocked.
 
+### Task 10 notes
+
+**Mutation coverage audit**: read every `guard`/conditional in every
+Health Coach source file and cross-referenced against
+`Tests/mutation_checks.py`'s existing `health-coach` entries. Found and
+closed two real gaps that had no coverage at all, not just no mutation
+entry: `HealthNarratorValidator`'s bullet-length cap (`maxBulletLength`)
+had zero test exercising it, and `HealthSignalSnapshot.activitySightings`'
+per-app-per-activity dedup guard had behavioural test coverage
+(`sightingChecks`) but no mutation entry proving that coverage actually
+catches its removal. Both fixed; 57 of 57 mutation checks now pass.
+
+**AI-HARNESS.md**: read in full. Its "Guarantees" table is specifically
+about the plan/action execution harness (`AIPlanValidator`,
+`AIActionRegistry`, capability leases) and is self-validated against
+`Tests/AIHarnessTests.swift`/`Tests/AIActionRegistryTests.swift` by name.
+Health Coach's narrator has no plan/action execution surface at all - it
+only ever reads and explains, never proposes or runs a step - so nothing
+in that table actually applies to it. No changes made; noted here so a
+future reader does not wonder why task 10's own description mentioned
+this file and nothing changed.
+
+**Roadmap**: Decision D5 settled (this task) as "yes, shipped early" -
+`docs/AI-PRODUCT-ROADMAP.md`'s M3 slice 3.4 row, the M6 flagship-experiences
+list's Mac Health Coach line, and the "How often AI runs" table's row (now
+named "Health Coach" instead of "Why is my Mac busy?", with real trigger
+policy and token-budget figures instead of the pre-implementation guess)
+were all updated.
+
+**Budget measurement**: `Tools/measure-health-coach-budget.sh` samples the
+Developer build's own CPU/RSS via `ps` and walks through comparing against
+section 6's numbers. It automates only what needs no click or keystroke -
+reading `ps`, flipping `defaults` directly - and deliberately does not
+simulate pressing Explain: an earlier session on this same codebase had a
+live Accessibility-driven AI test land keystrokes somewhere unintended, so
+the one step that cannot be done without an actual, real Explain press
+(the per-explanation memory/CPU/latency budget) is written up as a
+manual, human-in-the-loop procedure inside the script's own output rather
+than automated. **The script has not been run against a live build this
+session** - real numbers against the section 6 budgets are still
+outstanding and need the maintainer (or a future session working directly
+with them) to actually execute it.
+
 ---
 
 ## 8. Tests to add
@@ -480,7 +527,7 @@ waiting to be unlocked.
 | D2 | May the journal record *that* the clipboard captured something (no content)? | Yes, off by default, only when Clipboard History is installed | **Decided 2026-09-16: yes, off by default, source app only.** One event per capture carrying the source app's name; never content, never ignored apps |
 | D3 | May it read macOS logs or crash / memory-kill reports? | **Not in v1.** Later: on demand only, report names and dates only | **Decided 2026-09-16: not in v1** |
 | D4 | At critical memory pressure, should Explain still run? | Refuse for the on-device Apple model and a local server (both add load to this Mac); allow for a cloud provider (runs elsewhere) | **Decided 2026-09-16: on-device/local server refused outright at critical memory pressure, even on explicit press; a cloud (API) provider still runs normally** |
-| D5 | Does this replace roadmap slice 3.4 and start the Mac Health Coach early? | Yes; update the roadmap's M3 table and section 9's "How often AI runs" row | Open |
+| D5 | Does this replace roadmap slice 3.4 and start the Mac Health Coach early? | Yes; update the roadmap's M3 table and section 9's "How often AI runs" row | **Decided 2026-09-18: yes.** `docs/AI-PRODUCT-ROADMAP.md`'s slice 3.4 row, the M6 flagship-experiences list, and the "How often AI runs" table were all updated to reflect this |
 | D6 | For cloud providers, send real app names or categories ("a code editor")? | Categories by default, real names as an opt-in | **Decided 2026-09-18: categories by default.** A Settings toggle ("Replace app names with categories") opts into real names; on-device and a local server always use real names, since neither request leaves the Mac |
 | D7 | Any action buttons beyond navigation (Quit app, open Activity Monitor filtered)? | Navigation only in v1; a Quit button would need its own approval design | Open |
 | D8 | Feature name in the UI | "Health Coach" (matches the roadmap); header copy unchanged in tone | **Settled by use, 2026-09-17:** task 04 registered the feature as "Health Coach" throughout (`AppFeature.healthCoach`, hub title, settings page) |

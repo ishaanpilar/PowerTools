@@ -41,12 +41,39 @@ struct HealthCoachDetailView: View {
             if let activeNarration {
                 narrationSection(activeNarration)
                 Divider()
+            } else if narrator.isStreaming {
+                explainingRow
+            }
+            if !narrator.isStreaming, let notice = narrator.notice {
+                Text(strings.text(for: notice))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             findingsSection
             Divider()
             journalSection
         }
         .padding(.vertical, 6)
+        .onDisappear { narrator.clearNotice() }
+    }
+
+    /// Shown while the first explanation is on its way. `narrationSection`
+    /// has its own Cancel for a re-explain, but before any answer exists
+    /// nothing else on screen would say a request is running or let it be
+    /// stopped - the button would just look dead until the answer landed.
+    private var explainingRow: some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text(strings.narratorExplaining)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 4)
+            Button(strings.narratorCancelButton) { narrator.cancelStreaming() }
+                .buttonStyle(.plain)
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
+        }
     }
 
     private func narrationSection(_ narration: HealthNarration) -> some View {

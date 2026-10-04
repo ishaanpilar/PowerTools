@@ -89,6 +89,31 @@ struct HealthCoachStrings {
     /// `AIContextManifest.contentTypeLabel`, not specific to any one provider.
     let narratorPreviewContentTypeLabel: String
 
+    // MARK: - Explain feedback (task 12)
+
+    let narratorExplaining: String
+    let noticeNothingToExplain: String
+    let noticeOff: String
+    let noticeHourlyCap: String
+    let noticeDailyCap: String
+    let noticeMemoryCritical: String
+    let noticeProviderUnavailable: String
+    let noticeReplyRejected: String
+    let noticeFailed: String
+
+    func text(for notice: HealthNarratorNotice) -> String {
+        switch notice {
+        case .nothingToExplain: return noticeNothingToExplain
+        case .off: return noticeOff
+        case .hourlyCap: return noticeHourlyCap
+        case .dailyCap: return noticeDailyCap
+        case .memoryCritical: return noticeMemoryCritical
+        case .providerUnavailable: return noticeProviderUnavailable
+        case .replyRejected: return noticeReplyRejected
+        case .failed: return noticeFailed
+        }
+    }
+
     // MARK: - Cloud redaction (task 08, Decision D6)
 
     let redactionSectionTitle: String
@@ -259,6 +284,15 @@ extension HealthCoachStrings {
         narratorExplainAgainButton: "Explain again",
         narratorCancelButton: "Cancel",
         narratorPreviewContentTypeLabel: "Your Mac’s health snapshot",
+        narratorExplaining: "Explaining…",
+        noticeNothingToExplain: "Nothing to explain right now.",
+        noticeOff: "Explain is turned off in Health Coach settings.",
+        noticeHourlyCap: "You have reached the hourly limit for explanations.",
+        noticeDailyCap: "You have reached today’s limit for explanations.",
+        noticeMemoryCritical: "Memory is critically low, so the on-device model is paused. Try again once it recovers.",
+        noticeProviderUnavailable: "No AI provider is ready. Check AI text actions in Settings.",
+        noticeReplyRejected: "The explanation did not match your Mac’s readings, so it was discarded.",
+        noticeFailed: "The provider could not answer. Try again in a moment.",
         redactionSectionTitle: "Cloud providers",
         redactionToggleLabel: "Replace app names with categories",
         redactionToggleFootnote: "When a cloud provider explains something, it hears “a code editor” instead of “Xcode”. Turn this off to send real app names for a more specific explanation. This never applies on this Mac or to a local server, since nothing leaves the Mac either way.",

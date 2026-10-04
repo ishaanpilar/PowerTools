@@ -19,6 +19,18 @@ final class AITextActionPanelController {
     private var localMonitor: Any?
     private var globalMonitor: Any?
     private let request = AICancellableRequest()
+    /// Read by `present`; set per run, since only one panel exists at a time.
+    private var showsReplace = true
+
+    private enum Source {
+        case selection
+        case clipboardItem(ClipboardHistoryEntry)
+
+        var allowsReplace: Bool {
+            if case .selection = self { return true }
+            return false
+        }
+    }
 
     private init() {}
 
@@ -26,14 +38,36 @@ final class AITextActionPanelController {
     /// later - the Command Bar has already closed by the time this shows, so
     /// there is nothing left to re-read from.
     func run(_ kind: AITextActionKind, text: String) {
+        run(kind, text: text, source: .selection)
+    }
+
+    /// Roadmap slice 3.3's sibling, 3.2: the same actions on one clipboard
+    /// item the person chose. The answer is a result panel like any other;
+    /// its Copy puts the answer on the pasteboard, where the history
+    /// captures it as a new clip, so the original is never touched. Replace
+    /// is not offered: a clip has no text field to replace into.
+    func runOnClipboardItem(_ kind: AITextActionKind, entry: ClipboardHistoryEntry) {
+        run(kind, text: entry.text, source: .clipboardItem(entry))
+    }
+
+    private func run(_ kind: AITextActionKind, text: String, source: Source) {
         guard Thread.isMainThread else {
-            DispatchQueue.main.async { self.run(kind, text: text) }
+            DispatchQueue.main.async { self.run(kind, text: text, source: source) }
             return
         }
         let strings = FeatureStrings.aiTextActions(L10n.shared.language)
         let title = kind.title(strings: strings)
         let configuration = AITextActionsProviderConfiguration.current()
         let option = AITextActionsProviderCatalog.option(for: configuration.kind)
+        showsReplace = source.allowsReplace
+
+        // Before any provider is asked and before the first-send preview, so
+        // a clip that must not be sent is never half-sent.
+        if case .clipboardItem(let entry) = source,
+           let refusal = ClipboardTransformPolicy.refusal(for: entry, boundary: option.boundary) {
+            present(title: title, model: AITextActionPanelModel(phase: .failed(refusal.message(strings: strings))))
+            return
+        }
 
         guard let provider = AITextActionsProviderFactory.makeProvider(for: configuration) else {
             let model = AITextActionPanelModel(phase: .failed(strings.reasonNoProviderConfigured))
@@ -47,7 +81,13 @@ final class AITextActionPanelController {
             return
         }
 
-        let manifest = AIContextManifestBuilder.selectedText(text, option: option, strings: strings)
+        let manifest: AIContextManifest
+        switch source {
+        case .selection:
+            manifest = AIContextManifestBuilder.selectedText(text, option: option, strings: strings)
+        case .clipboardItem:
+            manifest = AIContextManifestBuilder.clipboardItem(text, option: option, strings: strings)
+        }
         if AIPreSendPreviewTracker.hasShownPreview(contentType: manifest.contentType, providerID: manifest.providerID) {
             let model = AITextActionPanelModel(phase: .running(text: ""))
             present(title: title, model: model)
@@ -96,7 +136,7 @@ final class AITextActionPanelController {
         close()
         let strings = FeatureStrings.aiTextActions(L10n.shared.language)
         let content = AnyView(AITextActionPanelHostView(
-            model: model, title: title, strings: strings,
+            model: model, title: title, strings: strings, showsReplace: showsReplace,
             onSend: onSend,
             onCancelPreview: { [weak self] in self?.close() },
             onCancelRunning: { [weak self] in self?.cancelRunning() },
@@ -241,6 +281,7 @@ private struct AITextActionPanelHostView: View {
     @ObservedObject var model: AITextActionPanelModel
     let title: String
     let strings: AITextActionsFeatureStrings
+    let showsReplace: Bool
     let onSend: () -> Void
     let onCancelPreview: () -> Void
     let onCancelRunning: () -> Void
@@ -253,15 +294,15 @@ private struct AITextActionPanelHostView: View {
             AIPreSendPreviewSheet(manifest: manifest, onSend: onSend, onCancel: onCancelPreview)
         case .running(let text):
             AITextActionResultView(title: title, strings: strings, text: text,
-                                   isRunning: true, errorMessage: nil,
+                                   isRunning: true, errorMessage: nil, showsReplace: showsReplace,
                                    onCopy: onCopy, onReplace: onReplace, onCancel: onCancelRunning)
         case .finished(let text):
             AITextActionResultView(title: title, strings: strings, text: text,
-                                   isRunning: false, errorMessage: nil,
+                                   isRunning: false, errorMessage: nil, showsReplace: showsReplace,
                                    onCopy: onCopy, onReplace: onReplace, onCancel: onCancelRunning)
         case .failed(let message):
             AITextActionResultView(title: title, strings: strings, text: "",
-                                   isRunning: false, errorMessage: message,
+                                   isRunning: false, errorMessage: message, showsReplace: showsReplace,
                                    onCopy: onCopy, onReplace: onReplace, onCancel: onCancelRunning)
         }
     }
@@ -273,6 +314,7 @@ private struct AITextActionResultView: View {
     let text: String
     let isRunning: Bool
     let errorMessage: String?
+    let showsReplace: Bool
     let onCopy: (String) -> Void
     let onReplace: (String) -> Void
     let onCancel: () -> Void
@@ -323,11 +365,17 @@ private struct AITextActionResultView: View {
                     Button(strings.resultCancelButton, action: onCancel)
                         .keyboardShortcut(.cancelAction)
                 } else if errorMessage == nil {
-                    Button(strings.resultCopyButton) { onCopy(text) }
-                        .buttonStyle(.bordered)
-                    Button(strings.resultReplaceButton) { onReplace(text) }
-                        .buttonStyle(.borderedProminent)
-                        .keyboardShortcut(.defaultAction)
+                    if showsReplace {
+                        Button(strings.resultCopyButton) { onCopy(text) }
+                            .buttonStyle(.bordered)
+                        Button(strings.resultReplaceButton) { onReplace(text) }
+                            .buttonStyle(.borderedProminent)
+                            .keyboardShortcut(.defaultAction)
+                    } else {
+                        Button(strings.resultCopyButton) { onCopy(text) }
+                            .buttonStyle(.borderedProminent)
+                            .keyboardShortcut(.defaultAction)
+                    }
                 }
             }
         }

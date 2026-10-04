@@ -11,6 +11,29 @@ import Foundation
 enum AIContextManifestBuilder {
     static let selectedTextContentType = "selected-text"
     static let healthSnapshotContentType = "health-snapshot"
+    static let clipboardItemContentType = "clipboard-item"
+
+    /// One chosen clipboard item (roadmap slice 3.2). A separate content type
+    /// from selected text: this came out of the clipboard history rather than
+    /// a selection the person just made, so it gets its own first-send
+    /// preview.
+    static func clipboardItem(
+        _ text: String,
+        option: AITextActionsProviderOption,
+        strings: AITextActionsFeatureStrings
+    ) -> AIContextManifest {
+        AIContextManifest(
+            contentType: clipboardItemContentType,
+            contentTypeLabel: strings.previewContentTypeClipboardItem,
+            itemCount: 1,
+            approximateSizeBytes: text.utf8.count,
+            boundary: option.boundary,
+            providerID: option.providerID,
+            providerDisplayName: AITextActionsProviderCatalog.displayName(for: option.kind, strings: strings),
+            retentionNote: option.boundary == .local ? strings.previewRetentionLocal : strings.previewRetentionRemote,
+            privacyURL: option.privacyURL
+        )
+    }
 
     static func selectedText(
         _ text: String,

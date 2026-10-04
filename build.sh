@@ -398,6 +398,7 @@ if (( TEST )); then
         Sources/PowerTools/Core/DiskImageInstallerStrings.swift
         Sources/PowerTools/Services/DiskImageInstaller/DiskImageInstallerSupport.swift
         Sources/PowerTools/Services/Clipboard/ClipboardHistorySupport.swift
+        Sources/PowerTools/Services/Clipboard/ClipboardTransformPolicy.swift
         Sources/PowerTools/Services/Clipboard/ClipboardAutoClearSupport.swift
         Sources/PowerTools/Services/AutoQuit/AutoQuitSupport.swift
         Sources/PowerTools/Services/AlwaysOnTop/AlwaysOnTopSupport.swift

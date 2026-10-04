@@ -481,6 +481,11 @@ private struct QuickEntryRow: View, Equatable {
         Button(text.copy) {
             history.copyOnlyQuickEntry(entry)
         }
+        // Uses the AI text actions provider, so it appears only once that
+        // feature is installed: AI stays off until the person turns it on.
+        if AppFeature.aiTextActions.isAvailable, ClipboardTransformPolicy.offersTransform(for: entry) {
+            transformMenu(entry)
+        }
         Divider()
         Button(entry.isPinned ? text.unpin : text.pin) {
             history.togglePin(entry)
@@ -496,6 +501,22 @@ private struct QuickEntryRow: View, Equatable {
         Divider()
         Button(text.delete, role: .destructive) {
             history.remove(entry)
+        }
+    }
+
+    /// One chosen clip, sent only when a specific action is picked from here.
+    /// The quick panel closes first so the result panel is not left behind it.
+    private func transformMenu(_ entry: ClipboardHistoryEntry) -> some View {
+        let strings = FeatureStrings.aiTextActions(l10n.language)
+        return Menu(strings.clipboardTransformMenu) {
+            ForEach(AITextActionKind.allCases) { kind in
+                Button {
+                    history.hideHistoryWindow()
+                    AITextActionPanelController.shared.runOnClipboardItem(kind, entry: entry)
+                } label: {
+                    Label(kind.title(strings: strings), systemImage: kind.symbolName)
+                }
+            }
         }
     }
 

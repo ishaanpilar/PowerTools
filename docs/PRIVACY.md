@@ -110,6 +110,12 @@ file, screenshot or webpage cannot make AI take an action.
   Nothing is copied or replaces your selection until you press one of those
   buttons; pressing Escape or clicking away closes the panel and does nothing
   else.
+- **Transform a clip** offers the same actions on one clipboard item you pick
+  from the history's menu, and sends only that item, only when you choose an
+  action. It shows the answer in the same panel with Copy; a copied answer is
+  added to the history as a new clip and the original is left as it was. A text
+  clip over 12,000 characters is not sent, and a clip that looks like a
+  password or key is never sent to a cloud provider.
 - **Actions**, such as arranging windows or starting a timer, are proposed as a
   plan. Nothing runs until you approve it.
 - **Anything that deletes, shares, installs or leaves your Mac** asks for your

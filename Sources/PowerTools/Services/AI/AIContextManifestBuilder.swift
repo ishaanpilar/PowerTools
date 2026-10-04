@@ -11,6 +11,29 @@ import Foundation
 enum AIContextManifestBuilder {
     static let selectedTextContentType = "selected-text"
     static let healthSnapshotContentType = "health-snapshot"
+    static let scratchpadNoteContentType = "scratchpad-note"
+
+    /// The active Scratchpad note (roadmap slice 3.1), sent whole: a note is
+    /// something the person chose to write, unlike text merely selected
+    /// somewhere, so it gets its own content type and its own first preview.
+    static func scratchpadNote(
+        _ text: String,
+        option: AITextActionsProviderOption,
+        strings: AITextActionsFeatureStrings,
+        contentTypeLabel: String
+    ) -> AIContextManifest {
+        AIContextManifest(
+            contentType: scratchpadNoteContentType,
+            contentTypeLabel: contentTypeLabel,
+            itemCount: 1,
+            approximateSizeBytes: text.utf8.count,
+            boundary: option.boundary,
+            providerID: option.providerID,
+            providerDisplayName: AITextActionsProviderCatalog.displayName(for: option.kind, strings: strings),
+            retentionNote: option.boundary == .local ? strings.previewRetentionLocal : strings.previewRetentionRemote,
+            privacyURL: option.privacyURL
+        )
+    }
 
     static func selectedText(
         _ text: String,

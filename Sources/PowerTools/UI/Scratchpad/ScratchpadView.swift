@@ -9,6 +9,7 @@ import SwiftUI
 /// quiet footer with an on-demand formatted preview and file actions.
 struct ScratchpadView: View {
     @ObservedObject private var service = ScratchpadService.shared
+    @ObservedObject private var ai = ScratchpadAIService.shared
     @ObservedObject private var l10n = L10n.shared
     @AppStorage(DefaultsKey.scratchpadBackgroundOpacity) private var backgroundOpacity = 0.0
     @State private var copied = false
@@ -303,7 +304,71 @@ struct ScratchpadView: View {
                 MarkdownPreview(blocks: ScratchpadSupport.markdownPreview(service.text))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+
+            if ai.phase != .idle {
+                aiStatus
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.regularMaterial)
+            }
         }
+    }
+
+    /// Covers the editor while an AI note action is previewing, running or
+    /// has failed, so its outcome is never missed. The note underneath is
+    /// never touched: a finished answer arrives as a new tab.
+    @ViewBuilder private var aiStatus: some View {
+        let strings = FeatureStrings.scratchpadAI(l10n.language)
+        switch ai.phase {
+        case .idle:
+            EmptyView()
+        case .previewing(let manifest):
+            ScrollView {
+                AIPreSendPreviewSheet(manifest: manifest,
+                                      onSend: { ai.confirmPreview() },
+                                      onCancel: { ai.dismiss() },
+                                      width: 280)
+            }
+        case .running:
+            VStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text(strings.working).font(.callout).foregroundStyle(.secondary)
+                Button(strings.cancel) { ai.dismiss() }
+            }
+        case .failed(let message):
+            VStack(spacing: 10) {
+                Text(message)
+                    .font(.callout)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(strings.dismiss) { ai.dismiss() }
+            }
+            .padding(16)
+        }
+    }
+
+    private var aiMenu: some View {
+        let strings = FeatureStrings.scratchpadAI(l10n.language)
+        return Menu {
+            ForEach(ScratchpadAIAction.allCases) { action in
+                Button {
+                    ai.run(action)
+                } label: {
+                    Label(action.title(strings: strings), systemImage: action.symbolName)
+                }
+            }
+        } label: {
+            Image(systemName: "sparkles")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .disabled(ai.phase != .idle)
+        .help(strings.menuTitle)
+        .accessibilityLabel(strings.menuTitle)
     }
 
     private var footer: some View {
@@ -325,6 +390,11 @@ struct ScratchpadView: View {
             footerButton("square.and.arrow.down", text.exportAction) {
                 service.exportText(suggestedName:
                     ScratchpadSupport.exportFileName(title: service.selectedPadName, date: Date()))
+            }
+            // Uses the AI text actions provider, so it appears only once that
+            // feature is installed: AI stays off until the person turns it on.
+            if AppFeature.aiTextActions.isAvailable {
+                aiMenu
             }
             Spacer()
             footerButton("trash", text.clearAction) {

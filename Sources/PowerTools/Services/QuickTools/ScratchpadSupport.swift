@@ -108,12 +108,14 @@ struct ScratchpadDocument: Codable, Equatable {
         return ScratchpadDocument(pads: cleanPads, selectedID: selection)
     }
 
-    func addingPad(defaultName: String, id: UUID = UUID()) -> ScratchpadDocument? {
+    func addingPad(defaultName: String, text: String = "", modifiedAt: Date? = nil,
+                   id: UUID = UUID()) -> ScratchpadDocument? {
         guard pads.count < Self.maximumPadCount else { return nil }
         var next = self
         let name = ScratchpadSupport.nextPadName(defaultName: defaultName,
                                                  existingNames: pads.map(\.name))
-        next.pads.append(ScratchpadPad(id: id, name: name, text: "", modifiedAt: nil))
+        next.pads.append(ScratchpadPad(id: id, name: name, text: text,
+                                       modifiedAt: text.isEmpty ? nil : modifiedAt))
         next.selectedID = id
         return next
     }

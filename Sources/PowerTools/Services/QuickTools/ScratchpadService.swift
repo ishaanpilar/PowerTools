@@ -189,6 +189,28 @@ final class ScratchpadService: NSObject, ObservableObject, NSWindowDelegate {
         apply(next, focus: true)
     }
 
+    func documentSnapshot() -> ScratchpadDocument? {
+        document
+    }
+
+    /// Appends an AI answer as a new tab, against the document as it is now,
+    /// so edits made while the answer was on its way are kept. Returns why
+    /// nothing was added, if nothing was.
+    func addAIResult(_ reply: String, for action: ScratchpadAIAction) -> ScratchpadAIRefusal? {
+        guard let document else { return .saveFailed }
+        let outcome = ScratchpadAIResult.adding(reply: reply, for: action, to: document,
+                                                strings: FeatureStrings.scratchpadAI(L10n.shared.language),
+                                                now: Date())
+        switch outcome {
+        case .failure(let refusal):
+            return refusal
+        case .success(let next):
+            guard store.save(next) else { return .saveFailed }
+            apply(next, focus: true)
+            return nil
+        }
+    }
+
     func selectPad(_ id: UUID) {
         guard id != selectedPadID, let document, let next = document.selecting(id), store.save(next) else { return }
         apply(next, focus: true)

@@ -79,7 +79,8 @@ OpenAI, Anthropic or another compatible service.
   actions it may propose. No account details, device identifiers or other
   content are added.
 - **You see it first.** Before the first request that sends a kind of content
-  (selected text, a clipboard item, a screenshot, a file), PowerTools AI shows
+  (selected text, a Scratchpad note, a clipboard item, a screenshot, a file),
+  PowerTools AI shows
   exactly what will be sent and to which provider.
 - **The provider's terms apply.** Retention, logging and model training for your
   requests are governed by the provider you chose. Settings links to its
@@ -110,6 +111,9 @@ file, screenshot or webpage cannot make AI take an action.
   Nothing is copied or replaces your selection until you press one of those
   buttons; pressing Escape or clicking away closes the panel and does nothing
   else.
+- **Scratchpad AI** (summarise, action items, structure) sends the note you
+  are looking at and puts the answer in a new tab. It never changes, replaces
+  or deletes an existing note.
 - **Transform a clip** offers the same actions on one clipboard item you pick
   from the history's menu, and sends only that item, only when you choose an
   action. It shows the answer in the same panel with Copy; a copied answer is

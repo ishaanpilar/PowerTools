@@ -32,6 +32,7 @@ enum HealthCoachTests {
         redactionWiringChecks(suite)
         clipboardCaptureWiringChecks(suite)
         detailScrollableChecks(suite)
+        explainFeedbackChecks(suite)
     }
 
     private static func groupingChecks(_ suite: TestSuite) {
@@ -1161,5 +1162,80 @@ enum HealthCoachTests {
         let scrollableOccurrences = panelSource.components(separatedBy: "HealthCoachDetailView()").count - 1
         suite.expect(scrollableOccurrences >= 2,
                      "the expanded detail is rendered inside the scrollable content on both screens that show the header (the dashboard and a metric's own detail), where a long list can always be scrolled back to its own collapse control")
+    }
+
+    /// Explain used to fail silently three ways (a refusal, an unavailable
+    /// provider, a rejected reply all just looked like a dead button), spend
+    /// a capped call on "nothing to explain", show nothing while the first
+    /// answer streamed, and let a rejected reply skip the usage caps. The
+    /// policy and the notice mapping are pure and executed here; the
+    /// service and view wiring around them is source-shape, the same
+    /// discipline the other UI glue checks in this file use.
+    private static func explainFeedbackChecks(_ suite: TestSuite) {
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        let finding = HealthFinding.memoryHog(app: ProcessUsage(pid: 1, name: "A", value: 1),
+                                              percentOfTotal: 50, thresholdPercent: 30)
+        func decide(_ findings: [HealthFinding], _ trigger: HealthCoachTrigger,
+                    mode: HealthCoachTriggerSettings.Mode = .onDemand) -> HealthCoachTriggerDecision {
+            HealthCoachTriggerPolicy.decide(now: base, findings: findings, trigger: trigger,
+                                            ledger: HealthCoachUsageLedger(),
+                                            settings: HealthCoachTriggerSettings(mode: mode),
+                                            system: HealthCoachSystemState(), providerBoundary: .local)
+        }
+        suite.expect(decide([], .explainPressed) == .useTemplate(.nothingToExplain),
+                     "pressing Explain with nothing wrong never spends a capped model call")
+        suite.expect(decide([finding], .explainPressed) == .callModel,
+                     "pressing Explain with a finding still calls the model")
+        suite.expect(decide([], .explainPressed, mode: .off) == .useTemplate(.off),
+                     "Off is still reported as Off, not as nothing to explain")
+        suite.expect(decide([], .panelOpened) == .useTemplate(.notTriggered),
+                     "an automatic trigger with nothing wrong keeps its own quiet reason")
+
+        suite.expect(HealthNarratorNotice(.nothingToExplain) == .nothingToExplain
+                        && HealthNarratorNotice(.off) == .off
+                        && HealthNarratorNotice(.hourlyCapReached) == .hourlyCap
+                        && HealthNarratorNotice(.dailyCapReached) == .dailyCap
+                        && HealthNarratorNotice(.criticalMemoryPressureLocalProvider) == .memoryCritical,
+                     "each reason an explicit press can hit maps to its own notice")
+        suite.expect(HealthNarratorNotice(.notTriggered) == nil && HealthNarratorNotice(.cooldownActive) == nil
+                        && HealthNarratorNotice(.lowPowerMode) == nil && HealthNarratorNotice(.thermalThrottling) == nil,
+                     "an automatic mode's own gating never becomes a notice worded like an error")
+
+        let strings = HealthCoachStrings.enUS
+        let notices: [HealthNarratorNotice] = [.nothingToExplain, .off, .hourlyCap, .dailyCap,
+                                               .memoryCritical, .providerUnavailable, .replyRejected, .failed]
+        suite.expect(Set(notices.map { strings.text(for: $0) }).count == notices.count
+                        && notices.allSatisfy { !strings.text(for: $0).isEmpty },
+                     "every notice has its own words, so no two failures read the same")
+
+        let rawService = (try? String(contentsOfFile: "Sources/PowerTools/Services/HealthCoach/HealthNarratorService.swift",
+                                      encoding: .utf8)) ?? ""
+        suite.expect(!rawService.isEmpty, "the narrator service source is readable for its feedback checks")
+        let service = rawService.components(separatedBy: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+        suite.expect(service.contains("if explicit { notice = HealthNarratorNotice(reason) }"),
+                     "a refused explicit press says why")
+        suite.expect(service.contains("if explicit { notice = .providerUnavailable }"),
+                     "an explicit press with no ready provider says so instead of doing nothing")
+        suite.expect(service.contains("if call.explicit { notice = .failed }")
+                        && service.contains("if call.explicit { notice = .replyRejected }"),
+                     "a failed request and a rejected reply are told apart, and only when the person asked")
+        if let ledgerAt = service.range(of: "HealthCoachUsageLedgerService.shared.recordCall")?.lowerBound,
+           let processAt = service.range(of: "guard let narration = HealthNarratorProcessing.process(")?.lowerBound {
+            suite.expect(ledgerAt < processAt,
+                         "a completed request is counted against the caps before its reply is judged, so a provider whose replies keep being rejected cannot run past the limits")
+        } else {
+            suite.expect(false, "the ledger call and the reply processing are both found in finish")
+        }
+
+        let rawDetail = (try? String(contentsOfFile: "Sources/PowerTools/UI/HealthCoach/HealthCoachDetailView.swift",
+                                     encoding: .utf8)) ?? ""
+        suite.expect(rawDetail.contains("strings.text(for: notice)"),
+                     "the expanded detail shows the notice")
+        suite.expect(rawDetail.contains("} else if narrator.isStreaming {\n                explainingRow"),
+                     "before any answer exists, the detail shows that a request is running and lets it be cancelled")
+        suite.expect(rawDetail.contains(".onDisappear { narrator.clearNotice() }"),
+                     "a notice is cleared when the detail collapses, so it never outlives the press it described")
     }
 }

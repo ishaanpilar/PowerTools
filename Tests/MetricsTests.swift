@@ -25,6 +25,7 @@ struct MetricsTests {
             ("ai-http-provider", { AIHTTPProviderTests.run(suite) }),
             ("ai-text-actions-provider", { AITextActionsProviderTests.run(suite) }),
             ("ai-context-manifest", { AIContextManifestTests.run(suite) }),
+            ("clipboard-transform", { ClipboardTransformTests.run(suite) }),
             ("health-coach", { HealthCoachTests.run(suite) }),
             ("scratchpad-ai", { ScratchpadAITests.run(suite) }),
             ("core", { coreChecks(suite) }),

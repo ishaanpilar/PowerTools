@@ -45,8 +45,14 @@ struct AITextActionsFeatureStrings {
     let errorRateLimited: String
     let errorHTTPFormat: String
     let errorGeneric: String
+    let clipboardTransformMenu: String
+    /// %1 = the character limit
+    let clipboardTooLongFormat: String
+    let clipboardSensitiveForRemote: String
+    let clipboardEmptyOrNotText: String
 
     let previewContentTypeSelectedText: String
+    let previewContentTypeClipboardItem: String
     let previewRetentionLocal: String
     let previewRetentionRemote: String
     let previewTitle: String
@@ -138,8 +144,13 @@ extension AITextActionsFeatureStrings {
         errorRateLimited: "Rate limited. Try again shortly.",
         errorHTTPFormat: "The provider returned an error (status %1$d)",
         errorGeneric: "Something went wrong",
+        clipboardTransformMenu: "Transform",
+        clipboardTooLongFormat: "This clip is too long to transform. The limit is %1$d characters.",
+        clipboardSensitiveForRemote: "This clip looks like it could hold a password or key, so it is not sent to a cloud provider. Switch to on-device AI or a local server to transform it.",
+        clipboardEmptyOrNotText: "Only text clips can be transformed.",
 
         previewContentTypeSelectedText: "Selected text",
+        previewContentTypeClipboardItem: "A clipboard item",
         previewRetentionLocal: "Processed on this Mac. Not kept anywhere, not sent anywhere.",
         previewRetentionRemote: "Governed by the provider’s own policy. See the privacy link below.",
         previewTitle: "Before this is sent",

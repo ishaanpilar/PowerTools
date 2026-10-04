@@ -329,6 +329,7 @@ if (( TEST )); then
         Sources/PowerTools/Core/RecorderShareStrings.swift
         Sources/PowerTools/Core/CameraPreviewStrings.swift
         Sources/PowerTools/Core/ScratchpadStrings.swift
+        Sources/PowerTools/Core/ScratchpadAIStrings.swift
         Sources/PowerTools/Core/FinderRenameStrings.swift
         Sources/PowerTools/Core/FinderActionsStrings.swift
         Sources/PowerTools/Services/FinderActions/FinderActionsSupport.swift
@@ -351,6 +352,7 @@ if (( TEST )); then
         Sources/PowerTools/Services/Snippets/TextSnippetSupport.swift
         Sources/PowerTools/Services/RadialMenu/RadialMenuSupport.swift
         Sources/PowerTools/Services/QuickTools/ScratchpadSupport.swift
+        Sources/PowerTools/Services/QuickTools/ScratchpadAIAction.swift
         Sources/PowerTools/Services/QuickTools/ScratchpadStore.swift
         Sources/PowerTools/Services/KillProcess/KillProcessSupport.swift
         Sources/PowerTools/Services/Recorder/RecorderSupport.swift

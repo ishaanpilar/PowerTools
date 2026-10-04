@@ -26,6 +26,7 @@ struct MetricsTests {
             ("ai-text-actions-provider", { AITextActionsProviderTests.run(suite) }),
             ("ai-context-manifest", { AIContextManifestTests.run(suite) }),
             ("health-coach", { HealthCoachTests.run(suite) }),
+            ("scratchpad-ai", { ScratchpadAITests.run(suite) }),
             ("core", { coreChecks(suite) }),
             ("keyboard", {
                 assistiveKeyboardChecks { suite.expect($0, $1) }

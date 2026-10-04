@@ -93,13 +93,15 @@ enum ClipboardTransformTests {
         suite.expect(!controller.isEmpty, "the text action panel source is readable for its clipboard checks")
 
         let refusalCall = "let refusal = ClipboardTransformPolicy.refusal(for: entry, boundary: option.boundary) {"
+        // One assertion, so a missing refusal call fails with the same words
+        // as a misplaced one: either way a clip could reach a provider.
+        var refusalComesFirst = false
         if let refusalAt = controller.range(of: refusalCall)?.lowerBound,
            let providerAt = controller.range(of: "AITextActionsProviderFactory.makeProvider(")?.lowerBound {
-            suite.expect(refusalAt < providerAt,
-                         "a clip that must not be sent is refused before any provider is built or asked, and before the first-send preview")
-        } else {
-            suite.expect(false, "the clipboard refusal and the provider lookup are both found in the panel controller")
+            refusalComesFirst = refusalAt < providerAt
         }
+        suite.expect(refusalComesFirst,
+                     "a clip that must not be sent is refused before any provider is built or asked, and before the first-send preview")
         suite.expect(controller.contains("AIContextManifestBuilder.clipboardItem(text, option: option, strings: strings)"),
                      "a clip is previewed as a clipboard item, not as selected text")
         suite.expect(controller.contains("if case .selection = self { return true }\n            return false"),

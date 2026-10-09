@@ -747,6 +747,7 @@ extension AppFeature {
         case .commandBar: return FeatureStrings.commandBar(L10n.shared.language).pageTitle
         case .aiTextActions: return FeatureStrings.aiTextActions(L10n.shared.language).pageTitle
         case .healthCoach: return FeatureStrings.healthCoach(L10n.shared.language).pageTitle
+        case .claudeAccounts: return FeatureStrings.claudeAccounts(L10n.shared.language).title
         case .cleaningMode: return s.cleaningMenuItem
         case .mediaTools: return s.mediaName
         case .cleaner: return s.cleanerName
@@ -815,6 +816,7 @@ extension AppFeature {
         case .commandBar: return FeatureStrings.commandBar(L10n.shared.language).hubDescription
         case .aiTextActions: return FeatureStrings.aiTextActions(L10n.shared.language).hubDescription
         case .healthCoach: return FeatureStrings.healthCoach(L10n.shared.language).hubDescription
+        case .claudeAccounts: return FeatureStrings.claudeAccounts(L10n.shared.language).hubDescription
         case .cleaningMode: return hub.descCleaningMode
         case .mediaTools: return hub.descMediaTools
         case .cleaner:

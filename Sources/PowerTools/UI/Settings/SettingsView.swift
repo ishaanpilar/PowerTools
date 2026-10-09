@@ -362,6 +362,7 @@ struct SettingsView: View {
         case .autoQuit: AutoQuitSettings()
         case .alwaysOnTop: AlwaysOnTopSettings()
         case .healthCoach: HealthCoachSettings()
+        case .claudeAccounts: ClaudeAccountsSettings()
         case .quitProtection: QuitProtectionSettings()
         case .uninstaller: UninstallerView()
         case .killProcess: KillProcessView()

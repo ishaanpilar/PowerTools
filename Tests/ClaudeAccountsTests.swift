@@ -11,6 +11,9 @@ enum ClaudeAccountsTests {
         configFileChecks(suite)
         keychainCommandChecks(suite)
         processInputChecks(suite)
+        registrationChecks(suite)
+        messageChecks(suite)
+        panelWiringChecks(suite)
     }
 
     private static func account(_ id: String, org: String = "org-1", email: String? = nil) -> Data {
@@ -198,8 +201,55 @@ enum ClaudeAccountsTests {
                      "input larger than the pipe buffer is refused instead of blocking")
     }
 
+    private static func registrationChecks(_ suite: TestSuite) {
+        let feature = AppFeature.claudeAccounts
+        suite.expect(feature.group == .tools && feature.enabledKeys.isEmpty && feature.permissions.isEmpty,
+                     "Claude Accounts is a Tools feature engaged by installing it, with no macOS permission")
+        suite.expect((AppFeature.availabilityDefaults[feature.availabilityKey] as? Bool) == false,
+                     "Claude Accounts ships uninstalled, like every feature added since aiTextActions")
+        suite.expect(feature.energyProfile == .idle, "Claude Accounts does no work until it is opened")
+        suite.expect(feature.panelSearchDestination == .hostedTool(.claudeAccounts),
+                     "searching for Claude Accounts opens it inside the panel")
+        suite.expect(feature.settingsDestination == FeatureSettingsDestination(.claudeAccounts)
+                         && FeatureVisibilitySupport.features(for: .claudeAccounts) == [feature],
+                     "Claude Accounts has its own settings page, gated on the feature alone")
+        suite.expect(Defaults.registeredDefaults[DefaultsKey.panelUtilityClaudeAccounts] as? Bool == true,
+                     "the Claude Accounts panel row ships visible like its siblings")
+    }
 
+    private static func messageChecks(_ suite: TestSuite) {
+        let results: [ClaudeAccountSwitchResult] = [.switched, .alreadyActive, .notSaved, .liveLoginUnidentified,
+                                                    .saveFailed, .credentialWriteFailed, .accountWriteFailed]
+        let email = "someone@example.com"
+        for language in AppLanguage.allCases {
+            let strings = FeatureStrings.claudeAccounts(language)
+            let messages = results.map { strings.message(for: $0, email: email) }
+            suite.expect(Set(messages).count == results.count && !messages.contains(where: \.isEmpty),
+                         "every switch outcome has its own message in \(language)")
+            suite.expect(messages[0].contains(email), "a successful switch names the account in \(language)")
+        }
+    }
 
+    private static func source(_ path: String) -> String {
+        let text = (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
+        return text.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+    }
 
+    private static func panelWiringChecks(_ suite: TestSuite) {
+        let panel = source("Sources/PowerTools/UI/MenuPanel/MenuPanelView.swift")
+        suite.expect(panel.contains("PanelClaudeAccountsView {"),
+                     "the Utilities section hosts the Claude Accounts view")
+        suite.expect(panel.contains("showClaudeAccountsPanel = tool == .claudeAccounts"),
+                     "a search for Claude Accounts opens the hosted view")
+        suite.expect(panel.contains("if showClaudeAccountsPanel { return .claudeAccounts }"),
+                     "the hosted view's settings button opens the Claude Accounts page")
+        let view = source("Sources/PowerTools/UI/ClaudeAccounts/ClaudeAccountsView.swift")
+        suite.expect(view.contains(".disabled(service.isWorking || isActive)"),
+                     "the login Claude Code is using cannot be removed from the list")
+        suite.expect(view.contains("role: .destructive") && view.contains(".confirmationDialog("),
+                     "removing a saved login asks first")
+    }
 
 }

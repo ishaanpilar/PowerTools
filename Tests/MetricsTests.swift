@@ -14926,7 +14926,7 @@ struct MetricsTests {
 
         // MARK: Features hub catalog
 
-        expect(AppFeature.allCases.count == 61, "feature catalog has 61 features")
+        expect(AppFeature.allCases.count == 62, "feature catalog has 62 features")
         expect(Set(AppFeature.allCases.map(\.rawValue)).count == AppFeature.allCases.count,
                "feature ids are unique")
         expect(AppFeature.allCases.map(\.rawValue) == [
@@ -14940,6 +14940,7 @@ struct MetricsTests {
             "quickLauncher", "quickToggles", "colorPicker", "screenOCR", "cleaningMode", "mediaTools",
             "cleaner", "uninstaller", "homebrew", "appUpdates", "screenshot", "cameraPreview",
             "radialMenu", "scratchpad", "commandBar", "screenRecorder", "killProcess", "aiTextActions", "healthCoach",
+            "claudeAccounts",
             "monitorCPU", "monitorGPU", "monitorMemory", "monitorNetwork", "monitorDisk", "monitorPower",
             "fanControl",
         ], "feature ids are stable (they persist inside availability keys)")
@@ -15067,10 +15068,11 @@ struct MetricsTests {
                 && (AppFeature.availabilityDefaults[AppFeature.aiTextActions.availabilityKey] as? Bool) == false
                 && (AppFeature.availabilityDefaults[AppFeature.alwaysOnTop.availabilityKey] as? Bool) == false
                 && (AppFeature.availabilityDefaults[AppFeature.healthCoach.availabilityKey] as? Bool) == false
+                && (AppFeature.availabilityDefaults[AppFeature.claudeAccounts.availabilityKey] as? Bool) == false
                 && AppFeature.allCases.filter {
                     $0 != .focusFollowsMouse && $0 != .fanControl && $0 != .diskImageInstaller
                         && $0 != .killProcess && $0 != .aiTextActions && $0 != .alwaysOnTop
-                        && $0 != .healthCoach
+                        && $0 != .healthCoach && $0 != .claudeAccounts
                 }.allSatisfy {
                     (AppFeature.availabilityDefaults[$0.availabilityKey] as? Bool) == true
                 },

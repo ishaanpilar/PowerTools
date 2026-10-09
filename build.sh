@@ -477,6 +477,7 @@ if (( TEST )); then
         Sources/PowerTools/Services/Metrics/BatteryTimeSupport.swift
         Sources/PowerTools/Services/BoundedProcessRunner.swift
         Sources/PowerTools/Services/ClaudeAccounts/ClaudeAccountSupport.swift
+        Sources/PowerTools/Core/ClaudeAccountsStrings.swift
         Sources/PowerTools/Services/DetachedProcess.swift
         Sources/PowerTools/Services/ShellSupport.swift
         Sources/PowerTools/Services/Metrics/NetworkProcessSupport.swift

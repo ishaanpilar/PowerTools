@@ -287,6 +287,7 @@ extension AppFeature {
         case .cleaner: return [.fullDiskAccess, .filesAndFolders, .notifications]
         case .uninstaller: return [.fullDiskAccess, .automationFinder]
         case .homebrew: return [.automationTerminal, .appManagement]
+        case .claudeAccounts: return [.automationTerminal]
         case .appUpdates: return [.notifications, .appManagement]
         case .diskImageInstaller: return [.appManagement]
         // The extension is allowed in System Settings, not through a privacy
@@ -298,7 +299,7 @@ extension AppFeature {
              .soundOutputSwitcher, .musicBlock,
              .extraBrightness, .bluetoothSleep, .quickLauncher, .colorPicker, .micMute, .mediaTools,
              .scratchpad, .monitorGPU, .monitorNetwork, .fanControl, .killProcess, .aiTextActions,
-             .healthCoach, .claudeAccounts:
+             .healthCoach:
             return []
         }
     }

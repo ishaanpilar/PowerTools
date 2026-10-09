@@ -19,6 +19,10 @@ struct ClaudeAccountsStrings {
     let removeConfirmAction: String
     let emptyText: String
     let addAccountHint: String
+    let logInButton: String
+    let logInAgainHelp: String
+    let loginOpened: String
+    let terminalFailed: String
     let savedFormat: String
     let nothingToSave: String
     let switchedFormat: String
@@ -76,7 +80,11 @@ extension ClaudeAccountsStrings {
         removeConfirmMessage: "PowerTools forgets its copy of this login. Claude Code itself is not logged out.",
         removeConfirmAction: "Remove",
         emptyText: "No saved logins yet. Log in with claude in Terminal, then save the login here.",
-        addAccountHint: "To add another account, save the current login first, then run claude auth login in Terminal, sign in with the other account, and save that login too.",
+        addAccountHint: "Logging in replaces Claude Code’s current login, so PowerTools saves that login first.",
+        logInButton: "Log In…",
+        logInAgainHelp: "Log in to this account again",
+        loginOpened: "Finish in Terminal: open or copy the link it shows, sign in, and paste the code back. A renewed login is saved when you reopen this list. Save a new account with Save Current Login.",
+        terminalFailed: "Terminal couldn’t be opened. Allow PowerTools AI to control Terminal in System Settings › Privacy & Security › Automation.",
         savedFormat: "Saved the login for %@.",
         nothingToSave: "Claude Code has no login on this Mac to save.",
         switchedFormat: "Switched to %@. New Claude Code sessions use this account.",

@@ -330,16 +330,10 @@ final class HomebrewManager: ObservableObject {
 
     @discardableResult
     private func openTerminal(command: String) -> Bool {
-        let source = """
-        tell application "Terminal"
-            activate
-            do script \(appleScriptString(command))
-        end tell
-        """
         // In-process Apple Events (see AppleScriptRunner): the Terminal Automation
         // consent is attributed to this app and re-requested if it was lost,
         // instead of a fragile osascript subprocess. Same permission as before.
-        let result = AppleScriptRunner.run(source)
+        let result = AppleScriptRunner.openInTerminal(command)
         if !result.ok {
             errorMessage = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
             return false
@@ -816,13 +810,6 @@ final class HomebrewManager: ObservableObject {
 
     private func appendLog(_ text: String) {
         log.append(text)
-    }
-
-    private func appleScriptString(_ value: String) -> String {
-        let escaped = value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return "\"\(escaped)\""
     }
 }
 

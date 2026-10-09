@@ -28,6 +28,7 @@ struct MetricsTests {
             ("clipboard-transform", { ClipboardTransformTests.run(suite) }),
             ("health-coach", { HealthCoachTests.run(suite) }),
             ("scratchpad-ai", { ScratchpadAITests.run(suite) }),
+            ("claude-accounts", { ClaudeAccountsTests.run(suite) }),
             ("core", { coreChecks(suite) }),
             ("keyboard", {
                 assistiveKeyboardChecks { suite.expect($0, $1) }

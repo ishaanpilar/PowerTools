@@ -32,7 +32,7 @@ enum PanelSearchSection: Equatable, CaseIterable {
 
 /// The tools the Utilities section can host in place of its own list.
 enum PanelHostedTool: Equatable, CaseIterable {
-    case homebrew, appUpdates, media, clipboard, windowLayout, uninstaller, cleaner, urlCleaner
+    case homebrew, appUpdates, media, clipboard, windowLayout, uninstaller, cleaner, urlCleaner, claudeAccounts
 }
 
 extension AppFeature {
@@ -57,6 +57,7 @@ extension AppFeature {
         case .uninstaller: return .hostedTool(.uninstaller)
         case .cleaner: return .hostedTool(.cleaner)
         case .urlCleaner: return .hostedTool(.urlCleaner)
+        case .claudeAccounts: return .hostedTool(.claudeAccounts)
         case .screenshot, .screenRecorder, .screenOCR, .colorPicker, .cameraPreview, .scratchpad,
              .quickLauncher, .commandBar, .cleaningMode, .shelf, .textSnippets:
             return .window

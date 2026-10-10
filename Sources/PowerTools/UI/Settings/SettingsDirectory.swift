@@ -235,6 +235,10 @@ enum SettingsDirectory {
                                       title: FeatureStrings.healthCoach(language).pageTitle,
                                       icon: "waveform.path.ecg",
                                       keywords: [FeatureStrings.healthCoach(language).sensitivitySectionTitle]),
+                SettingsDirectoryItem(page: .claudeAccounts,
+                                      title: FeatureStrings.claudeAccounts(language).title,
+                                      icon: AppFeature.claudeAccounts.symbolName,
+                                      keywords: ["Claude Code", "login", "switch account"]),
                 SettingsDirectoryItem(page: .quickTools, title: s.quickToolsTab, icon: "wand.and.rays",
                                        featureKeywords: [
                                         (.quickLauncher, [s.launcherName]),

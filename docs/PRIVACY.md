@@ -40,6 +40,12 @@ read through macOS and shown on your Mac. None of it is sent anywhere.
   so other apps can read it, removed once it is older than 24 hours or when the
   cache fills.
 - **Scratchpad notes, snippets and Shelf items** are stored locally.
+- **Claude Accounts** keeps a copy of each Claude Code login you save in your
+  macOS Keychain, under PowerTools AI's own items. A switch reads and writes
+  Claude Code's Keychain item `Claude Code-credentials` through macOS's
+  `security` command, and the `oauthAccount` entry in `~/.claude.json`. No
+  other setting in that file changes, and PowerTools AI sends none of it
+  anywhere.
 - **Permissions** such as Accessibility, Screen Recording or Microphone are used
   only by the feature that asked for them. See [permissions](PERMISSIONS.md).
 

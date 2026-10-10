@@ -868,10 +868,11 @@ enum WindowEnumerator {
         if let subrole = stringAttribute(window, kAXSubroleAttribute as String) {
             guard !isCancelled() else { return false }
             if subrole == "AXStandardWindow" || subrole == "AXFullScreenWindow" { return true }
-            if SwitcherSupport.isSupportedMediaFloatingWindow(bundleIdentifier: bundleIdentifier,
-                                                              subrole: subrole) { return true }
             let role = stringAttribute(window, kAXRoleAttribute as String)
             guard !isCancelled() else { return false }
+            if SwitcherSupport.isSupportedMediaFloatingWindow(bundleIdentifier: bundleIdentifier,
+                                                              role: role,
+                                                              subrole: subrole) { return true }
             let canBePlaybackSurface = subrole == "AXUnknown" || subrole == "AXFloatingWindow"
             let fillsScreen = canBePlaybackSurface
                 && frameLooksFullscreen(accessibilityFrame(for: window, isCancelled: isCancelled),

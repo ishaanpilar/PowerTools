@@ -57,9 +57,8 @@ final class ClaudeAccountsService: ObservableObject {
         isWorking = true
         queue.async { [live, saved] in
             let result = work(live, saved)
-            let accounts = saved.all().compactMap(\.identity)
-                .sorted { ($0.email, $0.organizationName) < ($1.email, $1.organizationName) }
             let activeKey = live.readAccount().flatMap(ClaudeAccountIdentity.init(accountJSON:))?.key
+            let accounts = ClaudeAccountSwitching.ordered(saved.all().compactMap(\.identity), activeKey: activeKey)
             DispatchQueue.main.async {
                 self.accounts = accounts
                 self.activeKey = activeKey

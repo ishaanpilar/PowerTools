@@ -35,13 +35,31 @@ enum BoundedProcessRunner {
         let timedOut: Bool
     }
 
+    /// Standard input is written whole before launch and then closed, so it
+    /// must fit the pipe buffer: a write needs no reader and cannot block, and
+    /// a child that exits without reading cannot raise SIGPIPE in this process.
+    static let maxInputBytes = 8 * 1024
+
     static func run(_ path: String,
                     _ arguments: [String],
+                    input: Data? = nil,
                     timeout: TimeInterval,
                     maxOutputBytes: Int) -> Result {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments
+        if let input {
+            guard input.count <= maxInputBytes else {
+                return Result(status: -1, output: Data(), timedOut: false)
+            }
+            let inputPipe = Pipe()
+            let writer = inputPipe.fileHandleForWriting
+            guard (try? writer.write(contentsOf: input)) != nil else {
+                return Result(status: -1, output: Data(), timedOut: false)
+            }
+            try? writer.close()
+            process.standardInput = inputPipe
+        }
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe

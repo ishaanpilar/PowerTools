@@ -80,6 +80,34 @@ enum ClaudeAccountsTests {
                      "one person in two organizations is saved as two logins")
         suite.expect(ClaudeAccountIdentity(accountJSON: Data("{}".utf8)) == nil,
                      "an account object without an account id names no login")
+
+        func identity(email: String, organization: String) -> ClaudeAccountIdentity? {
+            let json = try! JSONSerialization.data(withJSONObject: [
+                "accountUuid": "a", "emailAddress": email, "organizationName": organization,
+            ])
+            return ClaudeAccountIdentity(accountJSON: json)
+        }
+        let email = "someone@example.com"
+        suite.expect(identity(email: email, organization: email + "'s Organization")?.hasNamedOrganization == false
+                         && identity(email: email, organization: email + "\u{2019}s Organization")?.hasNamedOrganization == false,
+                     "a personal organization named after the email is not shown under it")
+        suite.expect(identity(email: email, organization: "")?.hasNamedOrganization == false,
+                     "an account with no organization name shows none")
+        suite.expect(identity(email: email, organization: "Acme Labs")?.hasNamedOrganization == true,
+                     "a team organization is shown under the email")
+
+        let people = ["c", "a", "b"].compactMap { ClaudeAccountIdentity(accountJSON: account($0)) }
+        let active = people[2].key
+        suite.expect(ClaudeAccountSwitching.ordered(people, activeKey: active).map(\.accountID) == ["b", "a", "c"],
+                     "the active account is listed first, the rest by email")
+        suite.expect(ClaudeAccountSwitching.ordered(people, activeKey: nil).map(\.accountID) == ["a", "b", "c"],
+                     "with no active account the list is by email")
+
+        let succeeded: Set<ClaudeAccountSwitchResult> = [.switched, .alreadyActive]
+        let all: [ClaudeAccountSwitchResult] = [.switched, .alreadyActive, .notSaved, .liveLoginUnidentified,
+                                                .saveFailed, .credentialWriteFailed, .accountWriteFailed]
+        suite.expect(all.allSatisfy { $0.succeeded == succeeded.contains($0) },
+                     "only a switch that happened, or one already in place, reads as success")
     }
 
     private static func switchChecks(_ suite: TestSuite) {
@@ -249,10 +277,12 @@ enum ClaudeAccountsTests {
         suite.expect(panel.contains("if showClaudeAccountsPanel { return .claudeAccounts }"),
                      "the hosted view's settings button opens the Claude Accounts page")
         let view = source("Sources/PowerTools/UI/ClaudeAccounts/ClaudeAccountsView.swift")
-        suite.expect(view.contains(".disabled(service.isWorking || isActive)"),
+        suite.expect(view.contains("Button(strings.removeButton, role: .destructive) { interaction.pendingRemoval = account }\n                .disabled(isActive)"),
                      "the login Claude Code is using cannot be removed from the list")
-        suite.expect(view.contains("role: .destructive") && view.contains(".confirmationDialog("),
+        suite.expect(view.contains(".confirmationDialog(") && view.contains("interaction.confirmRemoval()"),
                      "removing a saved login asks first")
+        suite.expect(view.contains(".formStyle(.grouped)"),
+                     "the settings page uses the grouped form every other settings page uses")
     }
 
     private static func loginChecks(_ suite: TestSuite) {

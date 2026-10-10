@@ -25,6 +25,13 @@ struct ClaudeAccountIdentity: Equatable {
     /// includes both.
     var key: String { accountID + ":" + organizationID }
 
+    /// Anthropic names a personal organization after its owner's email, so
+    /// showing it under that email only repeats it.
+    var hasNamedOrganization: Bool {
+        !organizationName.isEmpty && organizationName != email + "'s Organization"
+            && organizationName != email + "\u{2019}s Organization"
+    }
+
     init?(accountJSON: Data) {
         guard let object = try? JSONSerialization.jsonObject(with: accountJSON) as? [String: Any],
               let accountID = object["accountUuid"] as? String, !accountID.isEmpty
@@ -61,9 +68,20 @@ enum ClaudeAccountSwitchResult: Equatable {
     case saveFailed
     case credentialWriteFailed
     case accountWriteFailed
+
+    var succeeded: Bool { self == .switched || self == .alreadyActive }
 }
 
 enum ClaudeAccountSwitching {
+    /// The account Claude Code is using first, then the rest by email.
+    static func ordered(_ accounts: [ClaudeAccountIdentity], activeKey: String?) -> [ClaudeAccountIdentity] {
+        accounts.sorted {
+            let (first, second) = ($0.key == activeKey, $1.key == activeKey)
+            if first != second { return first }
+            return ($0.email, $0.organizationName, $0.key) < ($1.email, $1.organizationName, $1.key)
+        }
+    }
+
     static func currentLogin(_ live: ClaudeLiveLoginStore) -> ClaudeLogin? {
         guard let credentials = live.readCredentials(), let account = live.readAccount() else { return nil }
         return ClaudeLogin(credentials: credentials, account: account)

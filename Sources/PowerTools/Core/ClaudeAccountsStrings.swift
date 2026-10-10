@@ -9,20 +9,23 @@ struct ClaudeAccountsStrings {
     let title: String
     let hubDescription: String
     let panelCaption: String
-    let intro: String
+    let accountsSectionTitle: String
+    let accountsFooter: String
+    let addSectionTitle: String
+    let addFooter: String
+    let panelFootnote: String
     let activeBadge: String
     let switchButton: String
+    let moreActionsHelp: String
+    let logInAgainButton: String
+    let removeButton: String
     let saveCurrentButton: String
-    let removeHelp: String
+    let addAccountButton: String
+    let emptyTitle: String
+    let emptyText: String
     let removeConfirmTitleFormat: String
     let removeConfirmMessage: String
     let removeConfirmAction: String
-    let emptyText: String
-    let addAccountHint: String
-    let logInButton: String
-    let logInAgainHelp: String
-    let loginOpened: String
-    let terminalFailed: String
     let savedFormat: String
     let nothingToSave: String
     let switchedFormat: String
@@ -32,6 +35,8 @@ struct ClaudeAccountsStrings {
     let saveFailed: String
     let credentialWriteFailed: String
     let accountWriteFailed: String
+    let loginOpened: String
+    let terminalFailed: String
 
     func message(for result: ClaudeAccountSwitchResult, email: String) -> String {
         switch result {
@@ -71,28 +76,33 @@ extension ClaudeAccountsStrings {
         title: "Claude Accounts",
         hubDescription: "Save the Claude Code logins on this Mac and switch between them from the menu bar.",
         panelCaption: "Switch the account Claude Code uses",
-        intro: "A switch applies to Claude Code sessions you start afterwards. Sessions already running keep their account. A token in CLAUDE_CODE_OAUTH_TOKEN overrides any switch.",
+        accountsSectionTitle: "Accounts",
+        accountsFooter: "A switch applies to Claude Code sessions you start afterwards; running sessions keep their account. A token in CLAUDE_CODE_OAUTH_TOKEN overrides any switch.",
+        addSectionTitle: "Add an Account",
+        addFooter: "Add Account saves the current login, then opens Terminal to sign in. Copy the link it shows, sign in, and paste the code back, then choose Save Current Login.",
+        panelFootnote: "Applies to Claude Code sessions you start next.",
         activeBadge: "Active",
         switchButton: "Switch",
+        moreActionsHelp: "More Actions",
+        logInAgainButton: "Log In Again\u{2026}",
+        removeButton: "Remove\u{2026}",
         saveCurrentButton: "Save Current Login",
-        removeHelp: "Remove this saved login",
+        addAccountButton: "Add Account\u{2026}",
+        emptyTitle: "No saved accounts",
+        emptyText: "Save the login Claude Code is using now, so you can switch back to it later.",
         removeConfirmTitleFormat: "Remove the saved login for %@?",
         removeConfirmMessage: "PowerTools forgets its copy of this login. Claude Code itself is not logged out.",
         removeConfirmAction: "Remove",
-        emptyText: "No saved logins yet. Log in with claude in Terminal, then save the login here.",
-        addAccountHint: "Logging in replaces Claude Code’s current login, so PowerTools saves that login first.",
-        logInButton: "Log In…",
-        logInAgainHelp: "Log in to this account again",
-        loginOpened: "Finish in Terminal: open or copy the link it shows, sign in, and paste the code back. A renewed login is saved when you reopen this list. Save a new account with Save Current Login.",
-        terminalFailed: "Terminal couldn’t be opened. Allow PowerTools AI to control Terminal in System Settings › Privacy & Security › Automation.",
         savedFormat: "Saved the login for %@.",
         nothingToSave: "Claude Code has no login on this Mac to save.",
         switchedFormat: "Switched to %@. New Claude Code sessions use this account.",
         alreadyActive: "That account is already active. Its saved login was refreshed.",
         notSaved: "That login is no longer saved.",
-        liveLoginUnidentified: "Claude Code’s current login has no account details, so it can’t be saved. Nothing was changed.",
-        saveFailed: "The current login couldn’t be saved, so nothing was changed.",
-        credentialWriteFailed: "Claude Code’s Keychain item couldn’t be updated, so the switch was stopped.",
-        accountWriteFailed: "~/.claude.json couldn’t be updated, so PowerTools put the previous Keychain login back. Run claude auth status to check."
+        liveLoginUnidentified: "Claude Code\u{2019}s current login has no account details, so it can\u{2019}t be saved. Nothing was changed.",
+        saveFailed: "The current login couldn\u{2019}t be saved, so nothing was changed.",
+        credentialWriteFailed: "Claude Code\u{2019}s Keychain item couldn\u{2019}t be updated, so the switch was stopped.",
+        accountWriteFailed: "~/.claude.json couldn\u{2019}t be updated, so PowerTools put the previous Keychain login back. Run claude auth status to check.",
+        loginOpened: "Terminal is open. Copy the link it shows, sign in, and paste the code back. A renewed login is saved when you reopen this list.",
+        terminalFailed: "Terminal couldn\u{2019}t be opened. Allow PowerTools AI to control Terminal in System Settings \u{203A} Privacy & Security \u{203A} Automation."
     )
 }

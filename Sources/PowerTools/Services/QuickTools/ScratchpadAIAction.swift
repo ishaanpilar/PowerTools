@@ -39,6 +39,14 @@ enum ScratchpadAIAction: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The note, fenced and followed by a one-line reminder of the task. A
+    /// bare note gave the on-device model nothing to tell data from task, and
+    /// it answered with the instructions themselves.
+    func prompt(forNote note: String) -> String {
+        "Note:\n\"\"\"\n\(note)\n\"\"\"\n\nNow do the task on the note above. "
+            + "Do not repeat the instructions."
+    }
+
     var instructions: String {
         switch self {
         case .summary:
@@ -47,7 +55,8 @@ enum ScratchpadAIAction: String, CaseIterable, Identifiable {
         case .actionItems:
             return "List the concrete tasks, decisions and follow-ups in the user's note as a "
                 + "Markdown checklist, one \"- [ ] \" line each. If there are none, reply "
-                + "\"- [ ] No action items found\". Reply with only the list, no preamble."
+                + "\"- [ ] No action items found\". Reply with only the list, no preamble, and "
+                + "never repeat these instructions."
         case .structure:
             return "Reorganise the user's note into clear Markdown with headings and lists, "
                 + "keeping all of its content and wording. Reply with only the reorganised "

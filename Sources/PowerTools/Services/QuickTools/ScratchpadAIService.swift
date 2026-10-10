@@ -79,7 +79,7 @@ final class ScratchpadAIService: ObservableObject {
         phase = .running(action)
         lastText = nil
         request.run(
-            provider.streamText(instructions: action.instructions, prompt: note, maxOutputTokens: nil),
+            provider.streamText(instructions: action.instructions, prompt: action.prompt(forNote: note), maxOutputTokens: nil),
             onUpdate: { [weak self] partial in self?.lastText = partial },
             onFinish: { [weak self] result in self?.finish(result, action: action) }
         )

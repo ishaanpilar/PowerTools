@@ -88,6 +88,10 @@ enum ScratchpadAITests {
                         && Set(actions.map { $0.padName(strings: strings) }).count == actions.count
                         && Set(actions.map(\.instructions)).count == actions.count,
                      "each note action has its own title, tab name and instructions")
+        let framed = ScratchpadAIAction.actionItems.prompt(forNote: "Call Sam on Friday")
+        suite.expect(framed.contains("\"\"\"\nCall Sam on Friday\n\"\"\"")
+                        && actions.allSatisfy { !$0.prompt(forNote: "x").contains($0.instructions) },
+                     "the note is fenced as data and the prompt never carries the instructions, so the model has nothing to echo back")
         let refusals: [ScratchpadAIRefusal] = [.emptyNote, .padLimitReached, .emptyReply, .saveFailed]
         suite.expect(Set(refusals.map { $0.message(strings: strings) }).count == refusals.count,
                      "each reason a note action did nothing reads differently")
@@ -102,7 +106,7 @@ enum ScratchpadAITests {
 
     private static func wiringChecks(_ suite: TestSuite) {
         let aiService = source("Sources/PowerTools/Services/QuickTools/ScratchpadAIService.swift")
-        suite.expect(aiService.contains("instructions: action.instructions, prompt: note"),
+        suite.expect(aiService.contains("instructions: action.instructions, prompt: action.prompt(forNote: note)"),
                      "the note is sent only as data, never as instructions")
         suite.expect(aiService.contains("AIPreSendPreviewTracker.hasShownPreview"),
                      "a note is previewed before the first send to each provider")

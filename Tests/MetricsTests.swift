@@ -2999,6 +2999,21 @@ struct MetricsTests {
             bundleIdentifier: "com.adobe.AfterEffects.application",
             subrole: "AXDialog"),
                "App Switcher does not relax ordinary dialogs from supported media apps")
+        expect(SwitcherSupport.isSupportedMediaFloatingWindow(
+            bundleIdentifier: "com.adobe.PremierePro.26",
+            role: "AXLayoutArea",
+            subrole: "AXDialog"),
+               "App Switcher accepts the layout-area workspace Premiere Pro 26 reports")
+        expect(!SwitcherSupport.isSupportedMediaFloatingWindow(
+            bundleIdentifier: "com.adobe.PremierePro.26",
+            role: "AXWindow",
+            subrole: "AXDialog"),
+               "App Switcher keeps windowed dialogs from supported media apps filtered")
+        expect(!SwitcherSupport.isSupportedMediaFloatingWindow(
+            bundleIdentifier: "com.example.editor",
+            role: "AXLayoutArea",
+            subrole: "AXDialog"),
+               "App Switcher keeps layout areas from unrelated apps filtered")
         expect(!SwitcherSupport.isSupportedMediaFloatingWindow(
             bundleIdentifier: "com.example.editor",
             subrole: "AXFloatingWindow"),

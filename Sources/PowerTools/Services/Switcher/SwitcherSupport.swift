@@ -586,10 +586,15 @@ enum SwitcherSupport {
 
     /// Some professional media apps expose their main surface as a floating
     /// or undescribed Accessibility window instead of a standard macOS window.
+    /// Premiere Pro 26 goes further and describes its workspace as an
+    /// `AXLayoutArea` with an `AXDialog` subrole; the role is what separates it
+    /// from an ordinary dialog, which is still an `AXWindow`.
     /// Match bundle prefixes case-insensitively because releases vary between
     /// lowercase, uppercase and versioned bundle identifiers.
-    static func isSupportedMediaFloatingWindow(bundleIdentifier: String?, subrole: String?) -> Bool {
-        guard let subrole, subrole == "AXFloatingWindow" || subrole == "AXUnknown",
+    static func isSupportedMediaFloatingWindow(bundleIdentifier: String?,
+                                               role: String? = nil,
+                                               subrole: String?) -> Bool {
+        guard role == "AXLayoutArea" || subrole == "AXFloatingWindow" || subrole == "AXUnknown",
               let bundleIdentifier else { return false }
         let lower = bundleIdentifier.lowercased()
         return lower.hasPrefix("com.adobe.audition")

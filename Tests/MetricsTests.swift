@@ -15719,7 +15719,8 @@ struct MetricsTests {
                "pasting copied images as files engages the shared Finder feature")
         expect(AppFeature.quickToggles.permissions == [.automationFinder],
                "the quick toggles need no permission beyond the Trash's Finder ask")
-        expect(activeSet(.automationTerminal) == [.homebrew], "homebrew drives the Terminal")
+        expect(activeSet(.automationTerminal) == [.homebrew, .claudeAccounts],
+               "homebrew and the Claude Accounts login drive the Terminal")
         expect(activeSet(.appManagement) == [.homebrew, .appUpdates, .diskImageInstaller],
                "package, update and disk-image installs declare App Management access")
         expect(AppFeature.homebrew.permissions == [.automationTerminal, .appManagement],

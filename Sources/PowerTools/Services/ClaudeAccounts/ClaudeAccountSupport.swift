@@ -79,6 +79,18 @@ enum ClaudeAccountSwitching {
         return identity
     }
 
+    /// Refreshes the saved copy of the active account when Claude Code has
+    /// rotated its tokens, or a fresh login replaced them. A login that was
+    /// never saved stays unsaved until the person saves it.
+    @discardableResult
+    static func syncActive(live: ClaudeLiveLoginStore, saved: ClaudeSavedLoginStore) -> Bool {
+        guard let login = currentLogin(live), let key = login.identity?.key,
+              let stored = saved.all().first(where: { $0.identity?.key == key }),
+              stored != login
+        else { return false }
+        return saved.save(key, login)
+    }
+
     static func switchTo(_ key: String,
                          live: ClaudeLiveLoginStore,
                          saved: ClaudeSavedLoginStore) -> ClaudeAccountSwitchResult {
@@ -165,3 +177,11 @@ enum ClaudeKeychainCommand {
     }
 }
 
+/// Claude Code's own login, run in Terminal so the person can copy its link
+/// and paste back the code it asks for.
+enum ClaudeLoginCommand {
+    static func command(email: String?) -> String {
+        guard let email, !email.isEmpty else { return "claude auth login" }
+        return "claude auth login --email " + HomebrewCommandBuilder.shellQuote(email)
+    }
+}

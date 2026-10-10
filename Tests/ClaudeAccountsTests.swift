@@ -14,6 +14,7 @@ enum ClaudeAccountsTests {
         registrationChecks(suite)
         messageChecks(suite)
         panelWiringChecks(suite)
+        loginChecks(suite)
     }
 
     private static func account(_ id: String, org: String = "org-1", email: String? = nil) -> Data {
@@ -203,8 +204,10 @@ enum ClaudeAccountsTests {
 
     private static func registrationChecks(_ suite: TestSuite) {
         let feature = AppFeature.claudeAccounts
-        suite.expect(feature.group == .tools && feature.enabledKeys.isEmpty && feature.permissions.isEmpty,
-                     "Claude Accounts is a Tools feature engaged by installing it, with no macOS permission")
+        suite.expect(feature.group == .tools && feature.enabledKeys.isEmpty,
+                     "Claude Accounts is a Tools feature engaged by installing it")
+        suite.expect(feature.permissions == [.automationTerminal],
+                     "Claude Accounts asks only to open Terminal, and only for logging in")
         suite.expect((AppFeature.availabilityDefaults[feature.availabilityKey] as? Bool) == false,
                      "Claude Accounts ships uninstalled, like every feature added since aiTextActions")
         suite.expect(feature.energyProfile == .idle, "Claude Accounts does no work until it is opened")
@@ -252,4 +255,24 @@ enum ClaudeAccountsTests {
                      "removing a saved login asks first")
     }
 
+    private static func loginChecks(_ suite: TestSuite) {
+        suite.expect(ClaudeLoginCommand.command(email: nil) == "claude auth login",
+                     "a login for a new account runs Claude Code's own login")
+        let email = "o'brien@example.com"
+        suite.expect(ClaudeLoginCommand.command(email: email)
+                         == "claude auth login --email " + HomebrewCommandBuilder.shellQuote(email),
+                     "logging in again fills in the account's email, quoted for the shell")
+
+        let renewed = login("a", token: "a-renewed")
+        let fixture = Fixture(live: renewed, saved: [login("a", token: "a-expired"), login("b", token: "b-token")])
+        suite.expect(ClaudeAccountSwitching.syncActive(live: fixture.live, saved: fixture.saved)
+                         && fixture.savedLogins[renewed.identity!.key] == renewed,
+                     "a login renewed in Terminal replaces the account's expired saved copy")
+        suite.expect(!ClaudeAccountSwitching.syncActive(live: fixture.live, saved: fixture.saved),
+                     "an unchanged login is not written again")
+        let unsaved = Fixture(live: login("c", token: "c-token"), saved: [])
+        suite.expect(!ClaudeAccountSwitching.syncActive(live: unsaved.live, saved: unsaved.saved)
+                         && unsaved.savedLogins.isEmpty,
+                     "a login that was never saved stays unsaved until the person saves it")
+    }
 }

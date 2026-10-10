@@ -110,14 +110,7 @@ enum AdminShell {
     }
 
     static func appleScriptSource(command: String, prompt: String) -> String {
-        "do shell script \(appleScriptString(command)) with administrator privileges with prompt \(appleScriptString(prompt))"
-    }
-
-    private static func appleScriptString(_ value: String) -> String {
-        let escaped = value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return "\"\(escaped)\""
+        "do shell script \(AppleScriptRunner.literal(command)) with administrator privileges with prompt \(AppleScriptRunner.literal(prompt))"
     }
 }
 
@@ -238,6 +231,18 @@ enum AppleScriptRunner {
                     "")
         }
         return (true, nil, "", result.stringValue ?? "")
+    }
+
+    /// Runs `command` in a new Terminal window, for steps that need a person
+    /// at an interactive prompt. Needs the Terminal Automation permission.
+    @discardableResult
+    static func openInTerminal(_ command: String) -> (ok: Bool, output: String) {
+        run("""
+        tell application "Terminal"
+            activate
+            do script \(literal(command))
+        end tell
+        """)
     }
 
     /// Escapes a value for embedding inside an AppleScript double-quoted string.

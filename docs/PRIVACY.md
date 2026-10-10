@@ -210,6 +210,11 @@ This is the complete list. Each connection belongs to a feature you can see.
    to the provider address shown in Settings, as described in
    [With a cloud provider you connect](#with-a-cloud-provider-you-connect).
 
+7. **Claude Accounts login — only when you press Log In.** Terminal runs your
+   local `claude auth login`, which connects to Anthropic to sign you in. The
+   login link and code pass between you, your browser and Claude Code;
+   PowerTools AI never sees them. Switching accounts makes no connection.
+
 Apple's on-device model and model servers on your own Mac make no connection
 beyond your Mac.
 

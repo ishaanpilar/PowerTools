@@ -24,8 +24,10 @@ final class ClaudeAccountsService: ObservableObject {
         self.saved = saved
     }
 
+    /// Also refreshes the active account's saved copy, so a login renewed in
+    /// Terminal is kept without a separate save.
     func refresh() {
-        perform { _, _ in }
+        perform { ClaudeAccountSwitching.syncActive(live: $0, saved: $1) }
     }
 
     func saveCurrent(completion: @escaping (ClaudeAccountIdentity?) -> Void = { _ in }) {
@@ -34,6 +36,14 @@ final class ClaudeAccountsService: ObservableObject {
 
     func switchTo(_ key: String, completion: @escaping (ClaudeAccountSwitchResult) -> Void = { _ in }) {
         perform({ ClaudeAccountSwitching.switchTo(key, live: $0, saved: $1) }, completion: completion)
+    }
+
+    /// Logging in replaces Claude Code's current login, so that login is saved
+    /// first. Terminal then runs Claude Code's own login for the person.
+    func logIn(email: String?, completion: @escaping (_ opened: Bool) -> Void = { _ in }) {
+        perform({ ClaudeAccountSwitching.saveCurrent(live: $0, saved: $1) }) { _ in
+            completion(AppleScriptRunner.openInTerminal(ClaudeLoginCommand.command(email: email)).ok)
+        }
     }
 
     func remove(_ key: String) {

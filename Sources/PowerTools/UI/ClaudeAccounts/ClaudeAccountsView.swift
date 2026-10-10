@@ -23,6 +23,8 @@ struct ClaudeAccountsList: View {
             HStack(spacing: 7) {
                 Button(strings.saveCurrentButton, action: saveCurrent)
                     .disabled(service.isWorking || service.activeKey == nil)
+                Button(strings.logInButton) { logIn(email: nil) }
+                    .disabled(service.isWorking)
                 Spacer()
                 if service.isWorking { ProgressView().controlSize(.small) }
             }
@@ -75,6 +77,18 @@ struct ClaudeAccountsList: View {
                     .controlSize(.small)
                     .disabled(service.isWorking)
             }
+            Button {
+                logIn(email: account.email)
+            } label: {
+                Image(systemName: "key")
+                    .font(.system(size: 11))
+                    .frame(width: 20, height: 20)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help(strings.logInAgainHelp)
+            .accessibilityLabel(strings.logInAgainHelp)
+            .disabled(service.isWorking)
             // Kept apart from Switch, and disabled for the active login, so a
             // slip never removes the login Claude Code is using.
             Button {
@@ -102,6 +116,12 @@ struct ClaudeAccountsList: View {
     private func saveCurrent() {
         service.saveCurrent { identity in
             message = identity.map { String(format: strings.savedFormat, $0.email) } ?? strings.nothingToSave
+        }
+    }
+
+    private func logIn(email: String?) {
+        service.logIn(email: email) { opened in
+            message = opened ? strings.loginOpened : strings.terminalFailed
         }
     }
 

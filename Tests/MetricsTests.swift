@@ -25233,6 +25233,37 @@ struct MetricsTests {
                 == "https://example.com/x",
                "a typed address with a scheme keeps its scheme")
 
+        // MARK: Go to a path that was typed or pasted
+        let pathHome = "/Users/someone"
+        let project = "/Users/someone/Root/Nexstar Extrusion Pvt Ltd/Airbound 15 Sept Shoot.prproj"
+        for typed in [project,
+                      "  \(project)\n",
+                      "\"\(project)\"",
+                      "'\(project)'",
+                      project.replacingOccurrences(of: " ", with: "\\ "),
+                      "~/Root/Nexstar Extrusion Pvt Ltd/Airbound 15 Sept Shoot.prproj",
+                      URL(fileURLWithPath: project).absoluteString] {
+            expect(CommandBarLinks.typedPath(typed, homeDirectory: pathHome) == project,
+                   "\"\(typed)\" names the project file however it was pasted")
+        }
+        expect(CommandBarLinks.typedPath("~", homeDirectory: pathHome) == pathHome
+                && CommandBarLinks.typedPath("~/Root/", homeDirectory: pathHome) == pathHome + "/Root",
+               "the home folder and a trailing slash resolve to the folder itself")
+        expect(CommandBarLinks.typedPath("/Users/someone/Root/../Downloads", homeDirectory: pathHome)
+                == pathHome + "/Downloads",
+               "a path that steps back up resolves to where it ends")
+        expect(CommandBarLinks.typedPath("/Users/someone/A\\(1\\)", homeDirectory: pathHome)
+                == pathHome + "/A(1)",
+               "Terminal's other escapes keep the character they escape")
+        for search in ["notes", "Root/Nexstar", "example.com", "~someone/Root", "", "https://example.com/x"] {
+            expect(CommandBarLinks.typedPath(search, homeDirectory: pathHome) == nil,
+                   "\"\(search)\" is not a path to go to")
+        }
+        expect(CommandBarLinks.typedPath("~/Root", homeDirectory: "") == nil,
+               "without a home folder a ~ path is not guessed at")
+        expect(CommandBarLinks.typedURL(project) == nil,
+               "a typed path never also reads as a web address")
+
         expect(CommandBarText.wordCount("uma frase com cinco palavras") == 5
                 && CommandBarText.wordCount("  espaços   demais  ") == 2
                 && CommandBarText.wordCount("") == 0,

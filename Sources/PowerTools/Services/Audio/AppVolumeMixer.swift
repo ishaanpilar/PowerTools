@@ -81,6 +81,9 @@ final class AppVolumeMixer: ObservableObject {
     @Published private(set) var currentSystemSoundOutputDeviceUID: String?
     @Published private(set) var systemOutputVolume: Double?
     @Published private(set) var systemOutputMuted: Bool?
+    /// True while `systemOutputVolume` is PowerTools' own level for an output
+    /// that has no volume control (an HDMI or DisplayPort display).
+    @Published private(set) var systemOutputUsesSoftwareVolume = false
     @Published private(set) var outputSwitchError: String?
     /// Set when tap creation fails with a permission error, so the panel can
     /// point at the System Audio Recording consent.
@@ -90,6 +93,16 @@ final class AppVolumeMixer: ObservableObject {
     @Published private(set) var hiddenApps: [MixerHiddenApp] = []
 
     private var engines: [String: any GainEngine] = [:]
+    /// The one tap that scales everything else headed for an output with no
+    /// volume of its own. Kept out of `engines`, which holds one per row.
+    private var masterEngine: (any GainEngine)?
+    /// The default output while its volume is PowerTools' to provide.
+    private var softwareVolumeDeviceUID: String?
+    /// Outputs muted with the mute key. Session only, so a relaunch never
+    /// starts silent.
+    private var softwareMutedDeviceUIDs = Set<String>()
+    /// This process's own audio object, read on `halQueue` by each refresh.
+    private var ownProcessObject: AudioObjectID?
     /// Arbitrates the engine builds running off-main: it suppresses duplicate
     /// builds while a slider keeps dragging, and discards a build that lands
     /// after the mixer moved on (which would leave two live taps on one app).
@@ -109,6 +122,7 @@ final class AppVolumeMixer: ObservableObject {
     /// never renders, the row stays untapped so system audio fails open.
     private var engineRecovery = MixerEngineRecovery()
     private var engineReconcilePending = false
+    private var masterReconcilePending = false
     /// Volumes and routes of rows without a bundle id: adjustable while the
     /// process runs, never written to disk.
     private var sessionVolumes: [String: Double] = [:]
@@ -214,6 +228,7 @@ final class AppVolumeMixer: ObservableObject {
         builds.invalidateAll()
         for engine in engines.values { engine.stop() }
         engines.removeAll()
+        discardMasterEngine()
         engineChangeAt.removeAll()
         objectsLostAt.removeAll()
         engineRenderProgress.removeAll()
@@ -243,6 +258,10 @@ final class AppVolumeMixer: ObservableObject {
         if currentSystemSoundOutputDeviceUID != nil { currentSystemSoundOutputDeviceUID = nil }
         if systemOutputVolume != nil { systemOutputVolume = nil }
         if systemOutputMuted != nil { systemOutputMuted = nil }
+        if systemOutputUsesSoftwareVolume { systemOutputUsesSoftwareVolume = false }
+        softwareVolumeDeviceUID = nil
+        softwareMutedDeviceUIDs.removeAll()
+        ownProcessObject = nil
         if outputSwitchError != nil { outputSwitchError = nil }
         if needsPermission { needsPermission = false }
     }
@@ -365,8 +384,14 @@ final class AppVolumeMixer: ObservableObject {
                           self.listenerInstalled,
                           self.outputControlListenerDevice == device,
                           self.outputControlRefreshGeneration == generation else { return }
-                    if self.systemOutputVolume != volume { self.systemOutputVolume = volume }
-                    if self.systemOutputMuted != muted { self.systemOutputMuted = muted }
+                    // An output whose volume PowerTools provides keeps that
+                    // level; the device has none to report.
+                    if self.softwareVolumeDeviceUID == nil, self.systemOutputVolume != volume {
+                        self.systemOutputVolume = volume
+                    }
+                    if self.softwareVolumeDeviceUID == nil, self.systemOutputMuted != muted {
+                        self.systemOutputMuted = muted
+                    }
                 }
             }
         }
@@ -429,14 +454,106 @@ final class AppVolumeMixer: ObservableObject {
 
     // MARK: - Volume API (panel)
 
-    func setCurrentOutputVolume(_ volume: Double) {
+    /// The current output's volume: the device's own, or PowerTools' on an
+    /// output that has none. False when neither can be set.
+    @discardableResult
+    func setCurrentOutputVolume(_ volume: Double) -> Bool {
         let clamped = min(max(volume, 0), 1)
+        if let uid = softwareVolumeDeviceUID {
+            if clamped > 0 { softwareMutedDeviceUIDs.remove(uid) }
+            setSoftwareOutputLevel(clamped, for: uid)
+            return true
+        }
         guard Self.setSystemOutputVolume(clamped) else {
             scheduleListenerRefresh()
-            return
+            return false
         }
         if systemOutputVolume != clamped { systemOutputVolume = clamped }
         if clamped > 0, systemOutputMuted == true { systemOutputMuted = false }
+        return true
+    }
+
+    /// Mute for the current output, on the same terms. False when the device
+    /// has no mute switch and its volume is not PowerTools' to provide.
+    @discardableResult
+    func setCurrentOutputMuted(_ muted: Bool) -> Bool {
+        if let uid = softwareVolumeDeviceUID {
+            if muted { softwareMutedDeviceUIDs.insert(uid) } else { softwareMutedDeviceUIDs.remove(uid) }
+            applySoftwareOutputChange(for: uid)
+            return true
+        }
+        guard Self.setSystemOutputMuted(muted) else {
+            scheduleListenerRefresh()
+            return false
+        }
+        if systemOutputMuted != muted { systemOutputMuted = muted }
+        return true
+    }
+
+    /// A volume key on an output whose volume PowerTools provides; nil when
+    /// the output has its own, which macOS handles. Either key unmutes, as
+    /// on macOS. Returns the new level.
+    func stepSoftwareOutputVolume(up: Bool, fine: Bool) -> Double? {
+        guard let uid = softwareVolumeDeviceUID else { return nil }
+        let level = MasterVolumeSupport.steppedLevel(softwareOutputLevel(for: uid), up: up, fine: fine)
+        softwareMutedDeviceUIDs.remove(uid)
+        setSoftwareOutputLevel(level, for: uid)
+        return level
+    }
+
+    /// The mute key, under the same condition. Returns whether the output is
+    /// now muted.
+    func toggleSoftwareOutputMute() -> Bool? {
+        guard let uid = softwareVolumeDeviceUID else { return nil }
+        let muted = !softwareMutedDeviceUIDs.contains(uid)
+        setCurrentOutputMuted(muted)
+        return muted
+    }
+
+    private func setSoftwareOutputLevel(_ level: Double, for uid: String) {
+        var levels = MasterVolumeSupport.sanitizedLevels(
+            UserDefaults.standard.dictionary(forKey: DefaultsKey.softwareOutputVolumes) ?? [:])
+        levels[uid] = MixerRoutingSupport.isUnity(level) ? nil : level
+        UserDefaults.standard.set(levels, forKey: DefaultsKey.softwareOutputVolumes)
+        applySoftwareOutputChange(for: uid)
+    }
+
+    private func applySoftwareOutputChange(for uid: String) {
+        let level = softwareOutputLevel(for: uid)
+        let muted = softwareMutedDeviceUIDs.contains(uid)
+        if systemOutputVolume != level { systemOutputVolume = level }
+        if systemOutputMuted != muted { systemOutputMuted = muted }
+        // A deliberate change gets a fresh build even after earlier failures.
+        engineRecovery.clear(MasterVolumeSupport.engineID)
+        refreshEngineGains()
+        reconcileMasterEngine()
+    }
+
+    private func refreshEngineGains() {
+        for app in apps {
+            guard let engine = engines[app.id] else { continue }
+            engine.gain = gain(for: app, outputUID: engine.outputDeviceUID)
+        }
+    }
+
+    private func softwareOutputLevel(for uid: String) -> Double {
+        MasterVolumeSupport.sanitizedLevels(
+            UserDefaults.standard.dictionary(forKey: DefaultsKey.softwareOutputVolumes) ?? [:])[uid] ?? 1
+    }
+
+    private func softwareOutputGain(for uid: String) -> Double {
+        MasterVolumeSupport.gain(level: softwareOutputLevel(for: uid),
+                                 muted: softwareMutedDeviceUIDs.contains(uid))
+    }
+
+    /// What an app's engine plays at: its own volume, times the master level
+    /// when it renders to the output PowerTools provides the volume for.
+    private func gain(for app: MixerApp, outputUID: String) -> Float {
+        let master = softwareVolumeDeviceUID.map(softwareOutputGain(for:)) ?? 1
+        return Float(MasterVolumeSupport.appGain(volume: app.volume,
+                                                 engineOutputUID: outputUID,
+                                                 softwareDeviceUID: softwareVolumeDeviceUID,
+                                                 masterGain: master))
     }
 
     /// 100% means bit-perfect passthrough (no tap). A value the UI would round to
@@ -607,7 +724,7 @@ final class AppVolumeMixer: ObservableObject {
         if let engine = engines[app.id],
            engine.tappedObjects == app.audioObjects,
            engine.outputDeviceUID == targetOutputDeviceUID {
-            engine.gain = Float(app.volume)
+            engine.gain = gain(for: app, outputUID: targetOutputDeviceUID)
             return
         }
         // Nothing is ever tapped on behalf of an app the user never adjusted.
@@ -622,9 +739,10 @@ final class AppVolumeMixer: ObservableObject {
         guard engineRecovery.allowsBuild(app.id, configuration: configuration) else { return }
         guard #available(macOS 14.4, *), let token = builds.begin(app.id) else { return }
 
+        let initialGain = gain(for: app, outputUID: targetOutputDeviceUID)
         buildQueue.async { [weak self] in
             let engine = TapGainEngine(objects: app.audioObjects,
-                                       gain: Float(app.volume),
+                                       gain: initialGain,
                                        outputDeviceUID: targetOutputDeviceUID)
             DispatchQueue.main.async {
                 guard let self else {
@@ -679,7 +797,7 @@ final class AppVolumeMixer: ObservableObject {
             applyRouting(for: latestApp)
             return
         }
-        engine.gain = Float(latestApp.volume)
+        engine.gain = gain(for: latestApp, outputUID: engine.outputDeviceUID)
         let previous = engines.updateValue(engine, forKey: id)
         engineChangeAt[id] = CFAbsoluteTimeGetCurrent()
         // The fresh engine starts its render count over.
@@ -699,6 +817,131 @@ final class AppVolumeMixer: ObservableObject {
         objectsLostAt.removeValue(forKey: id)
         engineRenderProgress.removeValue(forKey: id)
         engineRecovery.clear(id)
+        setNeedsMasterReconcile()
+    }
+
+    // MARK: - Master volume (outputs with no volume of their own)
+
+    /// Every row engine that comes or goes changes what the master tap leaves
+    /// out. One pass can change several, so the decision waits for the pass.
+    private func setNeedsMasterReconcile() {
+        guard !masterReconcilePending else { return }
+        masterReconcilePending = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.masterReconcilePending = false
+            self.reconcileMasterEngine()
+        }
+    }
+
+    private var masterVolumeNeedsEngine: Bool {
+        softwareVolumeDeviceUID.map {
+            MasterVolumeSupport.needsEngine(level: softwareOutputLevel(for: $0),
+                                            muted: softwareMutedDeviceUIDs.contains($0))
+        } ?? false
+    }
+
+    /// Brings the master tap in line with the default output, its level and
+    /// the row engines it leaves out. As with the rows, a replacement is
+    /// built first and the running tap stops only once it lands.
+    private func reconcileMasterEngine() {
+        let id = MasterVolumeSupport.engineID
+        guard !stopped, let uid = softwareVolumeDeviceUID, masterVolumeNeedsEngine,
+              let excluded = MasterVolumeSupport.excludedProcesses(
+                ownProcess: ownProcessObject,
+                appEngineObjects: engines.values.map(\.tappedObjects)) else {
+            discardMasterEngine()
+            return
+        }
+        let gain = Float(softwareOutputGain(for: uid))
+        if let engine = masterEngine {
+            if engine.outputDeviceUID == uid, engine.tappedObjects == excluded {
+                engine.gain = gain
+                checkMasterRendering(engine, excluded: excluded)
+                return
+            }
+            // A tap on a device that is gone can only mute what it covers.
+            if !outputDevices.contains(where: { $0.uid == engine.outputDeviceUID }) {
+                discardMasterEngine()
+            }
+        }
+        let configuration = MixerEngineRecovery.Configuration(objects: excluded, outputDeviceUID: uid)
+        guard engineRecovery.allowsBuild(id, configuration: configuration) else { return }
+        guard #available(macOS 14.4, *), let token = builds.begin(id) else { return }
+        buildQueue.async { [weak self] in
+            let engine = TapGainEngine(excluding: excluded, gain: gain, outputDeviceUID: uid)
+            DispatchQueue.main.async {
+                guard let self else {
+                    engine?.stop()
+                    return
+                }
+                self.installMasterEngine(engine, configuration: configuration, token: token)
+            }
+        }
+    }
+
+    private func installMasterEngine(_ engine: (any GainEngine)?,
+                                     configuration: MixerEngineRecovery.Configuration,
+                                     token: Int) {
+        let id = MasterVolumeSupport.engineID
+        let isCurrentBuild = builds.isCurrent(id, token: token)
+        builds.finish(id, token: token)
+        guard isCurrentBuild, !stopped else {
+            engine?.stop()
+            return
+        }
+        guard let engine else {
+            // Usually the System Audio Recording consent. Two failures of the
+            // same configuration end the retries until the level changes.
+            _ = engineRecovery.recordFailure(id, configuration: configuration)
+            if masterEngine == nil, !needsPermission { needsPermission = true }
+            return
+        }
+        if needsPermission { needsPermission = false }
+        let previous = masterEngine
+        masterEngine = engine
+        engineRenderProgress.removeValue(forKey: id)
+        previous?.stop()
+        // The level, the output or the rows to leave out may have moved while
+        // this was built; the same decision corrects a stale tap.
+        reconcileMasterEngine()
+    }
+
+    /// The master tap mutes everything it covers, so one that stops rendering
+    /// after sleep silences the whole output (issue #341 for the rows). It
+    /// goes at once, which hands the audio back unscaled, and is rebuilt once.
+    private func checkMasterRendering(_ engine: any GainEngine, excluded: [AudioObjectID]) {
+        let id = MasterVolumeSupport.engineID
+        let isPlaying = apps.contains { $0.isPlaying && engines[$0.id] == nil }
+        switch MixerRoutingSupport.engineRenderVerdict(previous: engineRenderProgress[id],
+                                                       cycles: engine.renderCycles,
+                                                       isPlaying: isPlaying,
+                                                       now: CFAbsoluteTimeGetCurrent()) {
+        case .note(let observation, let recheckAfter):
+            engineRenderProgress[id] = observation
+            if let recheckAfter {
+                scheduleEngineReconcile(after: recheckAfter)
+            } else {
+                engineRecovery.clear(id)
+            }
+        case .stalled(let recheckAfter):
+            scheduleEngineReconcile(after: recheckAfter)
+        case .wedged:
+            discardMasterEngine()
+            let configuration = MixerEngineRecovery.Configuration(objects: excluded,
+                                                                  outputDeviceUID: engine.outputDeviceUID)
+            if engineRecovery.recordFailure(id, configuration: configuration) {
+                reconcileMasterEngine()
+            }
+        case nil:
+            engineRenderProgress.removeValue(forKey: id)
+        }
+    }
+
+    private func discardMasterEngine() {
+        masterEngine?.stop()
+        masterEngine = nil
+        engineRenderProgress.removeValue(forKey: MasterVolumeSupport.engineID)
     }
 
     private func rowMayBeTapped(_ app: MixerApp) -> Bool {
@@ -761,6 +1004,10 @@ final class AppVolumeMixer: ObservableObject {
         let defaultDeviceID: AudioObjectID?
         let systemOutputVolume: Double?
         let systemOutputMuted: Bool?
+        /// False when the default output offers no volume to set, which is
+        /// when PowerTools provides one in software.
+        let defaultHasHardwareVolume: Bool
+        let ownProcessObject: AudioObjectID?
         /// Nil where process taps do not exist (before macOS 14.4): the app
         /// list stays empty and no process object is looked at.
         let apps: [MixerApp]?
@@ -852,17 +1099,35 @@ final class AppVolumeMixer: ObservableObject {
             outputDevices = snapshot.outputDevices
         }
         subscribeToOutputControls(of: snapshot.defaultDeviceID)
-        if systemOutputVolume != snapshot.systemOutputVolume {
-            systemOutputVolume = snapshot.systemOutputVolume
+        ownProcessObject = snapshot.ownProcessObject
+        let softwareUID = MasterVolumeSupport.softwareVolumeDeviceUID(
+            defaultUID: snapshot.defaultUID,
+            hasHardwareVolume: snapshot.defaultHasHardwareVolume,
+            tapsSupported: snapshot.apps != nil)
+        if softwareVolumeDeviceUID != softwareUID {
+            softwareVolumeDeviceUID = softwareUID
+            refreshEngineGains()
         }
-        if systemOutputMuted != snapshot.systemOutputMuted {
-            systemOutputMuted = snapshot.systemOutputMuted
+        let usesSoftwareVolume = softwareVolumeDeviceUID != nil
+        let outputVolume = softwareVolumeDeviceUID.map(softwareOutputLevel(for:))
+            ?? snapshot.systemOutputVolume
+        let outputMuted = softwareVolumeDeviceUID.map(softwareMutedDeviceUIDs.contains)
+            ?? snapshot.systemOutputMuted
+        if systemOutputUsesSoftwareVolume != usesSoftwareVolume {
+            systemOutputUsesSoftwareVolume = usesSoftwareVolume
+        }
+        if systemOutputVolume != outputVolume {
+            systemOutputVolume = outputVolume
+        }
+        if systemOutputMuted != outputMuted {
+            systemOutputMuted = outputMuted
         }
 
         guard let next = snapshot.apps else {
             if !apps.isEmpty {
                 apps = []
             }
+            reconcileMasterEngine()
             return
         }
 
@@ -873,7 +1138,12 @@ final class AppVolumeMixer: ObservableObject {
             subscribeToRunningChanges(of: object)
         }
 
-        guard audioEnvironmentChanged || next != apps else { return }
+        guard audioEnvironmentChanged || next != apps else {
+            // The default output can lose or gain its volume control, or
+            // PowerTools' own audio object can appear, with no row changing.
+            reconcileMasterEngine()
+            return
+        }
         if apps != next {
             apps = next
         }
@@ -898,11 +1168,12 @@ final class AppVolumeMixer: ObservableObject {
             nextOutputDevices: nextOutputDevices,
             lowerOnDisconnect: request.lowerOnHeadphonesDisconnect,
             lowerToPercent: request.lowerToPercent)
-        let systemOutputVolume = defaultDevice.flatMap { device in
-            hasSettableOutputVolume(for: device.audioObjectID)
-                ? outputVolume(for: device.audioObjectID).map(Double.init)
-                : nil
-        }
+        let defaultHasHardwareVolume = defaultDevice.map {
+            hasSettableOutputVolume(for: $0.audioObjectID)
+        } ?? true
+        let systemOutputVolume = defaultHasHardwareVolume
+            ? defaultDevice.flatMap { outputVolume(for: $0.audioObjectID).map(Double.init) }
+            : nil
         let systemOutputMuted = defaultDevice.flatMap { outputMuted(for: $0.audioObjectID) }
 
         guard isSupported else {
@@ -912,6 +1183,8 @@ final class AppVolumeMixer: ObservableObject {
                                    defaultDeviceID: defaultDevice?.audioObjectID,
                                    systemOutputVolume: systemOutputVolume,
                                    systemOutputMuted: systemOutputMuted,
+                                   defaultHasHardwareVolume: defaultHasHardwareVolume,
+                                   ownProcessObject: nil,
                                    apps: nil,
                                    processObjects: [],
                                    lowered: lowered)
@@ -925,10 +1198,15 @@ final class AppVolumeMixer: ObservableObject {
         var playing: Set<pid_t> = []
         var bypassed: Set<pid_t> = []
         var bundleHints: [pid_t: String] = [:]
+        var ownProcessObject: AudioObjectID?
         let processObjects = audioProcessObjects()
         for object in processObjects {
             var pid: pid_t = -1
-            guard Self.read(object, kAudioProcessPropertyPID, &pid), pid > 0, pid != ownPid else { continue }
+            guard Self.read(object, kAudioProcessPropertyPID, &pid), pid > 0 else { continue }
+            guard pid != ownPid else {
+                ownProcessObject = object
+                continue
+            }
 
             // Show every regular app that holds an audio connection, not only
             // the ones making sound this instant, so apps are adjustable before
@@ -1031,6 +1309,8 @@ final class AppVolumeMixer: ObservableObject {
                                defaultDeviceID: defaultDevice?.audioObjectID,
                                systemOutputVolume: systemOutputVolume,
                                systemOutputMuted: systemOutputMuted,
+                               defaultHasHardwareVolume: defaultHasHardwareVolume,
+                               ownProcessObject: ownProcessObject,
                                apps: next,
                                processObjects: processObjects,
                                lowered: lowered)
@@ -1258,6 +1538,7 @@ final class AppVolumeMixer: ObservableObject {
         if let nextPassDelay {
             scheduleEngineReconcile(after: nextPassDelay)
         }
+        setNeedsMasterReconcile()
     }
 
     /// One trailing pass for rows whose rebuild was coalesced. A single
@@ -1447,7 +1728,9 @@ final class AppVolumeMixer: ObservableObject {
     private func clearPermissionIfNoActiveAdjustments() {
         guard needsPermission,
               !apps.contains(where: appNeedsEngine),
+              !masterVolumeNeedsEngine,
               engines.isEmpty,
+              masterEngine == nil,
               builds.isEmpty else { return }
         needsPermission = false
     }
@@ -1677,7 +1960,7 @@ final class AppVolumeMixer: ObservableObject {
     /// scalar. Static on purpose so callers (the command bar) never spin the
     /// mixer up; false when the device exposes no software volume control.
     @discardableResult
-    static func setSystemOutputVolume(_ volume: Double) -> Bool {
+    private static func setSystemOutputVolume(_ volume: Double) -> Bool {
         guard let device = defaultOutputDeviceID() else { return false }
         let clamped = Float32(min(max(volume, 0), 1))
         let applied = setOutputVolume(clamped, for: device)
@@ -1688,15 +1971,8 @@ final class AppVolumeMixer: ObservableObject {
         return applied
     }
 
-    /// Whether the sound is currently cut, or nil when this output has no
-    /// mute switch of its own.
-    static func systemOutputIsMuted() -> Bool? {
-        guard let device = defaultOutputDeviceID() else { return nil }
-        return outputMuted(for: device)
-    }
-
     @discardableResult
-    static func setSystemOutputMuted(_ muted: Bool) -> Bool {
+    private static func setSystemOutputMuted(_ muted: Bool) -> Bool {
         guard let device = defaultOutputDeviceID() else { return false }
         return setOutputMuted(muted, for: device)
     }
@@ -1847,12 +2123,32 @@ private final class TapGainEngine: GainEngine {
     /// the listener goes away.
     private var rateListenerClient: UnsafeMutableRawPointer?
 
-    init?(objects: [AudioObjectID], gain: Float, outputDeviceUID: String) {
-        tappedObjects = objects
+    /// One app's path: only `objects` are tapped.
+    convenience init?(objects: [AudioObjectID], gain: Float, outputDeviceUID: String) {
+        self.init(description: CATapDescription(stereoMixdownOfProcesses: objects),
+                  tappedObjects: objects, gain: gain, outputDeviceUID: outputDeviceUID)
+    }
+
+    /// The master path: everything headed for the device except `excluded`,
+    /// whose ids stand in `tappedObjects` so a changed exclusion list reads
+    /// as a changed target.
+    convenience init?(excluding excluded: [AudioObjectID], gain: Float, outputDeviceUID: String) {
+        let description = CATapDescription(excludingProcesses: excluded,
+                                           deviceUID: outputDeviceUID, stream: 0)
+        // The device's own channel layout would otherwise come through;
+        // MixerRender expects the stereo mix every per-app tap delivers.
+        description.isMixdown = true
+        description.isMono = false
+        self.init(description: description,
+                  tappedObjects: excluded, gain: gain, outputDeviceUID: outputDeviceUID)
+    }
+
+    private init?(description: CATapDescription, tappedObjects: [AudioObjectID],
+                  gain: Float, outputDeviceUID: String) {
+        self.tappedObjects = tappedObjects
         gainBox.value = min(max(gain, 0), Float(AppVolumeMixer.maxVolume))
         self.outputDeviceUID = outputDeviceUID
 
-        let description = CATapDescription(stereoMixdownOfProcesses: objects)
         description.muteBehavior = .mutedWhenTapped
         description.isPrivate = true
         guard AudioHardwareCreateProcessTap(description, &tapID) == noErr, tapID != 0 else {

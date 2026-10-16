@@ -183,10 +183,10 @@ struct MenuPanelView: View {
         if isSearching { return .none }
         guard let activeSection else {
             var needs = PanelDashboardLayout(sections: visibleSections).monitorNeeds
-            if let expandedDashboardTile {
+            if let detailKind = expandedDashboardTile?.detailKind {
                 // An expanded card shows its full metric detail, which reads
                 // more than the collapsed card ever needed.
-                needs = needs.union(expandedDashboardTile.detailKind.monitorNeeds)
+                needs = needs.union(detailKind.monitorNeeds)
             }
             return needs
         }

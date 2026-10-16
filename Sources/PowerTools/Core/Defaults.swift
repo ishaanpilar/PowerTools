@@ -112,12 +112,14 @@ enum DefaultsKey {
     static let releaseNotesOnUpdate = "releaseNotesOnUpdate" // show What's New after an update
     static let appVolumes = "appVolumes"                  // [bundle id: 0...2]
     static let appOutputDevices = "appOutputDevices"      // [bundle id: audio device UID]
+    static let softwareOutputVolumes = "softwareOutputVolumes" // [output device UID: 0...1] for outputs with no volume of their own
     static let mixerShowFinder = "mixerShowFinder"
     static let mixerHideInactiveApps = "mixerHideInactiveApps"
     static let mixerHiddenApps = "mixerHiddenApps"        // [persistence id: display name] kept out of the mixer list (issue #300)
     static let mixerLowerVolumeOnHeadphonesDisconnect = "mixerLowerVolumeOnHeadphonesDisconnect"
     static let mixerHeadphonesDisconnectVolumePercent = "mixerHeadphonesDisconnectVolumePercent"
     static let preciseVolumeRollerEnabled = "preciseVolumeRollerEnabled"
+    static let masterVolumeKeysEnabled = "masterVolumeKeysEnabled" // volume keys drive the software volume of outputs with none of their own
     static let soundOutputSwitcherEnabled = "soundOutputSwitcherEnabled"
     static let soundOutputSwitcherShortcut = "soundOutputSwitcherShortcut"
     static let soundOutputSwitcherDeviceUIDs = "soundOutputSwitcherDeviceUIDs"
@@ -425,6 +427,7 @@ enum DefaultsKey {
     static let panelDashboardShowNetwork = "panelDashboardShowNetwork"
     static let panelDashboardShowGPU = "panelDashboardShowGPU"
     static let panelDashboardShowBattery = "panelDashboardShowBattery"
+    static let panelDashboardShowVolume = "panelDashboardShowVolume"
     static let panelNavigationEnabled = "panelNavigationEnabled" // legacy: the panel always navigates by sections since 3.1.8
     static let updateLastInstallFailure = "updateLastInstallFailure" // last installer step that failed (fail-copy etc.)
     static let windowLayoutHiddenActions = "windowLayoutHiddenActions" // comma-separated action ids hidden from the grid
@@ -991,6 +994,7 @@ enum Defaults {
         DefaultsKey.mixerLowerVolumeOnHeadphonesDisconnect: false,
         DefaultsKey.mixerHeadphonesDisconnectVolumePercent: defaultMixerHeadphonesDisconnectVolumePercent,
         DefaultsKey.preciseVolumeRollerEnabled: false,
+        DefaultsKey.masterVolumeKeysEnabled: false,
         DefaultsKey.soundOutputSwitcherEnabled: false,
         DefaultsKey.soundOutputSwitcherShortcut: GlobalShortcut.soundOutputSwitcherDefault.storageValue,
         // Finder never benefits from being "quit" (it just relaunches), so
@@ -1222,6 +1226,8 @@ enum Defaults {
         DefaultsKey.panelDashboardShowNetwork: true,
         DefaultsKey.panelDashboardShowGPU: true,
         DefaultsKey.panelDashboardShowBattery: true,
+        // A control rather than a reading, so it joins the cards only when asked.
+        DefaultsKey.panelDashboardShowVolume: false,
         DefaultsKey.monitorNetSpeed: true,
         DefaultsKey.monitorNetApps: true,
         DefaultsKey.monitorNetTotals: true,

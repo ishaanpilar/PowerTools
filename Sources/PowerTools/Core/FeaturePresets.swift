@@ -131,6 +131,7 @@ extension AppFeature {
             return .periodic
         case .mixer:
             return UserDefaults.standard.bool(forKey: DefaultsKey.preciseVolumeRollerEnabled)
+                || UserDefaults.standard.bool(forKey: DefaultsKey.masterVolumeKeysEnabled)
                 ? .keyboard : .idle
         case .mouseAcceleration, .pastePlain, .soundOutputSwitcher, .micMute,
              .musicBlock, .bluetoothSleep, .keepAwake, .brightness, .quickLauncher, .quickToggles, .colorPicker,

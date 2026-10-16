@@ -120,6 +120,10 @@ struct PanelDashboardLayout {
             needs.gpuTemperature = AppFeature.monitorGPU.isAvailable
             needs.thermal = true
         }
+        // The charging card appears whenever the charger is connected,
+        // independent of the Battery tile's own visibility, so power needs
+        // sampling here regardless of whether that tile is shown.
+        needs.power = PowerSampler.hasInternalBattery
         for tile in tiles {
             switch tile {
             case .cpu: needs.cpu = true

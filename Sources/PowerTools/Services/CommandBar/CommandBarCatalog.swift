@@ -1546,6 +1546,40 @@ enum CommandBarCatalog {
             run: { _ in NSWorkspace.shared.open(url) })
     }
 
+    /// A row for a path typed or pasted into the bar, offered only when
+    /// something is there. A file is shown selected in its folder rather
+    /// than opened; a folder opens in Finder. It leads the list like a web
+    /// address does, so Return goes there at once.
+    static func typedPathEntry(for query: String, bar: CommandBarFeatureStrings) -> CommandBarEntry? {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        guard let path = CommandBarLinks.typedPath(query, homeDirectory: home) else { return nil }
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else { return nil }
+        let url = URL(fileURLWithPath: path, isDirectory: isDirectory.boolValue)
+        let parent = CommandBarFileSearchSupport.abbreviating(
+            url.deletingLastPathComponent().path, homeDirectory: home)
+        let opensFolder = isDirectory.boolValue
+        return CommandBarEntry(
+            id: "action.typedPath",
+            title: path == "/" ? path : url.lastPathComponent,
+            subtitle: String(format: opensFolder ? bar.typedPathOpenFolderFormat : bar.typedPathRevealFormat,
+                             parent),
+            icon: .filePath(path),
+            countsUsage: false,
+            revealPath: path,
+            run: { _ in
+                guard FileManager.default.fileExists(atPath: path) else {
+                    QuickToolHUD.show(icon: "folder.badge.questionmark", message: url.lastPathComponent)
+                    return
+                }
+                if opensFolder {
+                    NSWorkspace.shared.open(url)
+                } else {
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                }
+            })
+    }
+
     // MARK: - Clipboard history
 
     /// Rows for history items matching the query, capped so pasted text never

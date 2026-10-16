@@ -60,6 +60,7 @@ enum AIActionRegistryTests {
         "units.result": writesElsewhere,
         "action.appUpdates": outside,
         "action.openURL": outside,
+        "action.typedPath": outside,
         "link": outside,
         "file": outside,
         "macsettings": outside,

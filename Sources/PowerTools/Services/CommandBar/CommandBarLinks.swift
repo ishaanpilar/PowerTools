@@ -279,4 +279,49 @@ enum CommandBarLinks {
 
     private static let linkDetector = try? NSDataDetector(
         types: NSTextCheckingResult.CheckingType.link.rawValue)
+
+    /// A path typed or pasted on its own, as an absolute path, or nil when the
+    /// text should remain a search. Takes it the ways it arrives: plain,
+    /// from the home folder (~), wrapped in quotes, with the backslash
+    /// escapes Terminal adds when a file is dropped on it, or as a file URL.
+    /// Whether anything is there is for the caller to check.
+    static func typedPath(_ text: String, homeDirectory: String) -> String? {
+        var path = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if path.count >= 2,
+           let first = path.first, first == "\"" || first == "'",
+           path.last == first {
+            path = String(path.dropFirst().dropLast())
+        }
+        if path.lowercased().hasPrefix("file://") {
+            guard let url = URL(string: path), url.isFileURL else { return nil }
+            path = url.path
+        } else if path.contains("\\") {
+            path = unescapingShellBackslashes(path)
+        }
+        if path == "~" || path.hasPrefix("~/") {
+            guard homeDirectory.hasPrefix("/") else { return nil }
+            path = homeDirectory + path.dropFirst()
+        }
+        guard path.hasPrefix("/") else { return nil }
+        return (path as NSString).standardizingPath
+    }
+
+    /// "\ " to " ", "\(" to "(" and so on: a backslash keeps the character
+    /// after it, which is how a shell escapes a dropped path.
+    private static func unescapingShellBackslashes(_ text: String) -> String {
+        var result = ""
+        var escaping = false
+        for character in text {
+            if escaping {
+                result.append(character)
+                escaping = false
+            } else if character == "\\" {
+                escaping = true
+            } else {
+                result.append(character)
+            }
+        }
+        if escaping { result.append("\\") }
+        return result
+    }
 }

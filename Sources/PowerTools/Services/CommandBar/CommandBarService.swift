@@ -1368,6 +1368,9 @@ final class CommandBarService: ObservableObject {
         // A web address typed into the bar is opened, not searched: the row
         // leads so Return opens it at once, the way a sum's answer does.
         let openURL = CommandBarCatalog.openURLEntry(for: trimmed, bar: bar)
+        // A path is gone to the same way: a file shown in its folder, a
+        // folder opened.
+        let typedPath = CommandBarCatalog.typedPathEntry(for: trimmed, bar: bar)
 
         // A saved script answers the same way a sum does, once it has run:
         // the row leads, and Return copies what it printed. Same as any
@@ -1534,6 +1537,7 @@ final class CommandBarService: ObservableObject {
         var result: [CommandBarEntry] = []
         if let answer { result.append(answer) }
         if let openURL { result.append(openURL) }
+        if let typedPath { result.append(typedPath) }
         if let scriptAnswer { result.append(scriptAnswer) }
         for index in ranked {
             let entry = pool[index]

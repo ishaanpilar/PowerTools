@@ -225,6 +225,7 @@ final class FeatureRuntime: ObservableObject {
         .mixer: {
             PreciseVolumeRollerService.shared.syncWithPreferences()
             AppVolumeMixer.shared.syncWithPreferences()
+            MasterVolumeKeysService.shared.syncWithPreferences()
             AudioInputDeviceManager.shared.syncWithPreferences()
         },
         .soundOutputSwitcher: { SoundOutputSwitcher.shared.syncWithPreferences() },

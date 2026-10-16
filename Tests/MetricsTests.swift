@@ -29,6 +29,7 @@ struct MetricsTests {
             ("health-coach", { HealthCoachTests.run(suite) }),
             ("scratchpad-ai", { ScratchpadAITests.run(suite) }),
             ("claude-accounts", { ClaudeAccountsTests.run(suite) }),
+            ("master-volume", { MasterVolumeTests.run(suite) }),
             ("core", { coreChecks(suite) }),
             ("keyboard", {
                 assistiveKeyboardChecks { suite.expect($0, $1) }
@@ -15666,8 +15667,10 @@ struct MetricsTests {
                "the recorder uses accessibility for anonymous typing timing while active")
         expect(activeSet(.accessibility, on: [DefaultsKey.preciseVolumeRollerEnabled]).contains(.mixer),
                "mixer uses accessibility only for precise volume roller")
+        expect(activeSet(.accessibility, on: [DefaultsKey.masterVolumeKeysEnabled]).contains(.mixer),
+               "mixer uses accessibility for volume keys on displays without volume")
         expect(!activeSet(.accessibility).contains(.mixer),
-               "mixer without precise volume roller does not use accessibility")
+               "mixer without its key options does not use accessibility")
 
         expect(activeSet(.screenRecording, on: [DefaultsKey.switcherEnabled])
                 == [.switcher, .screenOCR, .screenshot, .screenRecorder],
@@ -21923,6 +21926,8 @@ struct MetricsTests {
                "per-app Switcher rules keep their bundle identity and behavior through backup import")
         expect(Defaults.registeredDefaults[DefaultsKey.preciseVolumeRollerEnabled] as? Bool == false,
                "precise volume roller is opt-in")
+        expect(Defaults.registeredDefaults[DefaultsKey.masterVolumeKeysEnabled] as? Bool == false,
+               "volume keys for displays without volume are opt-in")
 
         // MARK: Precise volume roller
 
@@ -25900,6 +25905,7 @@ struct MetricsTests {
                          "Sources/PowerTools/Services/Switcher/AppSwitcher.swift",
                          "Sources/PowerTools/Services/Snippets/TextSnippetService.swift",
                          "Sources/PowerTools/Services/Audio/PreciseVolumeRollerService.swift",
+                         "Sources/PowerTools/Services/Audio/MasterVolumeKeysService.swift",
                          "Sources/PowerTools/Services/DockClick/DockClickService.swift",
                          "Sources/PowerTools/Services/Display/BrightnessService.swift"] {
             let source = (try? String(contentsOfFile: tapOwner, encoding: .utf8)) ?? ""

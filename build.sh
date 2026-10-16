@@ -386,6 +386,7 @@ if (( TEST )); then
         Sources/PowerTools/Core/URLCleaning.swift
         Sources/PowerTools/Services/GeneralPasteboardAccess.swift
         Sources/PowerTools/Services/Audio/MixerRoutingSupport.swift
+        Sources/PowerTools/Services/Audio/MasterVolumeSupport.swift
         Sources/PowerTools/Services/Audio/MusicLaunchSupport.swift
         Sources/PowerTools/Services/Bluetooth/BluetoothSleepSupport.swift
         Sources/PowerTools/UI/MenuPanel/MixerPercentNativeTextField.swift

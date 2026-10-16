@@ -15,6 +15,7 @@ struct MixerSection: View {
     @ObservedObject private var inputManager = AudioInputDeviceManager.shared
     @ObservedObject private var outputSwitcher = SoundOutputSwitcher.shared
     @ObservedObject private var preciseVolumeRoller = PreciseVolumeRollerService.shared
+    @ObservedObject private var masterVolumeKeys = MasterVolumeKeysService.shared
     @ObservedObject private var permissions = Permissions.shared
     @AppStorage(DefaultsKey.mixerHideInactiveApps)
     private var hideInactiveApps = false
@@ -24,6 +25,8 @@ struct MixerSection: View {
     private var headphonesDisconnectVolumePercent = Defaults.defaultMixerHeadphonesDisconnectVolumePercent
     @AppStorage(DefaultsKey.preciseVolumeRollerEnabled)
     private var preciseVolumeRollerEnabled = false
+    @AppStorage(DefaultsKey.masterVolumeKeysEnabled)
+    private var masterVolumeKeysEnabled = false
     @AppStorage(DefaultsKey.soundOutputSwitcherEnabled)
     private var soundOutputSwitcherEnabled = false
     @State private var soundOutputSwitcherUIDs: [String] = []
@@ -109,6 +112,9 @@ struct MixerSection: View {
                     }
                     headphoneDisconnectProtectionToggle
                     preciseVolumeRollerToggle
+                    if AppVolumeMixer.isSupported {
+                        masterVolumeKeysToggle
+                    }
                     if AppFeature.soundOutputSwitcher.isAvailable {
                         soundOutputSwitcherControls
                     }
@@ -346,6 +352,36 @@ struct MixerSection: View {
                 .buttonStyle(.link)
                 .font(.system(size: 10.5, weight: .medium))
             } else if preciseVolumeRoller.tapFailed {
+                inputMessage(l10n.s.preciseVolumeRollerTapFailed,
+                             systemImage: "exclamationmark.triangle")
+            }
+        }
+    }
+
+    private var masterVolumeKeysToggle: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Toggle(l10n.s.masterVolumeKeysEnable, isOn: $masterVolumeKeysEnabled)
+                .toggleStyle(.checkbox)
+                .font(.system(size: 11.5, weight: .medium))
+                .onChange(of: masterVolumeKeysEnabled) { _, enabled in
+                    if enabled { permissions.requestAccessibility() }
+                    MasterVolumeKeysService.shared.syncWithPreferences()
+                }
+
+            Text(l10n.s.masterVolumeKeysCaption)
+                .font(.system(size: 9.5))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if masterVolumeKeysEnabled, !permissions.accessibility {
+                Button {
+                    Permissions.shared.openAccessibilitySettings()
+                } label: {
+                    Label(l10n.s.permissionOpenSettings, systemImage: "hand.raised")
+                }
+                .buttonStyle(.link)
+                .font(.system(size: 10.5, weight: .medium))
+            } else if masterVolumeKeys.tapFailed {
                 inputMessage(l10n.s.preciseVolumeRollerTapFailed,
                              systemImage: "exclamationmark.triangle")
             }
@@ -1107,7 +1143,7 @@ private struct AutofocusingVolumeTextField: NSViewRepresentable {
     }
 }
 
-private struct MixerVolumeSlider: View {
+struct MixerVolumeSlider: View {
     @Binding var value: Double
     let normalTint: Color
     let boostTint: Color

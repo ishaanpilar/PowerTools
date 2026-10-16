@@ -527,7 +527,7 @@ enum CommandBarCatalog {
             numericRange: 0...100,
             run: { value in
                 guard let value else { return }
-                let applied = AppVolumeMixer.setSystemOutputVolume(Double(value) / 100)
+                let applied = AppVolumeMixer.shared.setCurrentOutputVolume(Double(value) / 100)
                 if applied {
                     QuickToolHUD.show(icon: "speaker.wave.2",
                                       message: "\(FeatureStrings.commandBar(L10n.shared.language).volumeTitle) \(value)%")
@@ -537,7 +537,7 @@ enum CommandBarCatalog {
             }))
         }
 
-        if AppFeature.mixer.isAvailable, let muted = AppVolumeMixer.systemOutputIsMuted() {
+        if AppFeature.mixer.isAvailable, let muted = AppVolumeMixer.shared.systemOutputMuted {
             entries.append(CommandBarEntry(
                 id: "action.soundMute",
                 title: muted ? bar.soundUnmute : bar.soundMute,
@@ -545,7 +545,7 @@ enum CommandBarCatalog {
                 icon: .symbol(muted ? "speaker.slash.fill" : "speaker.wave.2"),
                 isActive: muted,
                 run: { _ in
-                    if !AppVolumeMixer.setSystemOutputMuted(!muted) { NSSound.beep() }
+                    if !AppVolumeMixer.shared.setCurrentOutputMuted(!muted) { NSSound.beep() }
                 }))
         }
 

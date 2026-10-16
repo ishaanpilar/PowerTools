@@ -5,36 +5,53 @@
 import AppKit
 import SwiftUI
 
-/// A brief percentage overlay for every brightness route. The disabled
-/// feature owns no window, observer or timer.
-enum BrightnessOSD {
+/// A brief percentage overlay for every brightness route, and for the volume
+/// keys on outputs whose volume PowerTools provides. A disabled feature owns
+/// no window, observer or timer.
+enum LevelOSD {
     private static var panel: NSPanel?
-    private static var host: NSHostingController<BrightnessOSDView>?
+    private static var host: NSHostingController<LevelOSDView>?
     private static var dismissWork: DispatchWorkItem?
     private static var generation = 0
 
-    static func show(displayID: CGDirectDisplayID, brightness: Double) {
+    static func showBrightness(_ brightness: Double, displayID: CGDirectDisplayID) {
         guard Thread.isMainThread else {
-            DispatchQueue.main.async {
-                show(displayID: displayID, brightness: brightness)
-            }
+            DispatchQueue.main.async { showBrightness(brightness, displayID: displayID) }
             return
         }
         guard let screen = NSScreen.screens.first(where: {
             ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?
                 .uint32Value == displayID
         }) else { return }
+        show(LevelOSDView(symbolName: "sun.max.fill", level: brightness), on: screen)
+    }
 
+    /// On the screen under the pointer, where the person is looking. Muted
+    /// shows an empty bar and keeps the level for when it comes back.
+    static func showVolume(_ level: Double, muted: Bool) {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { showVolume(level, muted: muted) }
+            return
+        }
+        let pointer = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(pointer, $0.frame, false) })
+                ?? NSScreen.main else { return }
+        show(LevelOSDView(symbolName: muted || level <= 0.001 ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                          level: muted ? 0 : level),
+             on: screen)
+    }
+
+    private static func show(_ view: LevelOSDView, on screen: NSScreen) {
         // One hosting controller for the panel's lifetime: a slider drag
         // shows dozens of updates a second, and rebuilding the SwiftUI host
         // for each would burn CPU for no visual difference.
         let panel = ensurePanel()
-        let host: NSHostingController<BrightnessOSDView>
+        let host: NSHostingController<LevelOSDView>
         if let existing = Self.host {
-            existing.rootView = BrightnessOSDView(brightness: brightness)
+            existing.rootView = view
             host = existing
         } else {
-            host = NSHostingController(rootView: BrightnessOSDView(brightness: brightness))
+            host = NSHostingController(rootView: view)
             Self.host = host
             panel.contentViewController = host
         }
@@ -126,20 +143,21 @@ enum BrightnessOSD {
 
 /// Kept separate from the transient panel so the mandatory UI preview can
 /// host and inspect the exact shipped surface.
-struct BrightnessOSDView: View {
-    let brightness: Double
+struct LevelOSDView: View {
+    let symbolName: String
+    let level: Double
 
     private var percentage: Int {
-        BrightnessSupport.wholePercent(brightness)
+        BrightnessSupport.wholePercent(level)
     }
 
     private var filledSegments: Int {
-        BrightnessSupport.filledBrightnessSegments(brightness)
+        BrightnessSupport.filledBrightnessSegments(level)
     }
 
     var body: some View {
         VStack(spacing: 11) {
-            Image(systemName: "sun.max.fill")
+            Image(systemName: symbolName)
                 .font(.system(size: 39, weight: .regular))
                 .symbolRenderingMode(.monochrome)
                 .foregroundStyle(.white.opacity(0.82))

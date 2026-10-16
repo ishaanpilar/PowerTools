@@ -7,15 +7,16 @@ import UniformTypeIdentifiers
 
 // MARK: - Dashboard
 
-/// The monitor cards the dashboard can show, one full-width row each, in
-/// display order. Declaration order is the default order: CPU, Memory,
-/// Storage, Network, GPU, Battery.
+/// The cards the dashboard can show, one full-width row each, in display
+/// order. Declaration order is the default order: CPU, Memory, Storage,
+/// Network, GPU, Battery, then the Volume control.
 enum PanelDashboardTile: String, PanelOrderItem, Identifiable {
-    case cpu, memory, storage, network, gpu, battery
+    case cpu, memory, storage, network, gpu, battery, volume
 
     var id: String { rawValue }
 
-    var detailKind: MetricDetailKind {
+    /// What a tap expands; nil for a card that is a control, not a reading.
+    var detailKind: MetricDetailKind? {
         switch self {
         case .cpu: return .cpu
         case .memory: return .memory
@@ -23,6 +24,7 @@ enum PanelDashboardTile: String, PanelOrderItem, Identifiable {
         case .network: return .network
         case .gpu: return .gpu
         case .battery: return .battery
+        case .volume: return nil
         }
     }
 
@@ -34,6 +36,7 @@ enum PanelDashboardTile: String, PanelOrderItem, Identifiable {
         case .network: return "network"
         case .gpu: return "rectangle.connected.to.line.below"
         case .battery: return "battery.100"
+        case .volume: return "speaker.wave.2.fill"
         }
     }
 
@@ -45,13 +48,14 @@ enum PanelDashboardTile: String, PanelOrderItem, Identifiable {
         case .network: return s.networkSection
         case .gpu: return s.gpuLabel
         case .battery: return s.batteryLabel
+        case .volume: return s.panelDashboardVolumeTitle
         }
     }
 
     /// The equivalent existing menu-bar metric: the card's own circle toggle
     /// shows or hides this reading next to the status icon, reusing the same
     /// keys the Menu bar settings page already writes to.
-    var menuBarMetric: MenuBarMetric {
+    var menuBarMetric: MenuBarMetric? {
         switch self {
         case .cpu: return .cpu
         case .memory: return .memory
@@ -59,6 +63,7 @@ enum PanelDashboardTile: String, PanelOrderItem, Identifiable {
         case .network: return .network
         case .gpu: return .gpu
         case .battery: return .battery
+        case .volume: return nil
         }
     }
 
@@ -75,6 +80,7 @@ enum PanelDashboardTile: String, PanelOrderItem, Identifiable {
         case .battery:
             return sections.contains(.power) && AppFeature.monitorPower.isAvailable
                 && PowerSampler.hasInternalBattery
+        case .volume: return sections.contains(.mixer) && AppFeature.mixer.isAvailable
         }
     }
 
@@ -86,11 +92,12 @@ enum PanelDashboardTile: String, PanelOrderItem, Identifiable {
         case .network: return DefaultsKey.panelDashboardShowNetwork
         case .gpu: return DefaultsKey.panelDashboardShowGPU
         case .battery: return DefaultsKey.panelDashboardShowBattery
+        case .volume: return DefaultsKey.panelDashboardShowVolume
         }
     }
 
     static func isShown(_ tile: PanelDashboardTile, defaults: UserDefaults = .standard) -> Bool {
-        defaults.object(forKey: tile.visibilityKey) as? Bool ?? true
+        defaults.object(forKey: tile.visibilityKey) as? Bool ?? (tile != .volume)
     }
 }
 
@@ -132,6 +139,7 @@ struct PanelDashboardLayout {
                 needs.gpu = true
                 needs.gpuTemperature = true
             case .network: needs.network = true
+            case .volume: break
             }
         }
         return needs
@@ -157,6 +165,7 @@ struct PanelDashboardView: View {
     @AppStorage(DefaultsKey.panelDashboardShowNetwork) private var showNetwork = true
     @AppStorage(DefaultsKey.panelDashboardShowGPU) private var showGPU = true
     @AppStorage(DefaultsKey.panelDashboardShowBattery) private var showBattery = true
+    @AppStorage(DefaultsKey.panelDashboardShowVolume) private var showVolume = false
     // Whether each card's history graph draws under its bar — the same
     // switches Settings → Monitor already exposes, now also live here.
     @AppStorage(DefaultsKey.monitorGraphCPU) private var graphCPU = true
@@ -421,6 +430,7 @@ struct PanelDashboardView: View {
         case .network: return showNetwork
         case .gpu: return showGPU
         case .battery: return showBattery
+        case .volume: return showVolume
         }
     }
 
@@ -432,6 +442,7 @@ struct PanelDashboardView: View {
         case .network: return $showNetwork
         case .gpu: return $showGPU
         case .battery: return $showBattery
+        case .volume: return $showVolume
         }
     }
 
@@ -452,6 +463,7 @@ struct PanelDashboardView: View {
         showNetwork = true
         showGPU = true
         showBattery = true
+        showVolume = false
     }
 
     @ViewBuilder
@@ -646,6 +658,21 @@ struct PanelDashboardView: View {
                                 isEditing: editing,
                                 visibility: visibility,
                                 action: open)
+        case .volume:
+            if editing {
+                // The same compact edit row as every other card.
+                DashboardMetricTile(title: tile.title(l10n.s),
+                                    systemImage: tile.symbolName,
+                                    accent: .accentColor,
+                                    value: "",
+                                    menuBarMetric: nil,
+                                    detailKind: nil,
+                                    isEditing: true,
+                                    visibility: visibility,
+                                    action: {})
+            } else {
+                DashboardVolumeTile()
+            }
         }
     }
 
@@ -910,10 +937,10 @@ private struct DashboardMetricTile: View {
     /// The optional history graph under the bar, already gated by the
     /// matching Settings → Monitor toggle; nil hides it outright.
     var graph: (values: [Double], color: Color, maxValue: Double?)? = nil
-    let menuBarMetric: MenuBarMetric
+    let menuBarMetric: MenuBarMetric?
     /// What a tap expands, embedded (no nested card, no repeated headline
     /// value) right under the header rather than swapped in from outside.
-    let detailKind: MetricDetailKind
+    let detailKind: MetricDetailKind?
     var isExpanded = false
     var isEditing = false
     var visibility: Binding<Bool>? = nil
@@ -941,7 +968,7 @@ private struct DashboardMetricTile: View {
                 .onHover { hovering = $0 }
                 .animation(.easeOut(duration: 0.12), value: hovering)
 
-                if isExpanded {
+                if isExpanded, let detailKind {
                     MetricDetailView(kind: detailKind, style: .embedded)
                         .padding(.top, 8)
                         // Grows out of the header rather than fading in flat:
@@ -960,9 +987,11 @@ private struct DashboardMetricTile: View {
                 // Same reasoning as the Thermal card: the circle is a sibling
                 // overlay, not nested inside the header's own Button, or
                 // macOS SwiftUI hands its taps to the outer button instead.
-                DashboardMenuBarToggle(metric: menuBarMetric)
-                    .padding(.top, 10)
-                    .padding(.trailing, 10)
+                if let menuBarMetric {
+                    DashboardMenuBarToggle(metric: menuBarMetric)
+                        .padding(.top, 10)
+                        .padding(.trailing, 10)
+                }
             }
             .accessibilityElement(children: .combine)
         }
@@ -1039,6 +1068,73 @@ private struct DashboardMetricTile: View {
     }
 
     private var isHidden: Bool { visibility?.wrappedValue == false }
+}
+
+/// The main volume as a dashboard card: mute, level and the output it acts
+/// on. It drives the same mixer calls as the Mixer's own output slider, so a
+/// display with no volume of its own gets PowerTools' volume here too.
+private struct DashboardVolumeTile: View {
+    @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var mixer = AppVolumeMixer.shared
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+
+    private var isMuted: Bool { mixer.systemOutputMuted == true }
+
+    private var outputName: String? {
+        mixer.outputDevices.first { $0.uid == mixer.currentOutputDeviceUID }?.name
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Button {
+                    mixer.setCurrentOutputMuted(!isMuted)
+                } label: {
+                    Image(systemName: isMuted || (mixer.systemOutputVolume ?? 1) <= 0.001
+                          ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 16, height: 16)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                // An output with neither a mute switch nor PowerTools' volume.
+                .disabled(mixer.systemOutputMuted == nil)
+                .help(isMuted ? l10n.s.actionUnmute : l10n.s.actionMute)
+                .accessibilityLabel(isMuted ? l10n.s.actionUnmute : l10n.s.actionMute)
+                Text(l10n.s.panelDashboardVolumeTitle)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                Text(mixer.systemOutputVolume.map { "\(Int(($0 * 100).rounded()))%" } ?? "–")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(isMuted ? Color.secondary : Color.accentColor)
+            }
+            MixerVolumeSlider(value: Binding(get: { mixer.systemOutputVolume ?? 0 },
+                                             set: { mixer.setCurrentOutputVolume($0) }),
+                              normalTint: .accentColor,
+                              boostTint: .accentColor,
+                              isBoosting: false,
+                              accentRevision: 0,
+                              maximum: 1,
+                              accessibilityLabel: l10n.s.panelDashboardVolumeTitle)
+                .disabled(mixer.systemOutputVolume == nil)
+            if let outputName {
+                Text(outputName)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(shape.fill(PanelSurface.cardFill(for: colorScheme)))
+        .overlay(shape.strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7))
+    }
 }
 
 extension View {

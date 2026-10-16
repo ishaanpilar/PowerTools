@@ -721,6 +721,8 @@ struct Strings {
     let preciseVolumeRollerEnable: String
     let preciseVolumeRollerCaption: String
     let preciseVolumeRollerTapFailed: String
+    let masterVolumeKeysEnable: String
+    let masterVolumeKeysCaption: String
     let soundOutputSwitcherTitle: String
     let soundOutputSwitcherEnable: String
     let soundOutputSwitcherCaption: String
@@ -973,6 +975,7 @@ struct Strings {
     let monitorOrderSection: String
     let monitorOrderHint: String
     let monitorDashboardCardsSection: String
+    let panelDashboardVolumeTitle: String
     let monitorDashboardCardsHint: String
     /// Shown briefly on a fresh panel open, while a background-trickled
     /// reading is on screen and a live one is still on its way in.
@@ -1789,6 +1792,8 @@ extension Strings {
         preciseVolumeRollerEnable: "Volume mais preciso no controle",
         preciseVolumeRollerCaption: "Transforma roletes e teclas de volume em passos menores.",
         preciseVolumeRollerTapFailed: "Não foi possível ouvir as teclas de volume.",
+        masterVolumeKeysEnable: "Use volume keys on displays without volume",
+        masterVolumeKeysCaption: "Volume and mute keys change PowerTools’ volume when sound plays through a display that macOS cannot set, such as HDMI or DisplayPort.",
         soundOutputSwitcherTitle: "Alternador de saída",
         soundOutputSwitcherEnable: "Alternar saídas por atalho",
         soundOutputSwitcherCaption: "Escolha as saídas e use o atalho para passar para a próxima disponível.",
@@ -2026,6 +2031,7 @@ extension Strings {
         monitorOrderSection: "Ordem das seções",
         monitorOrderHint: "Arraste para reordenar as seções do painel e use o olho para mostrar ou ocultar cada uma.",
         monitorDashboardCardsSection: "Cartões do painel",
+        panelDashboardVolumeTitle: "Volume",
         monitorDashboardCardsHint: "Arraste para reordenar os cartões do painel e use o olho para mostrar ou ocultar cada um.",
         monitorRefreshingLabel: "Atualizando…",
         obStepPanelTitle: "O que aparece no painel",
@@ -2833,6 +2839,8 @@ extension Strings {
         preciseVolumeRollerEnable: "Use finer volume steps",
         preciseVolumeRollerCaption: "Turns volume wheels and keys into smaller system volume steps.",
         preciseVolumeRollerTapFailed: "Could not listen for volume keys.",
+        masterVolumeKeysEnable: "Use volume keys on displays without volume",
+        masterVolumeKeysCaption: "Volume and mute keys change PowerTools’ volume when sound plays through a display that macOS cannot set, such as HDMI or DisplayPort.",
         soundOutputSwitcherTitle: "Output switcher",
         soundOutputSwitcherEnable: "Switch outputs with shortcut",
         soundOutputSwitcherCaption: "Choose outputs and use the shortcut to move to the next available one.",
@@ -3070,6 +3078,7 @@ extension Strings {
         monitorOrderSection: "Section order",
         monitorOrderHint: "Drag to reorder the panel sections and use the eye to show or hide each one.",
         monitorDashboardCardsSection: "Dashboard cards",
+        panelDashboardVolumeTitle: "Volume",
         monitorDashboardCardsHint: "Drag to reorder the dashboard cards and use the eye to show or hide each one.",
         monitorRefreshingLabel: "Refreshing…",
         obStepPanelTitle: "What’s in the panel",

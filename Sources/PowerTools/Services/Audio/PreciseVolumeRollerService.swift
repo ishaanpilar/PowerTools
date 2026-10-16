@@ -111,6 +111,11 @@ final class PreciseVolumeRollerService: ObservableObject {
         if event.flags.contains(.maskAlternate), event.flags.contains(.maskShift) {
             return Unmanaged.passUnretained(event)
         }
+        // On an output with no volume of its own the keys drive PowerTools'
+        // software volume, which applies finer steps itself.
+        if MasterVolumeKeysService.shared.isActive {
+            return Unmanaged.passUnretained(event)
+        }
 
         guard volumePress.isDown else { return nil }
         guard gate.accepts(volumePress.direction, at: ProcessInfo.processInfo.systemUptime) else {
